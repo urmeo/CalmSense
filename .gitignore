@@ -116,7 +116,7 @@ data/interim/*
 data/external/*
 !data/external/.gitkeep
 
-# Model files, except the small serving model
+# Model files, except the small serving + in-browser models
 *.pkl
 *.pickle
 *.h5
@@ -124,6 +124,7 @@ data/external/*
 *.pt
 *.pth
 *.onnx
+!frontend/public/model.onnx
 outputs/models/*
 !outputs/models/.gitkeep
 !outputs/models/stress_classifier.joblib
