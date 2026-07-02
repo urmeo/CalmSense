@@ -122,6 +122,7 @@ data/external/*
 *.hdf5
 *.pt
 *.pth
+*.ckpt
 *.onnx
 !frontend/public/model.onnx
 outputs/models/*
