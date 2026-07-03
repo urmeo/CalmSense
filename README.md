@@ -2,6 +2,10 @@
 
 > A Machine Learning and Deep Learning Framework for Wearable Biosignal Analysis, Integrating 1D CNNs, Explainable AI, Probability Calibration, and Cross-Dataset Evaluation.
 
+ML: Logistic Regression, Random Forest, XGBoost, LightGBM
+
+DL: 1D-CNN, SHAP
+
 [Live demo](https://urme-b.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urme-b/CalmSense/blob/main/notebooks/CalmSense.ipynb)
 
 ## What this is
