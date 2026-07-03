@@ -14,6 +14,8 @@ downloading WESAD; make demo reproduces the same pipeline on synthetic data inst
 | stats.json | scripts/stats.py |
 | calibration.json | scripts/calibration.py |
 | personalization.json | scripts/personalize.py |
+| threshold_metrics.json | scripts/threshold_metrics.py |
+| provenance.json | scripts/stamp_provenance.py |
 
 **Not committed** (regenerate on WESAD): tuning.json and its figures, which require the WESAD download.
 
