@@ -47,7 +47,7 @@ Signals are filtered, R-peaks detected with ectopic correction, and the electrod
 | HRV, nonlinear | 10 | SampEn, DFA, SD1/SD2, CSI |
 | Electrodermal | 15 | SCL level, SCR count, SCR amplitude |
 | Temperature | 5 | mean, slope, range |
-| Respiration | 3 | rate, variability |
+| Respiration | 3 | rate, amplitude, apnea index |
 | Accelerometer | 5 | magnitude mean, std, energy |
 
 ### B. Models and Evaluation
