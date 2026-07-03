@@ -70,7 +70,7 @@ const ModelComparison: React.FC = () => {
       {/* Optimism note */}
       <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-4 text-sm text-orange-800 dark:text-orange-200">
         The same model scores <strong>{pct(data.within_subject_accuracy)}</strong> under within-subject
-        5-fold but only <strong>{pct(losoPooled)}</strong> when tested on unseen subjects — the
+        5-fold but only <strong>{pct(losoPooled)}</strong> when tested on unseen subjects, the
         gap that inflates many reported WESAD results.
       </div>
 
@@ -82,7 +82,7 @@ const ModelComparison: React.FC = () => {
             <p className="text-gray-600 dark:text-gray-400">
               With the same model, Empatica E4 wrist signals reach{' '}
               <strong>{pct((results as any).wrist.same_model_rf.wrist)}</strong> vs{' '}
-              {pct((results as any).wrist.same_model_rf.chest)} for the chest — a{' '}
+              {pct((results as any).wrist.same_model_rf.chest)} for the chest, a{' '}
               {(results as any).wrist.same_model_rf.drop_pts.toFixed(1)}-pt drop. No chest strap needed.
             </p>
           </div>
@@ -90,8 +90,8 @@ const ModelComparison: React.FC = () => {
             <p className="font-semibold text-gray-900 dark:text-white mb-1">It doesn't cross datasets</p>
             <p className="text-gray-600 dark:text-gray-400">
               Trained on WESAD, tested on PhysioNet Non-EEG, balanced accuracy falls to{' '}
-              <strong>{pct((results as any).cross_dataset.wesad_to_noneeg.balanced_accuracy)}</strong> —
-              near chance. Within-dataset success ≠ real-world generalization.
+              <strong>{pct((results as any).cross_dataset.wesad_to_noneeg.balanced_accuracy)}</strong>,
+              near chance. Within-dataset success is not real-world generalization.
             </p>
           </div>
         </div>

@@ -57,8 +57,8 @@ const About: React.FC = () => {
         <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
           CalmSense is a stress-detection benchmark that measures how much of the field's reported
           accuracy survives honest, subject-independent evaluation. Using the WESAD dataset, it runs a
-          complete pipeline — signal preprocessing, feature extraction, and a leakage-free
-          Leave-One-Subject-Out comparison of classical models and a 1D-CNN — and exports the trained
+          complete pipeline: signal preprocessing, feature extraction, and a leakage-free
+          Leave-One-Subject-Out comparison of classical models and a 1D-CNN, and exports the trained
           model to run entirely in the browser via ONNX.
         </p>
         <p className="mt-4 text-gray-600 dark:text-gray-400 leading-relaxed">
@@ -137,7 +137,7 @@ const About: React.FC = () => {
   WESAD signals
       │   per-channel filtering · R-peak detection · EDA decomposition
       ▼
-  Feature extraction  —  58 HRV / EDA / TEMP / RESP / motion features
+  Feature extraction:  58 HRV / EDA / TEMP / RESP / motion features
       │
       ▼
   Leakage-free LOSO benchmark
