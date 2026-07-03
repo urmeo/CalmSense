@@ -82,7 +82,9 @@ def run():
         json.dump(prov, f, indent=2)
     print(f"Wrote {path}")
     print(f"  git {prov['git_sha'][:10]}  seed {prov['seed']}  python {prov['python']}")
-    print(f"  scikit-learn {prov['packages'].get('scikit-learn')}  torch {prov['packages'].get('torch')}")
+    print(
+        f"  scikit-learn {prov['packages'].get('scikit-learn')}  torch {prov['packages'].get('torch')}"
+    )
 
 
 if __name__ == "__main__":

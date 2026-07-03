@@ -59,6 +59,7 @@ def test_no_em_or_en_dashes_anywhere():
             ROOT / "README.md",
             ROOT / "PAPER.md",
             ROOT / "MODEL_CARD.md",
+            ROOT / "PROVENANCE.md",
             ROOT / "CONTRIBUTING.md",
             ROOT / "results" / "README.md",
             ROOT / "data" / "raw" / "README.md",
