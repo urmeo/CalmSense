@@ -82,7 +82,6 @@ class WristDataset(LoggerMixin):
                         "eda_raw": eda_filt[e0:e1],
                         "scr_peaks": scr_in,
                         "temperature": temp[e0:e1],
-                        "respiration": None,
                         "accelerometer": {"magnitude": acc_mag[a0:a1]},
                         "subject_id": subject_id,
                         "label": lab,
