@@ -10,7 +10,6 @@ from .config import LOG_FILE, LOG_LEVEL
 _logging_configured = False
 _configured_level: Optional[str] = None
 
-# Processors
 _shared_processors: list[Any] = [
     structlog.contextvars.merge_contextvars,
     structlog.stdlib.add_log_level,

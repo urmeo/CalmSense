@@ -15,8 +15,6 @@ from .config import (
     RAW_DATA_DIR,
     VALID_SUBJECTS,
     WESAD_DIR,
-    ensure_directories,
-    get_project_root,
 )
 from .data import WESADLoader
 from .logging_config import (
@@ -43,8 +41,6 @@ __all__ = [
     "FILTER_PARAMS",
     "FEATURE_PARAMS",
     "CONDITION_COLORS",
-    "get_project_root",
-    "ensure_directories",
     "setup_logging",
     "get_logger",
     "LoggerMixin",
