@@ -20,15 +20,24 @@ from scripts.run_experiment import (
     prepare_task,
 )
 
+# Canonical feature-group prefixes; every feature column is named "<GROUP>_...".
+# Subsets below are defined against these, so a prefix rename is caught by the
+# coverage guard in run() instead of silently dropping features from a subset.
+FEATURE_GROUPS = ["HRV", "EDA", "TEMP", "RESP", "ACC"]
+
 # Feature-group subsets (by name prefix)
 SUBSETS = {
-    "All features": ["HRV", "EDA", "TEMP", "RESP", "ACC"],
+    "All features": FEATURE_GROUPS,
     "No motion (HRV+EDA+TEMP+RESP)": ["HRV", "EDA", "TEMP", "RESP"],
     "Autonomic (HRV+EDA)": ["HRV", "EDA"],
     "HRV only": ["HRV"],
     "EDA only": ["EDA"],
     "Motion only (ACC)": ["ACC"],
 }
+
+
+def _group_of(col: str) -> str:
+    return col.split("_")[0]
 
 
 def run():
@@ -39,9 +48,16 @@ def run():
     features_df, x_raw = cached
 
     X, y, groups, feature_cols, _ = prepare_task(features_df, x_raw, [1, 2])
+
+    # Fail loudly if any feature is unaccounted for: the "All features" subset must
+    # cover every column, or the ablation would silently compare the wrong sets.
+    unknown = sorted({_group_of(c) for c in feature_cols} - set(FEATURE_GROUPS))
+    if unknown:
+        raise SystemExit(f"Feature groups not in FEATURE_GROUPS: {unknown}")
+
     rows = []
     for name, prefixes in SUBSETS.items():
-        cols = [i for i, c in enumerate(feature_cols) if c.split("_")[0] in prefixes]
+        cols = [i for i, c in enumerate(feature_cols) if _group_of(c) in prefixes]
         res = loso_evaluate(lambda: build_pipeline("rf"), X[:, cols], y, groups)
         rows.append(
             {
