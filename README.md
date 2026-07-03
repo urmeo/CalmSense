@@ -109,6 +109,9 @@ make install-dev
 make demo
 ```
 
+make install-dev installs the exact pinned versions the results were produced with (requirements.lock),
+so a clone reproduces them without version drift. The shipped model is coupled to scikit-learn 1.6.1.
+
 Full benchmark on real data (downloads WESAD, about 2 GB, research-only agreement):
 
 ```bash

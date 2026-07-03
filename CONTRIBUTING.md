@@ -8,7 +8,7 @@ especially welcome.
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-make install-dev          # editable install + dev tools
+make install-dev          # pinned deps (requirements.lock) + editable package + dev tools
 make demo                 # smoke-test the full pipeline on synthetic data (no download)
 ```
 
