@@ -3,7 +3,7 @@
 help:
 	@echo "CalmSense - subject-independent stress detection"
 	@echo ""
-	@echo "  install-dev    Editable install with dev tools"
+	@echo "  install-dev    Reproducible install: pinned deps (requirements.lock) + dev tools"
 	@echo "  demo           Run the pipeline on synthetic data (no download)"
 	@echo "  wesad          Download WESAD (~2 GB, primary dataset; needed for reproduce)"
 	@echo "  data           Download PhysioNet Non-EEG (needed for cross-dataset in reproduce)"
@@ -14,7 +14,11 @@ help:
 	@echo ""
 	@echo "  Frontend dashboard: see frontend/README.md (npm run dev / build)"
 
+# Install the exact pinned versions the results were produced with (requirements.lock),
+# then the editable package and dev tools. The pins matter: the shipped model pickle is
+# coupled to scikit-learn 1.6.1, so a looser install can load it with a version-mismatch warning.
 install-dev:
+	pip install -r requirements.lock
 	pip install -e ".[dev]"
 
 demo:
