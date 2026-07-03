@@ -16,6 +16,31 @@ def test_set_seed_makes_rngs_reproducible():
     assert first == second
 
 
+def test_feature_extraction_is_deterministic():
+    """Same seed -> identical features, so make reproduce is reproducible end to end.
+
+    Guards the whole synthetic path (signal simulation, filtering, R-peak
+    detection, and every extractor) against an unseeded RNG creeping in.
+    """
+    import numpy as np
+
+    from src.synthetic import features
+
+    feature_df_a, _, _ = features(n_subjects=2, block_sec=80, seed=5)
+    feature_df_b, _, _ = features(n_subjects=2, block_sec=80, seed=5)
+
+    meta = ("subject_id", "window_id", "label", "label_name")
+    cols = [c for c in feature_df_a.columns if c not in meta]
+    a = feature_df_a[cols].to_numpy(dtype=float)
+    b = feature_df_b[cols].to_numpy(dtype=float)
+
+    assert a.shape == b.shape
+    both_nan = np.isnan(a) & np.isnan(b)
+    assert (np.isclose(a, b, equal_nan=False) | both_nan).all(), (
+        "Feature extraction is not reproducible with a fixed seed"
+    )
+
+
 def test_cnn_training_is_deterministic():
     pytest.importorskip("torch")
     from src.models.dl.cnn_1d import CNN1DClassifier
