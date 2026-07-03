@@ -98,12 +98,36 @@ Key findings, one per check:
 <tr><td>Tooling</td><td>GitHub Actions, ruff, mypy, pytest</td></tr>
 </table>
 
-## Limitations
+## Limitations & intended use
 
-- 15 subjects, lab-induced stress. Underpowered, wide CIs. No clinical claim.
-- Ablation, calibration, and personalization are exploratory, not multiplicity-corrected.
-- The 1D-CNN is a small baseline, not a fair test of deep learning.
-- Cross-dataset uses one confounded pair. Illustrative, not conclusive.
+**Intended use.** Research and educational benchmark only. Not a medical device, not a
+diagnostic, and not for clinical, employment, insurance, or any decision about a person.
+No claim of validity outside this dataset. See [PROVENANCE.md](PROVENANCE.md) for data and
+model lineage, and Ethics & data use below.
+
+**Population & label validity.** 15 healthy adults (WESAD S2–S17), lab-induced stress
+(TSST-style protocol). "Stress" is the study condition label, not a clinical stress
+diagnosis. Underpowered with wide CIs (RF 95% CI [0.860, 0.960]); findings do not
+transfer to clinical populations, ambulatory settings, or other demographics untested here.
+
+**Eval scope.** Headline numbers are subject-independent (LOSO): train on 14 people, test
+on the held-out 15th, rotate — so a person's own data never appears in their test fold.
+Within-subject scoring is higher (0.964 vs 0.913 binary; +5.7 pts, +13 pts three-class);
+the LOSO number is the honest one for a new user. Ablation, calibration, and personalization
+are exploratory, not multiplicity-corrected.
+
+**Known failure modes.**
+- *Distribution shift:* transfer to another corpus (PhysioNet Non-EEG) drops to near chance
+  (0.50 balanced). Do not assume it generalizes off WESAD (see Results, cross-dataset).
+- *Motion:* accelerometer features contribute little (dropping all motion: 0.913 → 0.901),
+  so scores are not driven by movement — but the model is untested under real ambulatory
+  motion beyond the lab.
+- *Miscalibration:* raw probabilities are overconfident (ECE 0.070); use the isotonic
+  recalibration (→ 0.025) before trusting a probability.
+- *Cheap sensors:* wrist-only is ~2 pts lower than chest (0.893 vs 0.913).
+
+**Other.** The 1D-CNN is a small baseline, not a fair test of deep learning. Cross-dataset
+uses one confounded pair — illustrative, not conclusive.
 
 ## Future work
 
