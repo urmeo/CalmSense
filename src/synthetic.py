@@ -3,7 +3,7 @@
 NeuroKit2 simulators generate physiologically plausible chest and wrist signals.
 Stress blocks carry higher heart rate, more skin-conductance responses, faster
 breathing, and more motion, so the models learn a real (if easy) signal. This is
-for smoke tests and demos only — never for reported results.
+for smoke tests and demos only, never for reported results.
 
 Statistical fidelity (important): the per-condition means above are well separated
 and each subject is drawn i.i.d. from the same distribution, so the synthetic task
