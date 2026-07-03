@@ -28,4 +28,4 @@ Committing `calibration.json` and `personalization.json` is **leakage-free by co
 recalibration map is fit only on out-of-fold *training*-subject probabilities and never the held-out
 subject (`scripts/calibration.py:loso_recalibrated_proba`), and few-shot enrollment windows are disjoint
 from the evaluation half (`scripts/personalize.py`). So these are held-out results, not fitted-on-test
-outputs — safe to ship as a snapshot. The leakage guards are enforced by `tests/test_methodology.py`.
+outputs, safe to ship as a snapshot. The leakage guards are enforced by `tests/test_methodology.py`.
