@@ -93,6 +93,9 @@ def net_benefit(y: Array, p_pos: Array, thresholds: np.ndarray) -> np.ndarray:
         raise ValueError("net_benefit needs at least one sample")
     out = []
     for pt in thresholds:
+        if pt >= 1.0:
+            out.append(0.0)  # impossible threshold: treat no one, so net benefit is 0
+            continue
         flagged = p_pos >= pt
         tp = np.sum(flagged & (y == 1))
         fp = np.sum(flagged & (y == 0))

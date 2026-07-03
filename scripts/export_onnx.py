@@ -6,19 +6,19 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import joblib
 import numpy as np
 import onnxruntime as ort
 from skl2onnx import convert_sklearn
 from skl2onnx.common.data_types import FloatTensorType
 
 from src.config import MODELS_DIR, PROJECT_ROOT
+from src.utils import load_verified_joblib
 
 FRONTEND = PROJECT_ROOT / "frontend"
 
 
 def run():
-    bundle = joblib.load(MODELS_DIR / "stress_classifier.joblib")
+    bundle = load_verified_joblib(MODELS_DIR / "stress_classifier.joblib")
     pipe, features, classes = bundle["pipeline"], bundle["features"], bundle["classes"]
     imputer, scaler, rf = (
         pipe.named_steps["impute"],
