@@ -164,7 +164,7 @@ const ModelComparison: React.FC = () => {
               <BarChart data={shap} layout="vertical" margin={{ left: 40, right: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                 <XAxis type="number" tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="feature" width={140} tick={{ fontSize: 10 }} />
+                <YAxis type="category" dataKey="feature" width={175} tick={{ fontSize: 10 }} />
                 <Tooltip />
                 <Bar dataKey="mean_abs_shap" name="mean |SHAP|" fill="#805AD5" radius={[0, 4, 4, 0]} />
               </BarChart>

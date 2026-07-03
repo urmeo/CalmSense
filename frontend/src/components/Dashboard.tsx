@@ -55,10 +55,12 @@ const FeatureImportanceChart: React.FC = () => {
         Top biomarkers (mean |SHAP|, binary model)
       </h3>
       <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={data} layout="vertical" margin={{ left: 110 }}>
+        <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
           <XAxis type="number" />
-          <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} />
+          {/* width fits the longest feature name (e.g. EDA_SCR_recovery_time_mean); a narrow
+              axis clips the leftmost characters and makes real features look corrupted. */}
+          <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={200} interval={0} />
           <Tooltip />
           <Bar dataKey="value" radius={[0, 4, 4, 0]}>
             {data.map((entry: { color: string }, index: number) => (
