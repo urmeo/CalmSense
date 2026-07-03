@@ -1,0 +1,42 @@
+{
+  "task": "binary",
+  "n_windows": 869,
+  "models": [
+    {
+      "model": "Logistic Regression",
+      "available": true,
+      "auroc": 0.9585878725352684,
+      "auprc": 0.9469452051370291
+    },
+    {
+      "model": "Random Forest",
+      "available": true,
+      "auroc": 0.9733038125818678,
+      "auprc": 0.9595197877358985,
+      "operating_point": {
+        "rule": "Youden J (max sensitivity + specificity - 1)",
+        "threshold": 0.453935991916671,
+        "sensitivity": 0.9022801302931596,
+        "specificity": 0.9128113879003559,
+        "ppv": 0.8496932515337423,
+        "npv": 0.9447513812154696
+      }
+    },
+    {
+      "model": "XGBoost",
+      "available": true,
+      "auroc": 0.9745963114516559,
+      "auprc": 0.9599561593722432
+    },
+    {
+      "model": "LightGBM",
+      "available": true,
+      "auroc": 0.9652995931236742,
+      "auprc": 0.9464156222226663
+    }
+  ],
+  "provenance": {
+    "git_sha": "1b3e9c90f82291de883baf453b1842755e7ef1f3",
+    "generated_at": "2026-07-03T05:22:15.983803+00:00"
+  }
+}
