@@ -1,31 +1,16 @@
-from typing import Dict, Optional, Tuple
+from typing import Dict, Tuple
 
 import numpy as np
 from scipy import stats
 
 from ..config import FEATURE_PARAMS
-from ..logging_config import LoggerMixin
+from .hrv_base import BaseHRVExtractor
 
 
-class HRVNonlinearExtractor(LoggerMixin):
+class HRVNonlinearExtractor(BaseHRVExtractor):
     def __init__(self, min_rr_count: int = 50):
         self.min_rr_count = min_rr_count
         self.logger.debug(f"HRVNonlinearExtractor initialized, min_rr={min_rr_count}")
-
-    def _validate_input(self, rr_intervals: np.ndarray) -> Optional[np.ndarray]:
-        rr = np.asarray(rr_intervals).flatten()
-        rr = rr[np.isfinite(rr)]
-
-        if len(rr) < self.min_rr_count:
-            self.logger.warning(f"Insufficient RR intervals: {len(rr)} < {self.min_rr_count}")
-            return None
-
-        rr = rr[(rr >= 200) & (rr <= 2500)]
-
-        if len(rr) < self.min_rr_count:
-            return None
-
-        return rr
 
     def compute_sample_entropy(self, rr: np.ndarray, m: int = 2, r: float = 0.2) -> float:
         n = len(rr)
