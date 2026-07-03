@@ -93,7 +93,7 @@ const SignalExplorer: React.FC = () => {
   };
 
   const layout: any = {
-    title: { text: `Signal Explorer — Subject ${selectedSubject}`, font: { size: 18 } },
+    title: { text: `Signal Explorer: Subject ${selectedSubject}`, font: { size: 18 } },
     showlegend: true,
     legend: { orientation: 'h', y: -0.12 },
     xaxis: { title: 'Time (s)', range: xRange, showgrid: true, gridcolor: 'rgba(0,0,0,0.1)' },
