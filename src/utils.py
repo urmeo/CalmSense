@@ -89,7 +89,9 @@ def load_verified_joblib(path: Union[str, Path]):
     expected = path.with_name(path.name + ".sha256").read_text().split()[0]
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
     if digest != expected:
-        raise ValueError(f"SHA-256 mismatch for {path.name}: refusing to load an unverified pickle.")
+        raise ValueError(
+            f"SHA-256 mismatch for {path.name}: refusing to load an unverified pickle."
+        )
     return joblib.load(path)
 
 

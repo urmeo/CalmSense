@@ -13,15 +13,15 @@ Every headline result and the shipped classifier come from WESAD.
 | Name | WESAD (Wearable Stress and Affect Detection) |
 | Authors | Schmidt, Reiss, Duerichen, Marberger, Van Laerhoven (Uni Siegen) |
 | Reference | Schmidt et al., ICMI 2018 (see `data/raw/README.md` for the BibTeX) |
-| Subjects used | S2–S17 (15 subjects; S1 and S12 do not exist upstream) |
+| Subjects used | S2 to S17 (15 subjects; S1 and S12 do not exist upstream) |
 | Source | UCI Machine Learning Repository, dataset 465 <https://archive.ics.uci.edu/dataset/465/wesad+wearable+stress+and+affect+detection> |
 | License / access | Research-only; behind a one-time research agreement. Not redistributed in this repository. |
 | Version | UCI distribution as of access; upstream ships no version tag or official checksum. |
 | Format | Per-subject `S*.pkl` (latin1 pickle): chest signals at 700 Hz (ACC/ECG/EMG/EDA/Temp/Resp), wrist signals (ACC 32 Hz, BVP 64 Hz, EDA/TEMP 4 Hz), labels at 700 Hz. |
 
 Download and layout instructions: `data/raw/README.md`. Because WESAD ships no
-official checksum, the SHA-256 reference values for each `S*.pkl` — computed from
-the official Uni-Siegen distribution — are listed there so a downloaded copy can be
+official checksum, the SHA-256 reference values for each `S*.pkl`, computed from
+the official Uni-Siegen distribution, are listed there so a downloaded copy can be
 verified before use.
 
 ### PhysioNet Non-EEG (cross-dataset transfer only)
@@ -34,7 +34,7 @@ headline LOSO benchmark.
 | Name | Non-EEG Dataset for Assessment of Neurological Status |
 | Authors | Birjandtalab et al. |
 | Source | PhysioNet (fetched with `wfdb` via `make data`) |
-| Role | Second corpus for cross-dataset transfer; a separate, confounded pair — illustrative, not conclusive (see README Limitations). |
+| Role | Second corpus for cross-dataset transfer; a separate, confounded pair, illustrative, not conclusive (see README Limitations). |
 
 ## Shipped model
 
@@ -43,19 +43,19 @@ scikit-learn bundle, which in turn is trained on WESAD.
 
 ### `outputs/models/stress_classifier.joblib`
 
-- **What it is:** a scikit-learn `Pipeline` — `SimpleImputer(strategy="median")` →
-  `StandardScaler` → classifier — bundled with its feature list and class names
+- **What it is:** a scikit-learn `Pipeline` (`SimpleImputer(strategy="median")` →
+  `StandardScaler` → classifier) bundled with its feature list and class names
   (`baseline`, `stress`).
 - **Classifier:** whichever of {Logistic Regression, Random Forest, XGBoost, LightGBM}
   scored highest by mean LOSO accuracy on the binary task. In the committed snapshot
   that is **Random Forest** (200 trees, depth 10, class-balanced; see `results/metrics.json`).
-- **How produced:** `scripts/run_experiment.py` — after the LOSO benchmark, the winning
+- **How produced:** `scripts/run_experiment.py`, after the LOSO benchmark, the winning
   classifier is refit on **all** WESAD binary windows (58 features, 869 windows) and
   serialized (`run_experiment.py:420-425`). Seeded (`src/config.SEED`).
 - **Trained on:** WESAD only, binary labels (baseline vs stress). No other data.
 - **Not a held-out artifact:** this is the deployment model fit on all subjects for
   in-browser demo use. The reported *performance* numbers are the separate LOSO
-  evaluation (train on 14, test on the 15th, rotate) — see README Results.
+  evaluation (train on 14, test on the 15th, rotate). See README Results.
 
 ### `frontend/public/model.onnx`
 
