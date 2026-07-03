@@ -1,32 +1,15 @@
-from typing import Dict, Optional
+from typing import Dict
 
 import numpy as np
 
 from ..config import FEATURE_PARAMS
-from ..logging_config import LoggerMixin
+from .hrv_base import BaseHRVExtractor
 
 
-class HRVTimeDomainExtractor(LoggerMixin):
+class HRVTimeDomainExtractor(BaseHRVExtractor):
     def __init__(self, min_rr_count: int = 10):
         self.min_rr_count = min_rr_count
         self.logger.debug(f"HRVTimeDomainExtractor initialized, min_rr={min_rr_count}")
-
-    def _validate_input(self, rr_intervals: np.ndarray) -> Optional[np.ndarray]:
-        rr = np.asarray(rr_intervals).flatten()
-        rr = rr[np.isfinite(rr)]
-
-        if len(rr) < self.min_rr_count:
-            self.logger.warning(f"Insufficient RR intervals: {len(rr)} < {self.min_rr_count}")
-            return None
-
-        # Normal RR: 200-2500ms (24-300
-        rr = rr[(rr >= 200) & (rr <= 2500)]
-
-        if len(rr) < self.min_rr_count:
-            self.logger.warning("Too many invalid RR intervals removed")
-            return None
-
-        return rr
 
     def compute_mean_nn(self, rr: np.ndarray) -> float:
         return float(np.mean(rr))
