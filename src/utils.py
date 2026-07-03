@@ -75,6 +75,24 @@ def provenance() -> dict:
     return {"git_sha": sha, "generated_at": datetime.now(timezone.utc).isoformat()}
 
 
+def load_verified_joblib(path: Union[str, Path]):
+    """Load a joblib bundle only after its bytes match the committed SHA-256 sidecar.
+
+    Unpickling executes arbitrary code, so the shipped model is checked against
+    ``<path>.sha256`` before loading; a mismatch raises instead of trusting the file.
+    """
+    import hashlib
+
+    import joblib
+
+    path = Path(path)
+    expected = path.with_name(path.name + ".sha256").read_text().split()[0]
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    if digest != expected:
+        raise ValueError(f"SHA-256 mismatch for {path.name}: refusing to load an unverified pickle.")
+    return joblib.load(path)
+
+
 def paired_effect_size(a, b) -> dict:
     """Paired Cohen's d and (small-sample-corrected) Hedges' g for two per-subject vectors.
 

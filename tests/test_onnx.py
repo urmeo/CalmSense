@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 from src.config import MODELS_DIR, PROJECT_ROOT
+from src.utils import load_verified_joblib
 
 MODEL = MODELS_DIR / "stress_classifier.joblib"
 ONNX = PROJECT_ROOT / "frontend" / "public" / "model.onnx"
@@ -18,9 +19,7 @@ pytestmark = pytest.mark.skipif(
 
 
 def test_meta_feature_order_matches_model():
-    import joblib
-
-    bundle = joblib.load(MODEL)
+    bundle = load_verified_joblib(MODEL)
     meta = json.load(open(META))
     # the browser builds its input vector in this exact order
     assert meta["features"] == bundle["features"]
@@ -30,10 +29,9 @@ def test_meta_feature_order_matches_model():
 
 
 def test_onnx_matches_sklearn_including_nonfinite():
-    import joblib
     import onnxruntime as ort
 
-    bundle = joblib.load(MODEL)
+    bundle = load_verified_joblib(MODEL)
     pipe, n = bundle["pipeline"], len(bundle["features"])
     meta = json.load(open(META))
 
@@ -60,10 +58,9 @@ def test_onnx_and_joblib_agree_on_fixed_vectors():
     """Browser ONNX and the Python joblib pipeline agree on BOTH probabilities and the
     predicted label for fixed, human-meaningful inputs (the label is what a visitor sees).
     """
-    import joblib
     import onnxruntime as ort
 
-    bundle = joblib.load(MODEL)
+    bundle = load_verified_joblib(MODEL)
     pipe, features = bundle["pipeline"], bundle["features"]
     meta = json.load(open(META))
     medians, mean, scale = (np.array(meta[k]) for k in ("medians", "mean", "scale"))
