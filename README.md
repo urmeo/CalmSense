@@ -1,10 +1,11 @@
 # CalmSense
 
-### The Accuracy You Read Is Not the Accuracy You Get: Leakage, Motion, Shift, and Calibration
+### The accuracy you read is not the accuracy you get: leakage, motion, shift, and calibration
 
-ML: Logistic Regression, Random Forest, XGBoost, LightGBM
-
-DL: 1D-CNN, SHAP
+Wearable stress detectors report accuracy in the high nineties. Most of that is an evaluation
+artifact: when the same person appears in both train and test, the model learns to recognize the
+individual, not the stress. CalmSense re-scores the task the honest way, holding out whole subjects,
+and traces where the inflation comes from. The number that survives is 0.91 on binary, not 0.99.
 
 [Live demo](https://urme-b.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urme-b/CalmSense/blob/main/notebooks/CalmSense.ipynb) · [Paper](PAPER.md)
 
@@ -53,7 +54,8 @@ Key findings, one per check:
 <tr><td>1D-CNN</td><td>Deep net on raw signal</td><td>Residual blocks, AdamW, early stopping</td></tr>
 </table>
 
-- Every model runs inside an impute (median) to scale to classifier pipeline, fit per fold, seeded.
+- Each model runs inside an impute (median), scale, classifier pipeline, fit per fold and seeded.
+- Hyperparameters are fixed defaults, justified by nested cross-validation (run make tuning): tuned and default accuracy agree within noise, so the benchmark ships the defaults.
 
 ## Features (58)
 
@@ -97,6 +99,27 @@ Key findings, one per check:
 <tr><td>Dashboard</td><td>React, TypeScript, ONNX Runtime Web</td></tr>
 <tr><td>Tooling</td><td>GitHub Actions, ruff, mypy, pytest</td></tr>
 </table>
+
+## Reproduce
+
+No download, synthetic signals, runs in about a minute:
+
+```bash
+make install-dev
+make demo
+```
+
+Full benchmark on real data (downloads WESAD, about 2 GB, research-only agreement):
+
+```bash
+make wesad
+make reproduce
+```
+
+make reproduce regenerates every number and figure in this README and the paper. The pipeline is
+described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), and each result file records the exact commit
+that produced it (see [results/README.md](results/README.md)). Synthetic demo numbers are near-ceiling by
+design and must not be read as evidence; only the real WESAD run is meaningful.
 
 ## Limitations
 
