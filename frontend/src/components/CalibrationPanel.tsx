@@ -62,7 +62,7 @@ const CalibrationPanel: React.FC = () => {
       {/* Optimism note */}
       <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-4 text-sm text-orange-800 dark:text-orange-200">
         Within-subject validation reports an ECE of <strong>{fmt(within_subject.ece)}</strong>, but on
-        unseen subjects the same model is off by <strong>{fmt(loso.ece)}</strong> — a calibration
+        unseen subjects the same model is off by <strong>{fmt(loso.ece)}</strong>, a calibration
         optimism gap of <strong>{signed(cal.calibration_optimism_gap_ece)}</strong>. A leak-free
         isotonic recalibration brings LOSO ECE down to <strong>{fmt(recalibrated_isotonic.ece)}</strong>.
       </div>
@@ -249,7 +249,7 @@ const CalibrationPanel: React.FC = () => {
         <Info className="w-5 h-5 text-blue-500 mt-0.5 shrink-0" />
         <p className="text-blue-800 dark:text-blue-300">
           Recalibration uses a calibrator fit only on out-of-fold training probabilities, so the
-          held-out subject is never seen — no leakage. Research demonstration only, not a medical
+          held-out subject is never seen, no leakage. Research demonstration only, not a medical
           device.
         </p>
       </div>
