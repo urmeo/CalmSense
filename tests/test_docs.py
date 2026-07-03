@@ -55,6 +55,7 @@ def test_no_em_or_en_dashes_anywhere():
         + sorted(ROOT.glob("frontend/src/**/*.ts"))
         + sorted(ROOT.glob("frontend/src/**/*.tsx"))
         + sorted(ROOT.glob("docs/*.md"))
+        + sorted(ROOT.glob("notebooks/*.ipynb"))
         + [
             ROOT / "README.md",
             ROOT / "PAPER.md",
