@@ -44,8 +44,10 @@ reproduce:
 	python scripts/personalize.py
 	python scripts/tuning.py
 	python scripts/stats.py
+	python scripts/threshold_metrics.py
 	python scripts/export_onnx.py
 	python scripts/build_dashboard_data.py
+	python scripts/stamp_provenance.py
 
 test:
 	pytest tests/ -q
