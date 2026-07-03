@@ -1,6 +1,6 @@
 # CalmSense
 
-> A Machine Learning and Deep Learning Framework for Wearable Biosignal Analysis, Integrating 1D CNNs, Explainable AI, Probability Calibration, and Cross-Dataset Evaluation.
+### A Machine Learning and Deep Learning Framework for Wearable Biosignal Analysis, Integrating 1D CNNs, Explainable AI, Probability Calibration, and Cross-Dataset Evaluation.
 
 ML: Logistic Regression, Random Forest, XGBoost, LightGBM
 
