@@ -156,13 +156,13 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
         else:
             sd1_sd2_ratio = np.nan
 
-        # CSI = SD2/SD1 (sympathetic
+        # CSI = SD2/SD1 (sympathetic index)
         if sd1 > FEATURE_PARAMS.EPSILON:
             csi = float(sd2 / sd1)
         else:
             csi = np.nan
 
-        # CVI = log10(SD1 *
+        # CVI = log10(SD1 * SD2) (vagal index)
         if sd1 > 0 and sd2 > 0:
             cvi = float(np.log10(sd1 * sd2))
         else:

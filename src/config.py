@@ -55,7 +55,7 @@ LABEL_NAMES: Dict[int, str] = {
 
 @dataclass(frozen=True)
 class SamplingRates:
-    # Chest (RespiBAN) — all channels at 700 Hz
+    # Chest (RespiBAN), all channels at 700 Hz
     CHEST: float = 700.0
 
     # Wrist (Empatica E4)
@@ -105,8 +105,6 @@ class FeatureParams:
 
 
 FEATURE_PARAMS = FeatureParams()
-
-EPSILON: float = FEATURE_PARAMS.EPSILON
 
 CONDITION_COLORS: Dict[str, str] = {
     "baseline": "#2ecc71",
