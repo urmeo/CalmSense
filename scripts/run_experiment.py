@@ -144,7 +144,7 @@ def cnn_loso(x_raw, y, groups):
 
 
 def nonoverlap_mask(groups):
-    """Every other window per subject — non-overlapping at 50% overlap."""
+    """Every other window per subject, non-overlapping at 50% overlap."""
     keep = np.zeros(len(groups), dtype=bool)
     for g in np.unique(groups):
         idx = np.where(groups == g)[0]
@@ -250,7 +250,7 @@ def plot_embedding(X, y, names, path):
     plt.close()
 
 
-def shap_analysis(X, y, feature_names, names, fig_dir):
+def shap_analysis(X, y, feature_names, fig_dir):
     import shap
 
     pipe = build_pipeline("xgb")
@@ -415,7 +415,7 @@ def run():
                 [(k, results[k]) for k in CLASSIFIERS],
                 key=lambda kv: kv[1]["accuracy_mean"],
             )[0]
-            importance = shap_analysis(X, y, feature_cols, cfg["names"], figures_dir)
+            importance = shap_analysis(X, y, feature_cols, figures_dir)
             importance.to_csv(results_dir / "shap_top_features.csv", index=False)
             final = build_pipeline(top_clf)
             final.fit(X, y, **_fit_params(final, y))
