@@ -1,16 +1,10 @@
 # CalmSense
 
-[![CI](https://github.com/urme-b/CalmSense/actions/workflows/ci.yml/badge.svg)](https://github.com/urme-b/CalmSense/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](pyproject.toml)
-[![Release](https://img.shields.io/github/v/tag/urme-b/CalmSense?label=release)](https://github.com/urme-b/CalmSense/releases)
+### The Accuracy You Read Is Not the Accuracy You Get: Leakage, Motion, Shift, and Calibration
 
-### The accuracy you read is not the accuracy you get: leakage, motion, shift, and calibration
+ML: Logistic Regression, Random Forest, XGBoost, LightGBM
 
-Wearable stress detectors report accuracy in the high nineties. Most of that is an evaluation
-artifact: when the same person appears in both train and test, the model learns to recognize the
-individual, not the stress. CalmSense re-scores the task the honest way, holding out whole subjects,
-and traces where the inflation comes from. The number that survives is 0.91 on binary, not 0.99.
+DL: 1D-CNN, SHAP
 
 [Live demo](https://urme-b.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urme-b/CalmSense/blob/main/notebooks/CalmSense.ipynb) · [Paper](PAPER.md)
 
@@ -26,7 +20,7 @@ and traces where the inflation comes from. The number that survives is 0.91 on b
 Binary (baseline vs stress), 15 subjects, LOSO, mean over held-out subjects.
 
 <table width="100%">
-<tr><th align="left" width="28%">Model</th><th align="left" width="30%">Accuracy</th><th align="left" width="42%">F1 (macro)</th></tr>
+<tr><th align="left" width="26%">Model</th><th align="left">Accuracy</th><th align="left">F1 (macro)</th></tr>
 <tr><td>Random Forest</td><td>0.913</td><td>0.898</td></tr>
 <tr><td>XGBoost</td><td>0.903</td><td>0.873</td></tr>
 <tr><td>Logistic Regression</td><td>0.902</td><td>0.883</td></tr>
@@ -39,7 +33,7 @@ Binary (baseline vs stress), 15 subjects, LOSO, mean over held-out subjects.
 Key findings, one per check:
 
 <table width="100%">
-<tr><th align="left" width="28%">Check</th><th align="left" width="30%">Question</th><th align="left" width="42%">Result</th></tr>
+<tr><th align="left" width="26%">Check</th><th align="left">Question</th><th align="left">Result</th></tr>
 <tr><td>Subject leakage</td><td>Does same-person testing inflate scores?</td><td>3-class 0.66 to 0.79 (+13 pts)</td></tr>
 <tr><td>Motion confound</td><td>Is it just movement?</td><td>Drop all motion: 0.913 to 0.901</td></tr>
 <tr><td>Wrist vs chest</td><td>Is a cheap sensor enough?</td><td>0.893 vs 0.913 (2 pts lower)</td></tr>
@@ -48,26 +42,10 @@ Key findings, one per check:
 <tr><td>Personalization</td><td>Does a short enrollment help?</td><td>20 windows: ECE 0.146 to 0.069</td></tr>
 </table>
 
-## Threshold-free performance
-
-Discrimination without a threshold, from pooled out-of-fold LOSO probabilities (binary). AUROC sits near
-0.97 while accuracy at the 0.5 threshold is 0.91: the probabilities rank subjects well, so the threshold
-and the calibration, not the ranking, are what to tune.
-
-<table width="100%">
-<tr><th align="left" width="28%">Model</th><th align="left" width="30%">AUROC</th><th align="left" width="42%">AUPRC</th></tr>
-<tr><td>Random Forest</td><td>0.973</td><td>0.960</td></tr>
-<tr><td>XGBoost</td><td>0.975</td><td>0.960</td></tr>
-<tr><td>Logistic Regression</td><td>0.959</td><td>0.947</td></tr>
-<tr><td>LightGBM</td><td>0.965</td><td>0.946</td></tr>
-</table>
-
-- Random Forest at the Youden-J threshold (0.45): sensitivity 0.90, specificity 0.91, PPV 0.85, NPV 0.94.
-
 ## Models
 
 <table width="100%">
-<tr><th align="left" width="28%">Model</th><th align="left" width="30%">Type</th><th align="left" width="42%">Key settings</th></tr>
+<tr><th align="left" width="26%">Model</th><th align="left">Type</th><th align="left">Key settings</th></tr>
 <tr><td>Logistic Regression</td><td>Linear</td><td>C=1.0, L2, class-balanced</td></tr>
 <tr><td>Random Forest</td><td>Bagged trees</td><td>200 trees, depth 10, class-balanced</td></tr>
 <tr><td>XGBoost</td><td>Boosted trees</td><td>200 trees, depth 7, lr 0.1</td></tr>
@@ -75,13 +53,12 @@ and the calibration, not the ranking, are what to tune.
 <tr><td>1D-CNN</td><td>Deep net on raw signal</td><td>Residual blocks, AdamW, early stopping</td></tr>
 </table>
 
-- Each model runs inside an impute (median), scale, classifier pipeline, fit per fold and seeded.
-- Hyperparameters are fixed defaults, justified by nested cross-validation (run make tuning): tuned and default accuracy agree within noise, so the benchmark ships the defaults.
+- Every model runs inside an impute (median) to scale to classifier pipeline, fit per fold, seeded.
 
 ## Features (58)
 
 <table width="100%">
-<tr><th align="left" width="28%">Group</th><th align="left" width="30%">Count</th><th align="left" width="42%">Examples</th></tr>
+<tr><th align="left" width="26%">Group</th><th align="left">Count</th><th align="left">Examples</th></tr>
 <tr><td>HRV time domain</td><td>12</td><td>MeanNN, SDNN, RMSSD, pNN50</td></tr>
 <tr><td>HRV frequency</td><td>8</td><td>LF/HF power, LF/HF ratio</td></tr>
 <tr><td>HRV nonlinear</td><td>10</td><td>SampEn, DFA, SD1/SD2, CSI</td></tr>
@@ -92,58 +69,34 @@ and the calibration, not the ranking, are what to tune.
 
 ## Graphs & charts
 
-<table width="100%">
+<table>
 <tr>
-<td align="center" width="33%"><img src="outputs/figures/binary_model_comparison.png" width="280" alt="Model comparison"><br>Model comparison (LOSO)</td>
-<td align="center" width="33%"><img src="outputs/figures/binary_optimism_gap.png" width="280" alt="Optimism gap"><br>Optimism gap (leakage)</td>
-<td align="center" width="33%"><img src="outputs/figures/ablation.png" width="280" alt="Ablation"><br>Feature ablation</td>
+<td align="center"><img src="outputs/figures/binary_model_comparison.png" width="280" alt="Model comparison"><br>Model comparison (LOSO)</td>
+<td align="center"><img src="outputs/figures/binary_optimism_gap.png" width="280" alt="Optimism gap"><br>Optimism gap (leakage)</td>
+<td align="center"><img src="outputs/figures/ablation.png" width="280" alt="Ablation"><br>Feature ablation</td>
 </tr>
 <tr>
-<td align="center" width="33%"><img src="outputs/figures/chest_vs_wrist.png" width="280" alt="Wrist vs chest"><br>Wrist vs chest</td>
-<td align="center" width="33%"><img src="outputs/figures/cross_dataset.png" width="280" alt="Cross-dataset"><br>Cross-dataset transfer</td>
-<td align="center" width="33%"><img src="outputs/figures/calibration_reliability.png" width="280" alt="Reliability"><br>Calibration reliability</td>
+<td align="center"><img src="outputs/figures/chest_vs_wrist.png" width="280" alt="Wrist vs chest"><br>Wrist vs chest</td>
+<td align="center"><img src="outputs/figures/cross_dataset.png" width="280" alt="Cross-dataset"><br>Cross-dataset transfer</td>
+<td align="center"><img src="outputs/figures/calibration_reliability.png" width="280" alt="Reliability"><br>Calibration reliability</td>
 </tr>
 <tr>
-<td align="center" width="33%"><img src="outputs/figures/personalization.png" width="280" alt="Personalization"><br>Few-shot personalization</td>
-<td align="center" width="33%"><img src="outputs/figures/shap_beeswarm.png" width="280" alt="SHAP"><br>Top features (SHAP)</td>
-<td align="center" width="33%"><img src="outputs/figures/binary_confusion.png" width="280" alt="Confusion"><br>Confusion matrix</td>
+<td align="center"><img src="outputs/figures/personalization.png" width="280" alt="Personalization"><br>Few-shot personalization</td>
+<td align="center"><img src="outputs/figures/shap_beeswarm.png" width="280" alt="SHAP"><br>Top features (SHAP)</td>
+<td align="center"><img src="outputs/figures/binary_confusion.png" width="280" alt="Confusion"><br>Confusion matrix</td>
 </tr>
 </table>
 
 ## Tech stack
 
 <table width="100%">
-<tr><th align="left" width="28%">Area</th><th align="left" width="72%">Tools</th></tr>
+<tr><th align="left" width="26%">Area</th><th align="left">Tools</th></tr>
 <tr><td>Modelling</td><td>scikit-learn, XGBoost, LightGBM, PyTorch</td></tr>
 <tr><td>Signal processing</td><td>NeuroKit2, SciPy</td></tr>
 <tr><td>Explainability</td><td>SHAP</td></tr>
 <tr><td>Dashboard</td><td>React, TypeScript, ONNX Runtime Web</td></tr>
 <tr><td>Tooling</td><td>GitHub Actions, ruff, mypy, pytest</td></tr>
 </table>
-
-## Reproduce
-
-No download, synthetic signals, runs in about a minute:
-
-```bash
-make install-dev
-make demo
-```
-
-make install-dev installs the exact pinned versions the results were produced with (requirements.lock),
-so a clone reproduces them without version drift. The shipped model is coupled to scikit-learn 1.6.1.
-
-Full benchmark on real data (downloads WESAD, about 2 GB, research-only agreement):
-
-```bash
-make wesad
-make reproduce
-```
-
-make reproduce regenerates every number and figure in this README and the paper. The pipeline is
-described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), and each result file records the exact commit
-that produced it (see [results/README.md](results/README.md)). Synthetic demo numbers are near-ceiling by
-design and must not be read as evidence; only the real WESAD run is meaningful.
 
 ## Limitations
 
@@ -165,21 +118,6 @@ design and must not be read as evidence; only the real WESAD run is meaningful.
 - Data minimization: collect and keep only what an analysis needs.
 - No surveillance: do not monitor or penalize people without informed consent.
 - Datasets keep their own licenses and are not redistributed here.
-
-## How to cite
-
-If you use CalmSense, please cite it (metadata in [CITATION.cff](CITATION.cff)):
-
-```bibtex
-@software{bose_calmsense_2026,
-  author  = {Bose, Urme},
-  title   = {CalmSense: Subject-Independent Stress Detection and Calibration on WESAD},
-  year    = {2026},
-  version = {1.0.0},
-  url     = {https://github.com/urme-b/CalmSense},
-  license = {MIT}
-}
-```
 
 ## License
 
