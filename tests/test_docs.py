@@ -43,3 +43,31 @@ def test_no_scaffold_numbered_notebook_series():
     assert not re.search(r"notebooks/0[1-8]_", README), (
         "README references the scaffold's numbered 01-08 notebook series"
     )
+
+
+def test_no_em_or_en_dashes_anywhere():
+    """The author's style bans em/en dashes in code, comments, and docs; guard the
+    whole tree so a stray dash cannot slip back in (an earlier pass missed several)."""
+    targets = (
+        sorted(ROOT.glob("src/**/*.py"))
+        + sorted(ROOT.glob("scripts/*.py"))
+        + sorted(ROOT.glob("tests/*.py"))
+        + sorted(ROOT.glob("frontend/src/**/*.ts"))
+        + sorted(ROOT.glob("frontend/src/**/*.tsx"))
+        + sorted(ROOT.glob("docs/*.md"))
+        + [
+            ROOT / "README.md",
+            ROOT / "PAPER.md",
+            ROOT / "MODEL_CARD.md",
+            ROOT / "CONTRIBUTING.md",
+            ROOT / "results" / "README.md",
+            ROOT / "data" / "raw" / "README.md",
+        ]
+    )
+    en_dash, em_dash = chr(0x2013), chr(0x2014)  # by codepoint, so this guard never flags itself
+    offenders = [
+        str(p.relative_to(ROOT))
+        for p in targets
+        if p.exists() and (en_dash in p.read_text() or em_dash in p.read_text())
+    ]
+    assert not offenders, f"em/en dash found in: {offenders}"
