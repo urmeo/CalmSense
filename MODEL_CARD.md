@@ -47,7 +47,7 @@ Operating point (Random Forest, Youden J threshold 0.45): sensitivity 0.90, spec
 
 Calibration on unseen subjects: ECE 0.070, cut to 0.025 by leakage-free isotonic recalibration; a 20-window per-subject enrollment reaches ECE 0.069 without retraining.
 
-Three-class (baseline, stress, amusement) accuracy is far lower at 0.66, close to the majority class, and amusement is the hardest class. The four feature models are a statistical tie (Friedman p = 0.81), so the family is reported rather than a single winner. The 1D-CNN on raw signal is a weak baseline at 0.718.
+Three-class (baseline, stress, amusement) accuracy is far lower at 0.66, close to the majority class, and amusement is the hardest class. The four feature models are a statistical tie (Friedman p = 0.81), so the family is reported rather than a single winner. The 1D-CNN on raw signal is a weak baseline (0.718 binary, 0.626 three-class).
 
 ## Ethical considerations
 
