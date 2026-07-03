@@ -13,6 +13,23 @@ def test_rmssd_constant_rr_is_zero():
     assert abs(features["MeanNN"] - 800.0) < 1e-6
 
 
+def test_frequency_features_nan_below_min_rr():
+    from src.features.hrv_frequency_domain import HRVFrequencyDomainExtractor
+
+    feats = HRVFrequencyDomainExtractor().extract_all(np.full(5, 800.0))  # < 30 required
+    assert all(np.isnan(v) for v in feats.values())
+
+
+def test_nonlinear_features_finite_with_enough_rr():
+    from src.features.hrv_nonlinear import HRVNonlinearExtractor
+
+    rng = np.random.RandomState(0)
+    rr = 800 + 30 * rng.randn(120)  # > 50 required, physiological variation
+    feats = HRVNonlinearExtractor().extract_all(rr)
+    for key in ("SD1", "SD2", "SampEn"):
+        assert np.isfinite(feats[key]), f"{key} should be finite on a well-formed RR series"
+
+
 def test_hrv_matches_known_sequence():
     rr = np.tile([800.0, 820.0], 30)  # alternating RR, 60 beats
     f = HRVTimeDomainExtractor().extract_all(rr)
