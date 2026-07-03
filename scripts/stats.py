@@ -19,9 +19,8 @@ from scripts.run_experiment import (
     loso_evaluate,
     prepare_task,
 )
+from src.config import SEED
 from src.utils import paired_effect_size, provenance
-
-SEED = 42
 
 
 def per_subject_acc(res) -> dict:
