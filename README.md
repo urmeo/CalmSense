@@ -1,5 +1,10 @@
 # CalmSense
 
+[![CI](https://github.com/urme-b/CalmSense/actions/workflows/ci.yml/badge.svg)](https://github.com/urme-b/CalmSense/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](pyproject.toml)
+[![Release](https://img.shields.io/github/v/tag/urme-b/CalmSense?label=release)](https://github.com/urme-b/CalmSense/releases)
+
 ### The accuracy you read is not the accuracy you get: leakage, motion, shift, and calibration
 
 Wearable stress detectors report accuracy in the high nineties. Most of that is an evaluation
@@ -42,6 +47,22 @@ Key findings, one per check:
 <tr><td>Calibration</td><td>Are the probabilities trustworthy?</td><td>ECE 0.070; isotonic map to 0.025</td></tr>
 <tr><td>Personalization</td><td>Does a short enrollment help?</td><td>20 windows: ECE 0.146 to 0.069</td></tr>
 </table>
+
+## Threshold-free performance
+
+Discrimination without a threshold, from pooled out-of-fold LOSO probabilities (binary). AUROC sits near
+0.97 while accuracy at the 0.5 threshold is 0.91: the probabilities rank subjects well, so the threshold
+and the calibration, not the ranking, are what to tune.
+
+<table width="100%">
+<tr><th align="left" width="28%">Model</th><th align="left" width="30%">AUROC</th><th align="left" width="42%">AUPRC</th></tr>
+<tr><td>Random Forest</td><td>0.973</td><td>0.960</td></tr>
+<tr><td>XGBoost</td><td>0.975</td><td>0.960</td></tr>
+<tr><td>Logistic Regression</td><td>0.959</td><td>0.947</td></tr>
+<tr><td>LightGBM</td><td>0.965</td><td>0.946</td></tr>
+</table>
+
+- Random Forest at the Youden-J threshold (0.45): sensitivity 0.90, specificity 0.91, PPV 0.85, NPV 0.94.
 
 ## Models
 
@@ -144,6 +165,21 @@ design and must not be read as evidence; only the real WESAD run is meaningful.
 - Data minimization: collect and keep only what an analysis needs.
 - No surveillance: do not monitor or penalize people without informed consent.
 - Datasets keep their own licenses and are not redistributed here.
+
+## How to cite
+
+If you use CalmSense, please cite it (metadata in [CITATION.cff](CITATION.cff)):
+
+```bibtex
+@software{bose_calmsense_2026,
+  author  = {Bose, Urme},
+  title   = {CalmSense: Subject-Independent Stress Detection and Calibration on WESAD},
+  year    = {2026},
+  version = {1.0.0},
+  url     = {https://github.com/urme-b/CalmSense},
+  license = {MIT}
+}
+```
 
 ## License
 
