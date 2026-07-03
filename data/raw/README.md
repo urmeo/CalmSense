@@ -62,7 +62,7 @@ Each S*.pkl is a pickle (load with encoding="latin1") containing:
 ## Verify integrity
 
 WESAD ships no official checksum, so the SHA-256 values below are computed from the official
-Uni-Siegen distribution as a reference. After extracting, verify your copy — save this block as
+Uni-Siegen distribution as a reference. After extracting, verify your copy, save this block as
 `data/raw/WESAD/SHA256SUMS` and run `cd data/raw/WESAD && shasum -a 256 -c SHA256SUMS` (a mismatch
 means re-download from the official source):
 

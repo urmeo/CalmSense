@@ -68,7 +68,7 @@ def run():
     )
     print(f"ONNX vs sklearn max probability error: {max_err:.6f}")
     assert max_err < 1e-4, "ONNX output diverges from the sklearn pipeline"
-    print("Match OK — the browser will reproduce the trained model exactly.")
+    print("Match OK: the browser will reproduce the trained model exactly.")
 
 
 if __name__ == "__main__":
