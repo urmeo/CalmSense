@@ -27,6 +27,7 @@ from scripts.run_experiment import (
     load_cached,
     prepare_task,
 )
+from src.config import SEED
 from src.utils import provenance
 
 GRIDS = {
@@ -126,7 +127,7 @@ def run(synthetic=False, inner_splits=3):
         from src.synthetic import features
 
         print("Using synthetic data (demo only).")
-        features_df, x_raw, _ = features(n_subjects=6, block_sec=150, seed=42)
+        features_df, x_raw, _ = features(n_subjects=6, block_sec=150, seed=SEED)
     else:
         cached = load_cached()
         if cached is None:
