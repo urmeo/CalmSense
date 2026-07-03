@@ -1,11 +1,17 @@
-"""The 1D-CNN learns a signal and generalizes to held-out data."""
+"""The 1D-CNN learns a signal and generalizes to held-out data.
+
+torch is an optional heavy dependency; if it is not installed these tests skip
+cleanly rather than erroring at collection (which would abort the whole run).
+"""
 
 import numpy as np
-
-from src.models.dl.cnn_1d import CNN1DClassifier
+import pytest
 
 
 def test_cnn_generalizes_to_held_out_split():
+    pytest.importorskip("torch")
+    from src.models.dl.cnn_1d import CNN1DClassifier
+
     rng = np.random.RandomState(0)
     n, c, length = 160, 5, 256
     X = rng.randn(n, c, length).astype("float32")
