@@ -4,7 +4,7 @@ import meta from '../model_meta.json';
 import { PredictionResponse } from '../types';
 
 // Serve the matching WASM from our own origin (public/ort) so the in-browser demo
-// has no runtime CDN dependency — it keeps working if jsdelivr is blocked or down.
+// has no runtime CDN dependency, so it keeps working if jsdelivr is blocked or down.
 ort.env.wasm.wasmPaths = `${import.meta.env.BASE_URL}ort/`;
 
 const NAMES: string[] = (meta as any).features;
@@ -27,7 +27,8 @@ async function getSession(): Promise<ort.InferenceSession> {
 
 // Build the standardized feature vector: provided finite value, else imputed median.
 // Non-finite inputs (NaN, ±Inf) are treated as missing, matching the training imputer.
-function vectorize(features: Record<string, number>): Float32Array {
+// Exported for unit testing (services/onnx.test.ts).
+export function vectorize(features: Record<string, number>): Float32Array {
   const vec = new Float32Array(NAMES.length);
   for (let i = 0; i < NAMES.length; i++) {
     const raw = features[NAMES[i]];

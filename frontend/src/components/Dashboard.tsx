@@ -169,7 +169,7 @@ const Dashboard: React.FC = () => {
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
         <p className="text-gray-500 dark:text-gray-400">
-          Subject-independent stress detection — real LOSO results
+          Subject-independent stress detection: real LOSO results
         </p>
       </div>
 
