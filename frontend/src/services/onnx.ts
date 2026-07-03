@@ -7,11 +7,31 @@ import { PredictionResponse } from '../types';
 // has no runtime CDN dependency, so it keeps working if jsdelivr is blocked or down.
 ort.env.wasm.wasmPaths = `${import.meta.env.BASE_URL}ort/`;
 
-const NAMES: string[] = (meta as any).features;
-const MEDIANS: number[] = (meta as any).medians;
-const MEAN: number[] = (meta as any).mean;
-const SCALE: number[] = (meta as any).scale;
-const CLASSES: string[] = (meta as any).classes;
+interface ModelMeta {
+  features: string[];
+  medians: number[];
+  mean: number[];
+  scale: number[];
+  classes: string[];
+}
+
+const MODEL_META = meta as ModelMeta;
+
+// The input vector is built by index, so a length mismatch would silently produce
+// NaN predictions. Fail loudly at load instead of shipping wrong probabilities.
+for (const key of ['medians', 'mean', 'scale'] as const) {
+  if (MODEL_META[key].length !== MODEL_META.features.length) {
+    throw new Error(
+      `model_meta.json is corrupt: ${key} has ${MODEL_META[key].length} values but features has ${MODEL_META.features.length}`
+    );
+  }
+}
+
+const NAMES = MODEL_META.features;
+const MEDIANS = MODEL_META.medians;
+const MEAN = MODEL_META.mean;
+const SCALE = MODEL_META.scale;
+const CLASSES = MODEL_META.classes;
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
