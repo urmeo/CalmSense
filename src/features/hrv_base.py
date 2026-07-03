@@ -3,7 +3,7 @@
 The three HRV extractors (time-domain, frequency-domain, nonlinear) all begin
 from the same RR-interval series and reject it the same way: drop non-finite
 values, require a minimum count, and clip to a plausible physiological range.
-That guard lives here so the three stay in lockstep — changing the accepted RR
+That guard lives here so the three stay in lockstep: changing the accepted RR
 range in one place changes it everywhere.
 """
 
