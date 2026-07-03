@@ -7,7 +7,6 @@ export interface PredictionResponse {
   confidence: number;
   model_used: string;
   inference_time_ms: number;
-  explanation?: Record<string, any>;
   timestamp: string;
 }
 
