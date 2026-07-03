@@ -26,10 +26,9 @@ from scripts.run_experiment import (
     prepare_task,
 )
 from src import calibration as cal
-from src.config import FIGURES_DIR
+from src.config import FIGURES_DIR, SEED
 from src.utils import provenance
 
-SEED = 42
 K_VALUES = [5, 10, 20]
 METHOD = "isotonic"
 
