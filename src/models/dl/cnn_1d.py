@@ -104,6 +104,11 @@ class CNN1DClassifier(LoggerMixin):
         self.classes_ = np.unique(y)
         y_idx = np.searchsorted(self.classes_, y)
 
+        # Per-channel train stats
+        self._mean = X.mean(axis=(0, 2), keepdims=True)
+        self._std = X.std(axis=(0, 2), keepdims=True) + 1e-8
+        X = self._standardize(X)
+
         x_tr, x_val, y_tr, y_val = train_test_split(
             X,
             y_idx,
@@ -111,13 +116,6 @@ class CNN1DClassifier(LoggerMixin):
             stratify=y_idx,
             random_state=self.random_state,
         )
-
-        # Per-channel stats from the training split only, so the early-stopping
-        # validation set is normalized with statistics it did not contribute to.
-        self._mean = x_tr.mean(axis=(0, 2), keepdims=True)
-        self._std = x_tr.std(axis=(0, 2), keepdims=True) + 1e-8
-        x_tr = self._standardize(x_tr)
-        x_val = self._standardize(x_val)
 
         weights = compute_class_weight("balanced", classes=np.unique(y_idx), y=y_idx)
         criterion = nn.CrossEntropyLoss(
