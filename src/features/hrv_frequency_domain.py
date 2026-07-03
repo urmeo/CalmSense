@@ -4,13 +4,13 @@ import numpy as np
 from scipy import signal as scipy_signal
 from scipy.interpolate import interp1d
 
-from ..logging_config import LoggerMixin
+from .hrv_base import BaseHRVExtractor
 
 # numpy>=2 renamed trapz to trapezoid
 _trapz = getattr(np, "trapezoid", None) or getattr(np, "trapz")
 
 
-class HRVFrequencyDomainExtractor(LoggerMixin):
+class HRVFrequencyDomainExtractor(BaseHRVExtractor):
     # Task Force 1996 bands
     VLF_BAND = (0.0033, 0.04)
     LF_BAND = (0.04, 0.15)
@@ -34,22 +34,6 @@ class HRVFrequencyDomainExtractor(LoggerMixin):
             f"HRVFrequencyDomainExtractor initialized: "
             f"LF={lf_band}, HF={hf_band}, fs={interpolation_rate} Hz"
         )
-
-    def _validate_input(self, rr_intervals: np.ndarray) -> Optional[np.ndarray]:
-        rr = np.asarray(rr_intervals).flatten()
-        rr = rr[np.isfinite(rr)]
-
-        if len(rr) < self.min_rr_count:
-            self.logger.warning(f"Insufficient RR intervals: {len(rr)} < {self.min_rr_count}")
-            return None
-
-        rr = rr[(rr >= 200) & (rr <= 2500)]
-
-        if len(rr) < self.min_rr_count:
-            self.logger.warning("Too many invalid RR intervals removed")
-            return None
-
-        return rr
 
     def _interpolate_rr(
         self, rr: np.ndarray, method: str = "cubic"
