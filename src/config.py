@@ -10,16 +10,13 @@ SEED: int = 42
 DATA_DIR = PROJECT_ROOT / "data"
 RAW_DATA_DIR = DATA_DIR / "raw"
 PROCESSED_DATA_DIR = DATA_DIR / "processed"
-INTERIM_DATA_DIR = DATA_DIR / "interim"
 EXTERNAL_DATA_DIR = DATA_DIR / "external"
 WESAD_DIR = RAW_DATA_DIR / "WESAD"
 
 OUTPUT_DIR = PROJECT_ROOT / "outputs"
 MODELS_DIR = OUTPUT_DIR / "models"
 FIGURES_DIR = OUTPUT_DIR / "figures"
-REPORTS_DIR = OUTPUT_DIR / "reports"
 
-CONFIG_DIR = PROJECT_ROOT / "configs"
 LOGS_DIR = PROJECT_ROOT / "logs"
 
 # S1, S12 excluded
@@ -119,25 +116,3 @@ LOG_FORMAT: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 LOG_DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S"
 LOG_LEVEL: str = "INFO"
 LOG_FILE: Path = LOGS_DIR / "calmsense.log"
-
-
-def get_project_root() -> Path:
-    return PROJECT_ROOT
-
-
-def ensure_directories() -> None:
-    directories = [
-        DATA_DIR,
-        RAW_DATA_DIR,
-        PROCESSED_DATA_DIR,
-        INTERIM_DATA_DIR,
-        EXTERNAL_DATA_DIR,
-        OUTPUT_DIR,
-        MODELS_DIR,
-        FIGURES_DIR,
-        REPORTS_DIR,
-        LOGS_DIR,
-        CONFIG_DIR,
-    ]
-    for directory in directories:
-        directory.mkdir(parents=True, exist_ok=True)
