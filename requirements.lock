@@ -1,4 +1,4 @@
-# Fully-pinned resolution for reproducible installs (requirements.txt holds human-readable ranges).
+# Fully-pinned resolution for reproducible installs on Python 3.9 (requirements.txt holds human-readable ranges).
 aiohappyeyeballs==2.6.1
 aiohttp==3.13.5
 aiosignal==1.4.0
