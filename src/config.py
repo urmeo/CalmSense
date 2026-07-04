@@ -1,3 +1,5 @@
+"""Project configuration: paths, sampling rates, filter and feature parameters, seed, and log settings."""
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List
