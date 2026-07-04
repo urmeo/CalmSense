@@ -47,8 +47,7 @@ async function getSession(): Promise<ort.InferenceSession> {
 
 // Build the standardized feature vector: provided finite value, else imputed median.
 // Non-finite inputs (NaN, ±Inf) are treated as missing, matching the training imputer.
-// Exported for unit testing (services/onnx.test.ts).
-export function vectorize(features: Record<string, number>): Float32Array {
+function vectorize(features: Record<string, number>): Float32Array {
   const vec = new Float32Array(NAMES.length);
   for (let i = 0; i < NAMES.length; i++) {
     const raw = features[NAMES[i]];
