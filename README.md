@@ -21,8 +21,8 @@ DL: 1D-CNN, SHAP
 
 Binary (baseline vs stress), 15 subjects, LOSO, mean over held-out subjects.
 
-<table width="100%">
-<tr><th align="left" width="28%">Model</th><th align="left" width="30%">Accuracy</th><th align="left" width="42%">F1 (macro)</th></tr>
+<table width="780">
+<tr><th align="left" width="220">Model</th><th align="left" width="230">Accuracy</th><th align="left" width="330">F1 (macro)</th></tr>
 <tr><td>Random Forest</td><td>0.913</td><td>0.898</td></tr>
 <tr><td>XGBoost</td><td>0.903</td><td>0.873</td></tr>
 <tr><td>Logistic Regression</td><td>0.902</td><td>0.883</td></tr>
@@ -34,8 +34,8 @@ Binary (baseline vs stress), 15 subjects, LOSO, mean over held-out subjects.
 
 Key findings, one per check:
 
-<table width="100%">
-<tr><th align="left" width="28%">Check</th><th align="left" width="30%">Question</th><th align="left" width="42%">Result</th></tr>
+<table width="780">
+<tr><th align="left" width="220">Check</th><th align="left" width="230">Question</th><th align="left" width="330">Result</th></tr>
 <tr><td>Subject leakage</td><td>Does same-person testing inflate scores?</td><td>3-class 0.66 to 0.79 (+13 pts)</td></tr>
 <tr><td>Motion confound</td><td>Is it just movement?</td><td>Drop all motion: 0.913 to 0.901</td></tr>
 <tr><td>Wrist vs chest</td><td>Is a cheap sensor enough?</td><td>0.893 vs 0.913 (2 pts lower)</td></tr>
@@ -46,8 +46,8 @@ Key findings, one per check:
 
 ## Models
 
-<table width="100%">
-<tr><th align="left" width="28%">Model</th><th align="left" width="30%">Type</th><th align="left" width="42%">Key settings</th></tr>
+<table width="780">
+<tr><th align="left" width="220">Model</th><th align="left" width="230">Type</th><th align="left" width="330">Key settings</th></tr>
 <tr><td>Logistic Regression</td><td>Linear</td><td>C=1.0, L2, class-balanced</td></tr>
 <tr><td>Random Forest</td><td>Bagged trees</td><td>200 trees, depth 10, class-balanced</td></tr>
 <tr><td>XGBoost</td><td>Boosted trees</td><td>200 trees, depth 7, lr 0.1</td></tr>
@@ -59,8 +59,8 @@ Key findings, one per check:
 
 ## Features (58)
 
-<table width="100%">
-<tr><th align="left" width="28%">Group</th><th align="left" width="30%">Count</th><th align="left" width="42%">Examples</th></tr>
+<table width="780">
+<tr><th align="left" width="220">Group</th><th align="left" width="230">Count</th><th align="left" width="330">Examples</th></tr>
 <tr><td>HRV time domain</td><td>12</td><td>MeanNN, SDNN, RMSSD, pNN50</td></tr>
 <tr><td>HRV frequency</td><td>8</td><td>LF/HF power, LF/HF ratio</td></tr>
 <tr><td>HRV nonlinear</td><td>10</td><td>SampEn, DFA, SD1/SD2, CSI</td></tr>
@@ -71,28 +71,28 @@ Key findings, one per check:
 
 ## Graphs & charts
 
-<table width="100%">
+<table width="780">
 <tr>
-<td align="center" width="33%"><img src="outputs/figures/binary_model_comparison.png" width="280" alt="Model comparison"><br>Model comparison (LOSO)</td>
-<td align="center" width="33%"><img src="outputs/figures/binary_optimism_gap.png" width="280" alt="Optimism gap"><br>Optimism gap (leakage)</td>
-<td align="center" width="33%"><img src="outputs/figures/ablation.png" width="280" alt="Ablation"><br>Feature ablation</td>
+<td align="center" width="260"><img src="outputs/figures/binary_model_comparison.png" width="250" alt="Model comparison"><br>Model comparison (LOSO)</td>
+<td align="center" width="260"><img src="outputs/figures/binary_optimism_gap.png" width="250" alt="Optimism gap"><br>Optimism gap (leakage)</td>
+<td align="center" width="260"><img src="outputs/figures/ablation.png" width="250" alt="Ablation"><br>Feature ablation</td>
 </tr>
 <tr>
-<td align="center" width="33%"><img src="outputs/figures/chest_vs_wrist.png" width="280" alt="Wrist vs chest"><br>Wrist vs chest</td>
-<td align="center" width="33%"><img src="outputs/figures/cross_dataset.png" width="280" alt="Cross-dataset"><br>Cross-dataset transfer</td>
-<td align="center" width="33%"><img src="outputs/figures/calibration_reliability.png" width="280" alt="Reliability"><br>Calibration reliability</td>
+<td align="center" width="260"><img src="outputs/figures/chest_vs_wrist.png" width="250" alt="Wrist vs chest"><br>Wrist vs chest</td>
+<td align="center" width="260"><img src="outputs/figures/cross_dataset.png" width="250" alt="Cross-dataset"><br>Cross-dataset transfer</td>
+<td align="center" width="260"><img src="outputs/figures/calibration_reliability.png" width="250" alt="Reliability"><br>Calibration reliability</td>
 </tr>
 <tr>
-<td align="center" width="33%"><img src="outputs/figures/personalization.png" width="280" alt="Personalization"><br>Few-shot personalization</td>
-<td align="center" width="33%"><img src="outputs/figures/shap_beeswarm.png" width="280" alt="SHAP"><br>Top features (SHAP)</td>
-<td align="center" width="33%"><img src="outputs/figures/binary_confusion.png" width="280" alt="Confusion"><br>Confusion matrix</td>
+<td align="center" width="260"><img src="outputs/figures/personalization.png" width="250" alt="Personalization"><br>Few-shot personalization</td>
+<td align="center" width="260"><img src="outputs/figures/shap_beeswarm.png" width="250" alt="SHAP"><br>Top features (SHAP)</td>
+<td align="center" width="260"><img src="outputs/figures/binary_confusion.png" width="250" alt="Confusion"><br>Confusion matrix</td>
 </tr>
 </table>
 
 ## Tech stack
 
-<table width="100%">
-<tr><th align="left" width="28%">Area</th><th align="left" width="72%">Tools</th></tr>
+<table width="780">
+<tr><th align="left" width="220">Area</th><th align="left" width="560">Tools</th></tr>
 <tr><td>Modelling</td><td>scikit-learn, XGBoost, LightGBM, PyTorch</td></tr>
 <tr><td>Signal processing</td><td>NeuroKit2, SciPy</td></tr>
 <tr><td>Explainability</td><td>SHAP</td></tr>
