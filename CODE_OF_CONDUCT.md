@@ -22,7 +22,7 @@ attacks, and publishing others' private information without permission.
 
 Instances of abusive or otherwise unacceptable behavior may be reported to the maintainer (@urme-b on
 GitHub), including through a private GitHub security advisory. All complaints will be reviewed and
-investigated promptly and fairly.
+investigated promptly, fairly, and in confidence.
 
 This Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org),
 version 2.1.
