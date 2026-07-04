@@ -1,4 +1,4 @@
-// API Response Types
+// In-browser prediction and results types (no backend; ONNX runs client-side)
 
 export interface PredictionResponse {
   prediction: number;
