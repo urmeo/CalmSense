@@ -8,7 +8,7 @@ DL: 1D-CNN, SHAP
 
 [Live demo](https://urme-b.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urme-b/CalmSense/blob/main/notebooks/CalmSense.ipynb) · [Paper](PAPER.md)
 
-[![CalmSense dashboard](docs/demo.png)](https://urme-b.github.io/CalmSense/)
+[![CalmSense dashboard](docs/demo.gif)](https://urme-b.github.io/CalmSense/)
 
 ## What this is
 
