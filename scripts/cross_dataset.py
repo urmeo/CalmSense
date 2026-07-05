@@ -63,7 +63,7 @@ def run():
     if not cache_n.exists():
         noneeg.to_parquet(cache_n, index=False)
 
-    feature_cols = sorted(set(wesad.columns) & set(noneeg.columns) - set(META))
+    feature_cols = sorted((set(wesad.columns) & set(noneeg.columns)) - set(META))
     print(
         f"WESAD: {len(wesad)} windows | Non-EEG: {len(noneeg)} windows | shared features: {len(feature_cols)}"
     )
