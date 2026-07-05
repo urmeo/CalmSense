@@ -213,7 +213,7 @@ const App: React.FC = () => {
             {/* Footer */}
             <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 py-3">
               <div className="text-center text-sm text-gray-500 dark:text-gray-400">
-                CalmSense v1.0.0 | Multimodal Stress Detection System
+                CalmSense v0.1.0 | Multimodal Stress Detection System
               </div>
             </footer>
           </div>
