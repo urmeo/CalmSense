@@ -178,7 +178,7 @@ class RespirationFeatureExtractor(LoggerMixin):
         if len(breath_intervals) == 0:
             return 0.0
 
-        # Apnea = breath interval
+        # Apnea = a breath interval longer than apnea_threshold seconds
         apnea_threshold = 10.0
         n_apnea = np.sum(breath_intervals > apnea_threshold)
 

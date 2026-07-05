@@ -126,7 +126,7 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
         if len(freqs) == 0 or len(psd) == 0:
             return np.nan
 
-        mask = (freqs >= band[0]) & (freqs <= band[1])
+        mask = (freqs >= band[0]) & (freqs < band[1])
         if not np.any(mask):
             return 0.0
 
