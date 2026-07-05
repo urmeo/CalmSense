@@ -33,7 +33,7 @@ headline LOSO benchmark.
 | ----- | ----- |
 | Name | Non-EEG Dataset for Assessment of Neurological Status |
 | Authors | Birjandtalab et al. |
-| Source | PhysioNet (fetched with `wfdb` via `make data`) |
+| Source | PhysioNet (downloaded as a zip via `make data`; records read with `wfdb`) |
 | Role | Second corpus for cross-dataset transfer; a separate, confounded pair, illustrative, not conclusive (see README Limitations). |
 
 ## Shipped model

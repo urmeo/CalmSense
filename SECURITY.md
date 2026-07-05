@@ -33,6 +33,6 @@ nothing.
 
 ## Supply chain & secrets
 
-Dependencies are pinned (requirements.txt) and audited in CI with pip-audit. The full git history
+Dependency ranges are declared in requirements.txt with exact pins in requirements.lock, and audited in CI with pip-audit. The full git history
 (all refs) is scanned for committed secrets with [gitleaks](https://github.com/gitleaks/gitleaks),
 last run: **0 findings**.
