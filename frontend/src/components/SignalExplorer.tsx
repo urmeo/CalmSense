@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Plot from 'react-plotly.js';
 import { ZoomIn, ZoomOut, RefreshCw } from 'lucide-react';
 import realSignals from '../signals.json';
@@ -38,6 +38,7 @@ const SignalExplorer: React.FC = () => {
   const signalData = useMemo(() => (realSignals as any)[selectedSubject], [selectedSubject]);
   const duration = signalData.time[signalData.time.length - 1];
   const [xRange, setXRange] = useState<[number, number]>([0, Math.round(duration)]);
+  useEffect(() => setXRange([0, Math.round(duration)]), [selectedSubject, duration]);
 
   // Contiguous condition segments straight from the labelled samples
   const segments = useMemo(() => {
