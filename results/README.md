@@ -22,10 +22,10 @@ shipped-model lineage, see [../PROVENANCE.md](../PROVENANCE.md).
 
 ## Provenance & leakage safety
 
-Every JSON here carries a provenance block (git_sha, generated_at) recording exactly which commit
-produced it. calibration.json and personalization.json are stamped in this snapshot; the
-xgboost/lightgbm-dependent artifacts gain the stamp on the next `make reproduce` (these need OpenMP,
-`brew install libomp` on macOS).
+The stamped JSONs (calibration.json, personalization.json, threshold_metrics.json) carry a
+provenance block (git_sha, generated_at) recording exactly which commit produced them; the
+remaining xgboost/lightgbm-dependent artifacts gain the stamp on the next `make reproduce` (these
+need OpenMP, `brew install libomp` on macOS).
 
 Committing calibration.json and personalization.json is **leakage-free by construction**: the
 recalibration map is fit only on out-of-fold *training*-subject probabilities and never the held-out
