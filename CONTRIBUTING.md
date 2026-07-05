@@ -47,7 +47,7 @@ Then wire it into `scripts/cross_dataset.py` alongside WESAD and Non-EEG, and ad
 `scripts/download_data.py` (with a SHA-256, see `data/raw/README.md`). Keep the feature space
 *device-agnostic* (HRV/EDA/TEMP/ACC summaries), harmonize labels to the binary stress vs. non-stress
 contrast, and remember: a robust leave-one-dataset-out claim needs **≥3 corpora with matched stress
-constructs** (see PAPER §4.5).
+constructs** (see PAPER §IV.E, Cross-Dataset Generalization).
 
 ## Reporting bugs
 
