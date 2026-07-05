@@ -46,7 +46,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -e ".[dev]"
-          pip install pytest-cov
       - name: ONNX export + browser-parity gate
         # Re-export from the committed joblib and let export_onnx.py assert the ONNX output
         # matches the sklearn pipeline (<1e-4); tests/test_onnx.py then re-checks parity + labels.
