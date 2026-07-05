@@ -17,7 +17,7 @@ Affect Detection," ICMI 2018.
 
 ## Download
 
-WESAD (the primary dataset, needed for `make experiment`/`make reproduce`) is behind a one-time
+WESAD (the primary dataset, needed for `make reproduce`) is behind a one-time
 research agreement; the cross-dataset PhysioNet Non-EEG set downloads directly.
 
 ```bash
