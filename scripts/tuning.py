@@ -149,7 +149,8 @@ def run(synthetic=False, inner_splits=3):
         if name == "provenance":
             continue
         d = defaults.get(name)
-        print(f"{name:20s} {d if d is None else f'{d:.3f}':>8} {r['accuracy_mean']:>8.3f}")
+        d_str = "n/a" if d is None else f"{d:.3f}"
+        print(f"{name:20s} {d_str:>8} {r['accuracy_mean']:>8.3f}")
     print(f"\nWrote {RESULTS_DIR / 'tuning.json'}")
 
 
