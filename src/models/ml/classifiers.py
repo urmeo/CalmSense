@@ -1,11 +1,13 @@
 """Configured classifier factory.
 
 Every hyperparameter lives in ``HYPERPARAMS`` as plain data so a reader can audit
-the choices at a glance, rather than hunting through constructor calls. The values
-are not arbitrary: ``scripts/tuning.py`` runs nested grouped cross-validation
-(inner ``GridSearchCV`` selects params, outer LOSO scores) and writes
-``results/tuning.json``. Tuned and default LOSO accuracy agree within noise, so the
-benchmark ships these fixed defaults for reproducibility. Re-check with ``make tuning``.
+the choices at a glance, rather than hunting through constructor calls. A tuned
+subset (``scripts/tuning.py`` GRIDS: XGBoost max_depth, learning_rate and
+scale_pos_weight; LightGBM num_leaves, learning_rate and n_estimators; small grids
+for LR and RF) is selected by nested grouped cross-validation (inner ``GridSearchCV``,
+outer LOSO) and written to ``results/tuning.json``. The remaining values are
+conventional defaults held fixed for reproducibility; tuned and default LOSO accuracy
+agree within noise. Re-check with ``make tuning``.
 
 A flat registry keeps the family in one place; ``get_classifier("rf")`` is the only
 entry point callers need. Passing keyword arguments overrides the shipped defaults.
@@ -15,7 +17,7 @@ from typing import Any, Callable, Dict
 
 SEED = 42
 
-# Fixed benchmark hyperparameters, justified by nested-CV in scripts/tuning.py.
+# Fixed benchmark hyperparameters. scripts/tuning.py tunes a subset; the rest are defaults.
 # random_state and n_jobs are added by the builders below (they are wiring, not tuning).
 HYPERPARAMS: Dict[str, Dict[str, Any]] = {
     "lr": {

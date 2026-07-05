@@ -219,7 +219,8 @@ class FeatureExtractionPipeline(LoggerMixin):
 
         if self.feature_config.get("eda", True):
             for k, v in self.extractors["eda"].get_feature_descriptions().items():
-                descriptions[f"EDA_{k}"] = v
+                key = k if k.startswith("EDA_") else f"EDA_{k}"
+                descriptions[key] = v
 
         if self.feature_config.get("temperature", True):
             descriptions.update(self.extractors["temperature"].get_feature_descriptions())
