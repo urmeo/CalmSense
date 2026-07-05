@@ -26,3 +26,5 @@ def test_sample_k_balances_classes():
     pick = _sample_k(y_pool, 6, rng)
     assert {0, 1} <= set(y_pool[pick])
     assert len(pick) <= 6
+    counts = np.bincount(y_pool[pick], minlength=2)
+    assert counts[0] == counts[1] == 3
