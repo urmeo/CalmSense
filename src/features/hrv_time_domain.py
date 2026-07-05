@@ -69,7 +69,6 @@ class HRVTimeDomainExtractor(BaseHRVExtractor):
         return float(q75 - q25)
 
     def compute_hrvti(self, rr: np.ndarray, bin_width: float = 7.8125) -> float:
-
         rr_range = np.max(rr) - np.min(rr)
         if rr_range < bin_width:
             return np.nan

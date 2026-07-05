@@ -5,7 +5,7 @@ Stress blocks carry higher heart rate, more skin-conductance responses, faster
 breathing, and more motion, so the models learn a real (if easy) signal. This is
 for smoke tests and demos only, never for reported results.
 
-Statistical fidelity (important): the per-condition means above are well separated
+Statistical fidelity (important): the per-condition means below are well separated
 and each subject is drawn i.i.d. from the same distribution, so the synthetic task
 is close to linearly separable and has almost no between-subject shift. Two
 consequences the demo must NOT be read as evidence for: accuracy is near-ceiling,
