@@ -39,10 +39,9 @@ class AccelerometerFeatureExtractor(LoggerMixin):
         ax = np.asarray(acc_x).flatten()
         ay = np.asarray(acc_y).flatten()
         az = np.asarray(acc_z).flatten()
-        m = min(len(ax), len(ay), len(az))
-        ax, ay, az = ax[:m], ay[:m], az[:m]
-        good = np.isfinite(ax) & np.isfinite(ay) & np.isfinite(az)
-        magnitude = self.compute_magnitude(ax[good], ay[good], az[good])
+        n = min(ax.size, ay.size, az.size)
+        good = np.isfinite(ax[:n]) & np.isfinite(ay[:n]) & np.isfinite(az[:n])
+        magnitude = self.compute_magnitude(ax[:n][good], ay[:n][good], az[:n][good])
         return self.extract_from_magnitude(magnitude)
 
     def extract_from_magnitude(self, magnitude: np.ndarray) -> Dict[str, float]:
