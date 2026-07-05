@@ -162,6 +162,7 @@ const HistoryItem: React.FC<{
         </span>
         <button
           onClick={onDelete}
+          aria-label="Delete prediction"
           className="p-1 text-gray-400 hover:text-red-500 transition-colors"
         >
           <Trash2 className="w-4 h-4" />
@@ -333,6 +334,7 @@ const PredictionPanel: React.FC = () => {
                 </div>
                 <button
                   onClick={() => setFile(null)}
+                  aria-label="Remove selected file"
                   className="text-gray-400 hover:text-red-500"
                 >
                   <Trash2 className="w-4 h-4" />
