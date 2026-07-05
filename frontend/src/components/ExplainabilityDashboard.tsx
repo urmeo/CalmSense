@@ -6,13 +6,13 @@ import results from '../results.json';
 const prettify = (f: string) => f.replace(/_/g, ' ');
 
 // Real global feature importance: mean |SHAP| from the trained Random Forest
-const shap: { feature: string; mean_abs_shap: number }[] = (results as any).shap;
+const shap: { feature: string; mean_abs_shap: number }[] = (results as any).shap || [];
 const importance = shap
   .slice()
   .sort((a, b) => b.mean_abs_shap - a.mean_abs_shap)
   .slice(0, 12)
   .map((d) => ({ feature: prettify(d.feature), value: d.mean_abs_shap }));
-const maxImportance = Math.max(...importance.map((d) => d.value));
+const maxImportance = Math.max(...importance.map((d) => d.value), 0);
 
 const ExplainabilityDashboard: React.FC = () => {
   return (
@@ -88,12 +88,16 @@ const ExplainabilityDashboard: React.FC = () => {
           What the model relies on
         </h3>
         <div className="space-y-4 text-sm text-gray-700 dark:text-gray-300">
-          <p>
-            The strongest single contributor is <strong>{importance[0].feature}</strong>, a motion
-            feature. Autonomic biomarkers follow: heart-rate-interval features (HRV MedianNN /
-            MeanNN) and electrodermal activity (EDA SCR / SCL), which track the sympathetic arousal
-            expected under acute stress (Task Force, 1996).
-          </p>
+          {importance.length > 0 ? (
+            <p>
+              The strongest single contributor is <strong>{importance[0].feature}</strong>, a motion
+              feature. Autonomic biomarkers follow: heart-rate-interval features (HRV MedianNN /
+              MeanNN) and electrodermal activity (EDA SCR / SCL), which track the sympathetic arousal
+              expected under acute stress (Task Force, 1996).
+            </p>
+          ) : (
+            <p>Run the experiment to populate SHAP values.</p>
+          )}
           <div className="flex items-start gap-2 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
             <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5 shrink-0" />
             <p className="text-yellow-800 dark:text-yellow-300">
