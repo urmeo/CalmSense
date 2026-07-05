@@ -59,7 +59,7 @@ def run():
     Xs = ((Xf - mean) / scale).astype(np.float32)
     sess = ort.InferenceSession((FRONTEND / "public" / "model.onnx").read_bytes())
     out = sess.run(None, {"input": Xs})
-    proba = out[1]
+    proba = next(np.asarray(o) for o in out if np.asarray(o).ndim == 2)
 
     max_err = float(np.abs(np.asarray(proba) - ref).max())
     print(

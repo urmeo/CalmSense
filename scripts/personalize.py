@@ -95,7 +95,9 @@ def compute(X, y, groups, model="rf", k_values=K_VALUES):
         glob = _global_calibrator(factory, Xtr, ytr, gtr, METHOD)
 
         acc["uncalibrated"].append(_metrics(y_ev, raw_ev))
-        acc["global"].append(_metrics(y_ev, glob.transform(raw_ev) if glob else raw_ev))
+        acc["global"].append(
+            _metrics(y_ev, _apply_calibrator(glob, raw_ev, METHOD) if glob else raw_ev)
+        )
 
         for k in k_values:
             pick = _sample_k(y_s[pool], k, rng)
