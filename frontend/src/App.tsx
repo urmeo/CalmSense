@@ -77,6 +77,7 @@ const Sidebar: React.FC<{
           </div>
           <button
             onClick={onClose}
+            aria-label="Close navigation menu"
             className="lg:hidden text-white hover:text-gray-300"
           >
             <X className="w-6 h-6" />
@@ -182,7 +183,7 @@ const App: React.FC = () => {
 
   return (
     <Router basename={import.meta.env.BASE_URL}>
-      <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 ${darkMode ? 'dark' : ''}`}>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="flex h-screen overflow-hidden">
           {/* Sidebar */}
           <Sidebar
