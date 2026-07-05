@@ -1,9 +1,6 @@
 import pickle
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
-
-import numpy as np
-import pandas as pd
+from typing import Dict, List, Optional, Union
 
 from ..config import (
     VALID_SUBJECTS,
@@ -103,80 +100,6 @@ class WESADLoader(LoggerMixin):
         )
 
         return result
-
-    def load_all_subjects(self, signals: Optional[List[str]] = None) -> Dict[str, Dict]:
-        self.logger.info(f"Loading all {len(self.subjects)} subjects")
-
-        all_data = {}
-        failed = {}
-        for subj_id in self.subjects:
-            try:
-                all_data[subj_id] = self.load_subject(subj_id, signals=signals)
-            except FileNotFoundError as e:
-                failed[subj_id] = f"missing: {e}"
-                self.logger.warning(f"Missing {subj_id}: {e}")
-            except Exception as e:
-                failed[subj_id] = f"error: {e}"
-                self.logger.error(f"Failed to load {subj_id}: {e}")
-
-        self.logger.info(
-            f"Loaded {len(all_data)}/{len(self.subjects)} subjects"
-            + (f", {len(failed)} failed: {list(failed.keys())}" if failed else "")
-        )
-        return all_data
-
-    def get_labels_binary(self, labels: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        labels = np.asarray(labels).flatten()
-        mask = (labels == 1) | (labels == 2)
-        binary_labels = np.where(labels[mask] == 2, 1, 0)
-
-        self.logger.debug(
-            f"Binary labels: {np.sum(binary_labels == 0)} baseline, "
-            f"{np.sum(binary_labels == 1)} stress"
-        )
-
-        return binary_labels, mask
-
-    def get_labels_multiclass(
-        self, labels: np.ndarray
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        labels = np.asarray(labels).flatten()
-        mask = (labels == 1) | (labels == 2) | (labels == 3)
-        multiclass_labels = labels[mask] - 1  # shift to 0, 1,
-
-        return multiclass_labels, mask
-
-    def get_subject_info(self, subject_id: str) -> Dict:
-        quest_path = self.data_path / subject_id / f"{subject_id}_quest.csv"
-        readme_path = self.data_path / subject_id / f"{subject_id}_readme.txt"
-
-        info = {"subject_id": subject_id}
-
-        if quest_path.exists():
-            try:
-                info["questionnaire"] = pd.read_csv(quest_path)
-            except Exception as e:
-                self.logger.warning(f"Failed to read questionnaire: {e}")
-
-        if readme_path.exists():
-            try:
-                with open(readme_path, "r", encoding="utf-8") as f:
-                    info["notes"] = f.read()
-            except Exception as e:
-                self.logger.warning(f"Failed to read notes: {e}")
-
-        return info
-
-    def get_label_statistics(self, labels: np.ndarray) -> Dict[str, int]:
-        labels = np.asarray(labels).flatten()
-        stats = {}
-
-        for label_val, label_name in self.LABELS.items():
-            count = int(np.sum(labels == label_val))
-            if count > 0:
-                stats[label_name] = count
-
-        return stats
 
     def __repr__(self) -> str:
         return f"WESADLoader(path='{self.data_path}', subjects={len(self.subjects)})"

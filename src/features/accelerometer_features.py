@@ -32,23 +32,17 @@ class AccelerometerFeatureExtractor(LoggerMixin):
     def extract_all(
         self, acc_x: np.ndarray, acc_y: np.ndarray, acc_z: np.ndarray
     ) -> Dict[str, float]:
-        vx = self._validate_signal(acc_x)
-        vy = self._validate_signal(acc_y)
-        vz = self._validate_signal(acc_z)
-
-        if vx is None or vy is None or vz is None:
+        if acc_x is None or acc_y is None or acc_z is None:
             self.logger.warning("Invalid accelerometer data")
-            return {
-                "ACC_magnitude": np.nan,
-                "ACC_std": np.nan,
-                "ACC_zero_crossings": np.nan,
-                "ACC_energy": np.nan,
-                "ACC_peak_freq": np.nan,
-            }
+            return self.extract_from_magnitude(np.array([]))
 
-        acc_x, acc_y, acc_z = vx, vy, vz
-        min_len = min(len(acc_x), len(acc_y), len(acc_z))
-        magnitude = self.compute_magnitude(acc_x[:min_len], acc_y[:min_len], acc_z[:min_len])
+        ax = np.asarray(acc_x).flatten()
+        ay = np.asarray(acc_y).flatten()
+        az = np.asarray(acc_z).flatten()
+        m = min(len(ax), len(ay), len(az))
+        ax, ay, az = ax[:m], ay[:m], az[:m]
+        good = np.isfinite(ax) & np.isfinite(ay) & np.isfinite(az)
+        magnitude = self.compute_magnitude(ax[good], ay[good], az[good])
         return self.extract_from_magnitude(magnitude)
 
     def extract_from_magnitude(self, magnitude: np.ndarray) -> Dict[str, float]:
