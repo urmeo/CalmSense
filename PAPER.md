@@ -36,7 +36,7 @@ We use two public, de-identified datasets (Table I). WESAD [6] has 15 subjects w
 
 ### A. Signals and Features
 
-Signals are filtered, R-peaks detected with ectopic correction, and the electrodermal signal split into tonic and phasic parts. We use 60 s windows at 50% overlap, kept only if at least 90% of samples share one in-set label. Extraction yields 58 features (Table II) and never sees labels.
+Signals are filtered, R-peaks detected with ectopic correction, and the electrodermal signal split into tonic and phasic parts. We use 60 s windows at 50% overlap, kept only if at least 90% of samples share one in-set label. Extraction yields 58 features (Table II) and never sees labels; HRV features follow standard time and frequency-domain definitions [8].
 
 **TABLE II. Feature groups (58 total)**
 
@@ -188,7 +188,7 @@ LOSO is less calibrated than within-subject (per-subject Brier gap +0.066, paire
 
 ### H. Few-Shot Personalization
 
-A per-subject calibrator beats a global one: ECE falls from 0.146 to 0.108 (global) to 0.069 (20 windows), passing global by about 10 windows, with no retraining (Table X, Fig. 11).
+A per-subject calibrator beats a global one: ECE falls from 0.146 to 0.108 (global) to 0.069 (20 windows), passing global with as few as 5 windows, with no retraining (Table X, Fig. 11).
 
 **TABLE X. Per-subject personalization (binary random forest)**
 
