@@ -55,7 +55,7 @@ Key findings, one per check:
 <tr><td>1D-CNN</td><td>Deep net on raw signal</td><td>Residual blocks, AdamW, early stopping</td></tr>
 </table>
 
-- Every model runs inside an impute (median) to scale to classifier pipeline, fit per fold, seeded.
+- Every model runs inside a median-impute -> standardize -> classifier pipeline, fit per fold, seeded.
 
 ## Features (58)
 
