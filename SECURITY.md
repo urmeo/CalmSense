@@ -28,7 +28,7 @@ CalmSense is research software, not a medical device or production service.
 
 The dashboard has no server: it runs the exported ONNX model entirely in the browser
 (frontend/src/services/onnx.ts) and self-hosts the WASM runtime, so there is no server-side attack
-surface. The CSV picker parses client-side (frontend/src/services/api.ts, numeric-only) and uploads
+surface. The CSV picker parses client-side (frontend/src/services/csv.ts, numeric-only) and uploads
 nothing.
 
 ## Supply chain & secrets
