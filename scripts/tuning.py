@@ -146,6 +146,8 @@ def run(synthetic=False, inner_splits=3):
 
     print(f"\n{'Model':20s} {'default':>8s} {'tuned':>8s}")
     for name, r in tuned.items():
+        if name == "provenance":
+            continue
         d = defaults.get(name)
         print(f"{name:20s} {d if d is None else f'{d:.3f}':>8} {r['accuracy_mean']:>8.3f}")
     print(f"\nWrote {RESULTS_DIR / 'tuning.json'}")
