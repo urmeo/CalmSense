@@ -22,26 +22,27 @@ DL: 1D-CNN, SHAP
 Binary (baseline vs stress), 15 subjects, LOSO, mean over held-out subjects.
 
 <table width="780">
-<tr><th align="left" width="220">Model</th><th align="left" width="230">Accuracy</th><th align="left" width="330">F1 (macro)</th></tr>
-<tr><td>Random Forest</td><td>0.913</td><td>0.898</td></tr>
-<tr><td>XGBoost</td><td>0.903</td><td>0.873</td></tr>
-<tr><td>Logistic Regression</td><td>0.902</td><td>0.883</td></tr>
-<tr><td>LightGBM</td><td>0.894</td><td>0.860</td></tr>
-<tr><td>1D-CNN (raw signal)</td><td>0.718</td><td>0.648</td></tr>
+<tr><th align="left" width="180">Model</th><th align="left" width="120">Accuracy</th><th align="left" width="120">F1 (macro)</th><th align="left" width="180">AUROC</th><th align="left" width="180">AUPRC</th></tr>
+<tr><td>Random Forest</td><td>0.913</td><td>0.898</td><td>0.973</td><td>0.960</td></tr>
+<tr><td>XGBoost</td><td>0.903</td><td>0.873</td><td>0.975</td><td>0.960</td></tr>
+<tr><td>Logistic Regression</td><td>0.902</td><td>0.883</td><td>0.959</td><td>0.947</td></tr>
+<tr><td>LightGBM</td><td>0.894</td><td>0.860</td><td>0.965</td><td>0.946</td></tr>
+<tr><td>1D-CNN (raw signal)</td><td>0.718</td><td>0.648</td><td>n/a</td><td>n/a</td></tr>
 </table>
 
 - The 4 feature models are a statistical tie (Friedman p = 0.81). RF 95% CI: [0.860, 0.960].
+- RF operating point (Youden J): threshold 0.45 gives sensitivity 0.90, specificity 0.91, PPV 0.85, NPV 0.94.
 
 Key findings, one per check:
 
 <table width="780">
 <tr><th align="left" width="220">Check</th><th align="left" width="230">Question</th><th align="left" width="330">Result</th></tr>
-<tr><td>Subject leakage</td><td>Does same-person testing inflate scores?</td><td>3-class 0.66 to 0.79 (+13 pts)</td></tr>
+<tr><td>Subject leakage</td><td>Does same-person testing inflate scores?</td><td>3-class 0.66 to 0.79 (+13 pts); binary +5.7 pts</td></tr>
 <tr><td>Motion confound</td><td>Is it just movement?</td><td>Drop all motion: 0.913 to 0.901</td></tr>
-<tr><td>Wrist vs chest</td><td>Is a cheap sensor enough?</td><td>0.893 vs 0.913 (2 pts lower)</td></tr>
-<tr><td>Dataset shift</td><td>Does it transfer to another dataset?</td><td>Near chance (0.50 balanced)</td></tr>
+<tr><td>Wrist vs chest</td><td>Is a cheap sensor enough?</td><td>0.893 vs 0.913 same model; best wrist 0.906, within noise</td></tr>
+<tr><td>Dataset shift</td><td>Does it transfer to another dataset?</td><td>Near chance (0.57 and 0.50 balanced)</td></tr>
 <tr><td>Calibration</td><td>Are the probabilities trustworthy?</td><td>ECE 0.070; isotonic map to 0.025</td></tr>
-<tr><td>Personalization</td><td>Does a short enrollment help?</td><td>20 windows: ECE 0.146 to 0.069</td></tr>
+<tr><td>Personalization</td><td>Does a short enrollment help?</td><td>5 windows beats global; 20 windows ECE 0.146 to 0.069</td></tr>
 </table>
 
 ## Models
