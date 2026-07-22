@@ -1,5 +1,5 @@
 __version__ = "0.1.0"
-__author__ = "urmeo"
+__author__ = "Urme"
 
 from .config import (
     CONDITION_COLORS,
