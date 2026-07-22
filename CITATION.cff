@@ -4,8 +4,8 @@ type: software
 title: "CalmSense: Subject-Independent Stress Detection and Calibration on WESAD"
 version: 1.0.0
 date-released: 2026-07-03
-url: "https://github.com/urme-b/CalmSense"
-repository-code: "https://github.com/urme-b/CalmSense"
+url: "https://github.com/urmeo/CalmSense"
+repository-code: "https://github.com/urmeo/CalmSense"
 license: MIT
 authors:
   - family-names: "Bose"
@@ -35,7 +35,7 @@ preferred-citation:
     - family-names: "Bose"
       given-names: "Urme"
   year: 2026
-  url: "https://github.com/urme-b/CalmSense/blob/main/PAPER.md"
+  url: "https://github.com/urmeo/CalmSense/blob/main/PAPER.md"
 references:
   - type: article
     authors:

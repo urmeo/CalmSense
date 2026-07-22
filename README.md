@@ -6,9 +6,9 @@ ML: Logistic Regression, Random Forest, XGBoost, LightGBM
 
 DL: 1D-CNN, SHAP
 
-[Live demo](https://urme-b.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urme-b/CalmSense/blob/main/notebooks/CalmSense.ipynb) · [Paper](PAPER.md)
+[Live demo](https://urmeo.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urmeo/CalmSense/blob/main/notebooks/CalmSense.ipynb) · [Paper](PAPER.md)
 
-[![CalmSense dashboard](docs/demo.gif)](https://urme-b.github.io/CalmSense/)
+[![CalmSense dashboard](docs/demo.gif)](https://urmeo.github.io/CalmSense/)
 
 ## What this is
 
