@@ -12,7 +12,7 @@ snapshot; see [results/README.md](results/README.md) and results/provenance.json
 - **Output:** A calibrated probability of stress, plus a class label.
 - **Pipeline:** Median imputation, standardization, then the classifier, all fit inside each evaluation fold.
 - **Export:** Trained with scikit-learn 1.6.1, exported to ONNX (opset via skl2onnx 1.20.0), and run in the browser with ONNX Runtime Web 1.19.2. The exported model is checked for parity with the scikit-learn pipeline to within 1e-4.
-- **License:** MIT. **Version:** 1.0.0. **Contact:** github.com/urme-b/CalmSense.
+- **License:** MIT. **Version:** 1.0.0. **Contact:** github.com/urmeo/CalmSense.
 
 ## Intended use
 

@@ -213,7 +213,7 @@ const About: React.FC = () => {
       {/* Links */}
       <div className="flex flex-wrap justify-center gap-4">
         <a
-          href="https://github.com/urme-b/CalmSense"
+          href="https://github.com/urmeo/CalmSense"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center space-x-2 px-4 py-2 bg-gray-900 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors"

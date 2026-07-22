@@ -20,7 +20,7 @@ attacks, and publishing others' private information without permission.
 
 ## Enforcement
 
-Instances of abusive or otherwise unacceptable behavior may be reported to the maintainer (@urme-b on
+Instances of abusive or otherwise unacceptable behavior may be reported to the maintainer (@urmeo on
 GitHub), including through a private GitHub security advisory. All complaints will be reviewed and
 investigated promptly, fairly, and in confidence.
 
