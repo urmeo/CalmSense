@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please report security issues privately through GitHub's
-[security advisories](https://github.com/urme-b/CalmSense/security/advisories/new) rather than opening a
+[security advisories](https://github.com/urmeo/CalmSense/security/advisories/new) rather than opening a
 public issue. Include steps to reproduce and the affected version or commit. You can expect an
 acknowledgement within a few days.
 
