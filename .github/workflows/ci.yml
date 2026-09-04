@@ -74,9 +74,12 @@ jobs:
           pip install -r requirements.txt
           pip install pip-audit
       - name: Audit installed dependencies (blocking)
-        # Ignored IDs are all onnx untrusted-model-loading CVEs (fixed in onnx 1.21). We
-        # load only our own committed model, and onnx is version-locked to onnxruntime-web
-        # 1.19.2 for browser parity; revisit when bumping to onnx>=1.21. Any other CVE fails CI.
+        # Ignored IDs are all onnx crashes reachable only by parsing or converting an
+        # untrusted model (the last two are version_converter adapter bugs, fixed in
+        # onnx 1.22). We load only our own committed model and never call
+        # onnx.version_converter; onnx stays version-locked to onnxruntime-web 1.19.2
+        # for browser parity, so bumping means re-exporting and re-verifying
+        # frontend/public/model.onnx. Any other CVE fails CI.
         run: |
           pip-audit --desc \
             --ignore-vuln PYSEC-2026-104 \
@@ -84,7 +87,9 @@ jobs:
             --ignore-vuln CVE-2026-34446 \
             --ignore-vuln GHSA-q56x-g2fj-4rj6 \
             --ignore-vuln CVE-2026-27489 \
-            --ignore-vuln CVE-2026-34445
+            --ignore-vuln CVE-2026-34445 \
+            --ignore-vuln PYSEC-2026-2689 \
+            --ignore-vuln PYSEC-2026-3587
 
   secrets:
     name: Secret scan (gitleaks)
