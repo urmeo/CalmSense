@@ -1,14 +1,4 @@
-// In-browser prediction and results types (no backend; ONNX runs client-side)
-
-export interface PredictionResponse {
-  prediction: number;
-  class_name: string;
-  probabilities: Record<string, number>;
-  confidence: number;
-  model_used: string;
-  inference_time_ms: number;
-  timestamp: string;
-}
+// Results types (the dashboard renders precomputed JSON; there is no backend)
 
 // Calibration analysis (results.calibration, written by scripts/calibration.py)
 

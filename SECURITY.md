@@ -16,20 +16,18 @@ CalmSense is research software, not a medical device or production service.
   **only load .pkl files you downloaded from the official WESAD source or generated yourself.** See
   [data/raw/README.md](data/raw/README.md).
 - **Model deserialization (trust boundary).** The pipeline writes and reloads one model,
-  outputs/models/stress_classifier.joblib (scripts/run_experiment.py, scripts/export_onnx.py). joblib
+  outputs/models/stress_classifier.joblib (scripts/run_experiment.py). joblib
   uses pickle, so loading executes code: only load the model **this repo's own pipeline produced**. Its
   SHA-256 is pinned in
   [outputs/models/stress_classifier.joblib.sha256](outputs/models/stress_classifier.joblib.sha256);
   verify with shasum -a 256 -c outputs/models/stress_classifier.joblib.sha256, and never load a
-  third-party .joblib. The public dashboard loads no pickled model at all, it runs the exported ONNX
-  model in the browser.
+  third-party .joblib. The public dashboard loads no model at all, it renders committed JSON.
 
-## Client-side inference (no backend)
+## Static dashboard (no backend)
 
-The dashboard has no server: it runs the exported ONNX model entirely in the browser
-(frontend/src/services/onnx.ts) and self-hosts the WASM runtime, so there is no server-side attack
-surface. The CSV picker parses client-side (frontend/src/services/csv.ts, numeric-only) and uploads
-nothing.
+The dashboard has no server and runs no model: it renders the committed experiment output
+(frontend/src/results.json, frontend/src/signals.json), so there is no server-side attack
+surface and it accepts no user input or uploads.
 
 ## Supply chain & secrets
 

@@ -124,8 +124,6 @@ data/external/*
 *.pt
 *.pth
 *.ckpt
-*.onnx
-!frontend/public/model.onnx
 outputs/models/*
 !outputs/models/.gitkeep
 !outputs/models/stress_classifier.joblib

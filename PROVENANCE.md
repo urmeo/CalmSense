@@ -38,5 +38,5 @@ headline LOSO benchmark.
 
 ## Shipped model
 
-The dashboard runs a Random Forest (the best of Logistic Regression, Random Forest, XGBoost, LightGBM by LOSO accuracy) refit on all 869 WESAD binary windows and exported to ONNX at `frontend/public/model.onnx`, with a `< 1e-4` sklearn-parity check enforced in CI.
-It is a deployment model fit on all subjects for the browser demo; the reported performance is the separate LOSO evaluation (see README Results), and no pretrained third-party weights are used.
+The shipped model is a Random Forest (the best of Logistic Regression, Random Forest, XGBoost, LightGBM by LOSO accuracy) refit on all 869 WESAD binary windows, committed at `outputs/models/stress_classifier.joblib`.
+It is fit on all subjects; the reported performance is the separate LOSO evaluation (see README Results), and no pretrained third-party weights are used.

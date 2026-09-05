@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react
 import {
   LayoutDashboard,
   Activity,
-  Brain,
   FileSearch,
   BarChart3,
   Gauge,
@@ -18,7 +17,6 @@ import {
 // Components
 import Dashboard from './components/Dashboard';
 import SignalExplorer from './components/SignalExplorer';
-import PredictionPanel from './components/PredictionPanel';
 import ExplainabilityDashboard from './components/ExplainabilityDashboard';
 import ModelComparison from './components/ModelComparison';
 import CalibrationPanel from './components/CalibrationPanel';
@@ -33,7 +31,6 @@ const hasCalibration = Boolean((results as any).calibration);
 const navItems = [
   { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/signals', icon: Activity, label: 'Signal Explorer' },
-  { path: '/predict', icon: Brain, label: 'Prediction' },
   { path: '/explain', icon: FileSearch, label: 'Explainability' },
   { path: '/models', icon: BarChart3, label: 'Model Comparison' },
   ...(hasCalibration ? [{ path: '/calibration', icon: Gauge, label: 'Calibration' }] : []),
@@ -201,7 +198,6 @@ const App: React.FC = () => {
               <Routes>
                 <Route path="/" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
                 <Route path="/signals" element={<ErrorBoundary><SignalExplorer /></ErrorBoundary>} />
-                <Route path="/predict" element={<ErrorBoundary><PredictionPanel /></ErrorBoundary>} />
                 <Route path="/explain" element={<ErrorBoundary><ExplainabilityDashboard /></ErrorBoundary>} />
                 <Route path="/models" element={<ErrorBoundary><ModelComparison /></ErrorBoundary>} />
                 {hasCalibration && (

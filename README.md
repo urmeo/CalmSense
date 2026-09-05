@@ -15,7 +15,7 @@ DL: 1D-CNN, SHAP
 - Detects stress vs baseline from wearable signals: ECG, EDA (skin conductance), temperature, respiration, motion.
 - Scored Leave-One-Subject-Out (LOSO): train on 14 people, test on the 15th, rotate.
 - Shows where the usual high numbers come from: subject leakage, motion, dataset shift, calibration.
-- Runs in the browser (ONNX, no backend). make demo runs the full pipeline offline on synthetic signals.
+- Ships a static dashboard of the committed results (no backend). make demo runs the full pipeline offline on synthetic signals.
 
 ## Results
 
@@ -97,7 +97,7 @@ Key findings, one per check:
 <tr><td>Modelling</td><td>scikit-learn, XGBoost, LightGBM, PyTorch</td></tr>
 <tr><td>Signal processing</td><td>NeuroKit2, SciPy</td></tr>
 <tr><td>Explainability</td><td>SHAP</td></tr>
-<tr><td>Dashboard</td><td>React, TypeScript, ONNX Runtime Web</td></tr>
+<tr><td>Dashboard</td><td>React, TypeScript</td></tr>
 <tr><td>Tooling</td><td>GitHub Actions, ruff, mypy, pytest</td></tr>
 </table>
 

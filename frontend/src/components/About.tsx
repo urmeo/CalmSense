@@ -39,7 +39,7 @@ const About: React.FC = () => {
 
       {/* Badges */}
       <div className="flex flex-wrap justify-center gap-2">
-        {['Python 3.9+', 'PyTorch', 'React', 'ONNX', 'WESAD Dataset'].map((badge) => (
+        {['Python 3.9+', 'PyTorch', 'React', 'WESAD Dataset'].map((badge) => (
           <span
             key={badge}
             className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 rounded-full text-sm font-medium"
@@ -58,8 +58,7 @@ const About: React.FC = () => {
           CalmSense is a stress-detection benchmark that measures how much of the field's reported
           accuracy survives honest, subject-independent evaluation. Using the WESAD dataset, it runs a
           complete pipeline: signal preprocessing, feature extraction, and a leakage-free
-          Leave-One-Subject-Out comparison of classical models and a 1D-CNN, and exports the trained
-          model to run entirely in the browser via ONNX.
+          Leave-One-Subject-Out comparison of classical models and a 1D-CNN.
         </p>
         <p className="mt-4 text-gray-600 dark:text-gray-400 leading-relaxed">
           Every result uses <strong>Leave-One-Subject-Out</strong> cross-validation, so models are always tested
@@ -146,7 +145,7 @@ const About: React.FC = () => {
   SHAP interpretation  +  calibration & decision-curve analysis
       │
       ▼
-  ONNX export  ──▶  React dashboard (runs in the browser, no backend)`}
+  dashboard data export  ──▶  React dashboard (static, no backend)`}
           </pre>
         </div>
       </div>
@@ -227,7 +226,7 @@ const About: React.FC = () => {
       {/* Footer */}
       <div className="text-center text-gray-500 dark:text-gray-500 text-sm">
         <p>© 2026 CalmSense Project. Licensed under MIT License.</p>
-        <p className="mt-1">Built with React, TypeScript, Tailwind CSS, ONNX, and PyTorch.</p>
+        <p className="mt-1">Built with React, TypeScript, Tailwind CSS, and PyTorch.</p>
       </div>
     </div>
   );
