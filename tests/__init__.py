@@ -1,1 +1,1 @@
-"""Test suite: leakage-free methodology guards, feature and calibration checks, determinism, and ONNX parity."""
+"""Test suite: leakage-free methodology guards, feature and calibration checks, and determinism."""

@@ -46,10 +46,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -e ".[dev]"
-      - name: ONNX export + browser-parity gate
-        # Re-export from the committed joblib and let export_onnx.py assert the ONNX output
-        # matches the sklearn pipeline (<1e-4); tests/test_onnx.py then re-checks parity + labels.
-        run: python scripts/export_onnx.py
       - name: Run tests with coverage
         run: pytest tests/ -q --cov=src --cov-report=term-missing --cov-report=xml --cov-fail-under=60
       - name: Upload coverage report
@@ -74,22 +70,9 @@ jobs:
           pip install -r requirements.txt
           pip install pip-audit
       - name: Audit installed dependencies (blocking)
-        # Ignored IDs are all onnx crashes reachable only by parsing or converting an
-        # untrusted model (the last two are version_converter adapter bugs, fixed in
-        # onnx 1.22). We load only our own committed model and never call
-        # onnx.version_converter; onnx stays version-locked to onnxruntime-web 1.19.2
-        # for browser parity, so bumping means re-exporting and re-verifying
-        # frontend/public/model.onnx. Any other CVE fails CI.
-        run: |
-          pip-audit --desc \
-            --ignore-vuln PYSEC-2026-104 \
-            --ignore-vuln PYSEC-2026-103 \
-            --ignore-vuln CVE-2026-34446 \
-            --ignore-vuln GHSA-q56x-g2fj-4rj6 \
-            --ignore-vuln CVE-2026-27489 \
-            --ignore-vuln CVE-2026-34445 \
-            --ignore-vuln PYSEC-2026-2689 \
-            --ignore-vuln PYSEC-2026-3587
+        # No ignores: every advisory previously suppressed here was an onnx
+        # untrusted-model crash, and the ONNX stack is gone. Any CVE fails CI.
+        run: pip-audit --desc
 
   secrets:
     name: Secret scan (gitleaks)

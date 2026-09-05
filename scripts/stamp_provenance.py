@@ -28,9 +28,6 @@ KEY_PACKAGES = [
     "lightgbm",
     "torch",
     "shap",
-    "skl2onnx",
-    "onnx",
-    "onnxruntime",
 ]
 
 

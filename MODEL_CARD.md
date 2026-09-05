@@ -1,6 +1,6 @@
 # Model Card: CalmSense binary stress classifier
 
-This card describes the model shipped in this repository and served by the browser demo.
+This card describes the model shipped in this repository.
 It follows the model-card format (Mitchell et al., 2019). Numbers are the committed WESAD
 snapshot; see [results/README.md](results/README.md) and results/provenance.json for provenance.
 
@@ -11,12 +11,12 @@ snapshot; see [results/README.md](results/README.md) and results/provenance.json
 - **Inputs:** 58 features from ECG-derived HRV (time, frequency, nonlinear), electrodermal activity, skin temperature, respiration, and accelerometer motion.
 - **Output:** A calibrated probability of stress, plus a class label.
 - **Pipeline:** Median imputation, standardization, then the classifier, all fit inside each evaluation fold.
-- **Export:** Trained with scikit-learn 1.6.1, exported to ONNX (opset via skl2onnx 1.20.0), and run in the browser with ONNX Runtime Web 1.19.2. The exported model is checked for parity with the scikit-learn pipeline to within 1e-4.
+- **Artifact:** Trained with scikit-learn 1.6.1 and shipped as `outputs/models/stress_classifier.joblib`.
 - **License:** MIT. **Version:** 1.0.0. **Contact:** github.com/urmeo/CalmSense.
 
 ## Intended use
 
-- **Primary use:** A research benchmark for how much reported wearable-stress accuracy survives subject-independent evaluation, and a demonstration of calibrated, in-browser inference.
+- **Primary use:** A research benchmark for how much reported wearable-stress accuracy survives subject-independent evaluation.
 - **Users:** Researchers and engineers studying physiological stress detection, evaluation methodology, and probability calibration.
 - **Scope:** Educational and methodological. The value is the honest evaluation, not a deployable stress detector.
 
