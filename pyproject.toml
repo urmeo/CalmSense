@@ -8,7 +8,7 @@ version = "1.0.0"
 description = "Multimodal stress detection from physiological signals"
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.9"
+requires-python = ">=3.11"  # neurokit2 >=0.2.13 requires >=3.10; CI tests 3.11 and 3.12
 authors = [
     {name = "Urme"}
 ]
@@ -28,9 +28,8 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
 ]
@@ -39,12 +38,12 @@ dependencies = [
     # Scientific core
     "numpy>=1.24,<3.0",
     "pandas>=2.0,<3.0",
-    "scipy>=1.10,<1.15",  # neurokit2 0.2.7 uses scipy.signal.daub, removed in scipy 1.15
+    "scipy>=1.10",
     "pyarrow>=14.0",
     "scikit-learn==1.6.1",  # pinned: the saved model pickle is version-coupled
 
     # Biosignal processing
-    "neurokit2==0.2.7",
+    "neurokit2>=0.2.11",  # 0.2.11 replaced scipy.signal.daub (removed in scipy 1.15) with PyWavelets
     "wfdb>=4.1,<5.0",  # reads the PhysioNet Non-EEG dataset (WESAD ships as pickle, loaded separately)
 
     # Models
