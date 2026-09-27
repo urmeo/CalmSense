@@ -2,7 +2,7 @@
 
 ## Abstract
 
-Wearable devices infer stress from physiological signals, and reported accuracy often exceeds 95%. Much of it is an evaluation artifact: pooling overlapping windows from all participants and splitting at random puts the same person in train and test, so the model recognizes the individual, not the stress. We re-evaluate the task subject-independent (Leave-One-Subject-Out) across four models and a convolutional network, and separate four sources of optimism. Subject leakage inflates accuracy by 6 points (binary) and 13 (three-class); the honest values are 0.91 and 0.66. Motion is not the cause, since dropping all movement features costs one point. A leakage-free model does not transfer, falling to near chance. Probabilities are miscalibrated on new people; leakage-free recalibration cuts calibration error from 0.070 to 0.025, and a 20-window enrollment does better without retraining. The four feature models are statistically tied. Subject-independent evaluation and calibrated confidence, not headline accuracy, are the right targets.
+Wearable devices infer stress from physiological signals, and reported accuracy often exceeds 95%. Much of it is an evaluation artifact: pooling overlapping windows from all participants and splitting at random puts the same person in train and test, so the model recognizes the individual, not the stress. We re-evaluate the task subject-independent (Leave-One-Subject-Out) across four models and a convolutional network, and separate four sources of optimism. Subject leakage inflates accuracy by 6 points (binary) and 13 (three-class); the honest values are 0.91 and 0.66. Motion is not the cause, since dropping all movement features costs one point. The recorded transfer run is near chance, but mismatched slope units confound that comparison. Probabilities are miscalibrated on new people; leakage-free recalibration cuts calibration error from 0.070 to 0.025, and a 20-window enrollment does better without retraining. The four feature models are statistically tied. Subject-independent evaluation and calibrated confidence, not headline accuracy, are the right targets.
 
 **Index Terms:** data leakage, electrodermal activity, heart rate variability, leave-one-subject-out, machine learning, personalization, physiological signals, probability calibration, stress detection, wearable computing.
 
@@ -150,6 +150,8 @@ Wrist-only trails chest by 2 points (0.893 vs 0.913; best wrist 0.906), within n
 
 On a shared 18-feature binary space, within-dataset accuracy holds but transfer falls to near chance (Table VIII, Fig. 7). One confounded pair is illustrative only; a firm claim needs three matched corpora [2], [4], [5], [11].
 
+The committed transfer results also contain a feature-unit mismatch: `src/portable.py` fits EDA and temperature slopes against sample index, while WESAD uses 4 Hz and Non-EEG uses 8 Hz. An identical physical trend therefore gives slopes differing by a factor of two. Table VIII and Fig. 7 cannot isolate dataset shift until slope units are harmonized, both portable feature caches are rebuilt, and the transfer models are refit and evaluated. Corrected transfer scores are pending that rerun.
+
 **TABLE VIII. Cross-dataset transfer (balanced accuracy)**
 
 | | Within-dataset | Cross-dataset |
@@ -157,7 +159,7 @@ On a shared 18-feature binary space, within-dataset accuracy holds but transfer 
 | WESAD | 0.86 | → Non-EEG: **0.57** |
 | Non-EEG | 0.70 | → WESAD: **0.50** |
 
-<p align="center"><img src="outputs/figures/cross_dataset.png" width="520" alt="Cross-dataset"><br><em>Fig. 7. Within-dataset accuracy holds; transfer collapses.</em></p>
+<p align="center"><img src="outputs/figures/cross_dataset.png" width="520" alt="Cross-dataset"><br><em>Fig. 7. Recorded within- and cross-dataset scores; the slope-unit mismatch requires a rerun.</em></p>
 
 ### F. Interpretability
 
@@ -214,7 +216,7 @@ A per-subject calibrator beats a global one: ECE falls from 0.146 to 0.108 (glob
 
 ## VI. Conclusion
 
-Subject-independent evaluation deflates accuracy from the high nineties to 0.91 (binary) and 0.66 (three-class), and shows where the inflation comes from: subject leakage, a minor motion confound, lost transfer, and miscalibration on new people. Calibration is the layer usually omitted, and it has a cheap fix, since leakage-free recalibration and a short enrollment restore trustworthy confidence without retraining. Honest evaluation and calibrated confidence, not headline accuracy, should be the standard.
+Subject-independent evaluation deflates accuracy from the high nineties to 0.91 (binary) and 0.66 (three-class), and shows where the inflation comes from: subject leakage, a minor motion confound, a confounded transfer comparison, and miscalibration on new people. Calibration is the layer usually omitted, and it has a cheap fix, since leakage-free recalibration and a short enrollment restore trustworthy confidence without retraining. Honest evaluation and calibrated confidence, not headline accuracy, should be the standard.
 
 ## References
 

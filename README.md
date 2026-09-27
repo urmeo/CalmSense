@@ -40,7 +40,7 @@ Key findings, one per check:
 <tr><td>Subject leakage</td><td>Does same-person testing inflate scores?</td><td>3-class 0.66 to 0.79 (+13 pts); binary +5.7 pts</td></tr>
 <tr><td>Motion confound</td><td>Is it just movement?</td><td>Drop all motion: 0.913 to 0.901</td></tr>
 <tr><td>Wrist vs chest</td><td>Is a cheap sensor enough?</td><td>0.893 vs 0.913 same model; best wrist 0.906, within noise</td></tr>
-<tr><td>Dataset shift</td><td>Does it transfer to another dataset?</td><td>Near chance (0.57 and 0.50 balanced)</td></tr>
+<tr><td>Transfer check</td><td>Does it transfer to another dataset?</td><td>Recorded 0.57 and 0.50 balanced; slope-unit mismatch requires a rerun</td></tr>
 <tr><td>Calibration</td><td>Are the probabilities trustworthy?</td><td>ECE 0.070; isotonic map to 0.025</td></tr>
 <tr><td>Personalization</td><td>Does a short enrollment help?</td><td>5 windows beats global; 20 windows ECE 0.146 to 0.069</td></tr>
 </table>
@@ -106,7 +106,7 @@ Key findings, one per check:
 - 15 subjects, lab-induced stress. Underpowered, wide CIs. No clinical claim.
 - Ablation, calibration, and personalization are exploratory, not multiplicity-corrected.
 - The 1D-CNN is a small baseline, not a fair test of deep learning.
-- Cross-dataset uses one confounded pair. Illustrative, not conclusive.
+- Cross-dataset uses one confounded pair, and EDA/TEMP slopes are per sample despite different sampling rates (4 Hz vs 8 Hz). The reported transfer scores need recomputing with harmonized slope units; they do not isolate dataset shift.
 
 ## Future work
 

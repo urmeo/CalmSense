@@ -76,7 +76,7 @@ const ExplainabilityDashboard: React.FC = () => {
               paper_bgcolor: 'rgba(0,0,0,0)',
               plot_bgcolor: 'rgba(0,0,0,0)',
             }}
-            config={{ responsive: true, displayModeBar: false }}
+            config={{ responsive: true, showSendToCloud: false, displayModeBar: false }}
             style={{ width: '100%' }}
           />
         </div>
