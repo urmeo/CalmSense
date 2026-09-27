@@ -194,7 +194,7 @@ const SignalExplorer: React.FC = () => {
         <Plot
           data={buildTraces()}
           layout={layout}
-          config={{ responsive: true, displayModeBar: true, modeBarButtonsToRemove: ['lasso2d', 'select2d'] }}
+          config={{ responsive: true, showSendToCloud: false, displayModeBar: true, modeBarButtonsToRemove: ['lasso2d', 'select2d'] }}
           style={{ width: '100%' }}
           onRelayout={(e: any) => {
             if (e['xaxis.range[0]'] !== undefined) {

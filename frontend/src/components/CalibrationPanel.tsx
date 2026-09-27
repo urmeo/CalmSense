@@ -119,7 +119,7 @@ const CalibrationPanel: React.FC = () => {
               plot_bgcolor: TRANSPARENT,
               font: { color: AXIS_FONT },
             }}
-            config={{ responsive: true, displayModeBar: false }}
+            config={{ responsive: true, showSendToCloud: false, displayModeBar: false }}
             style={{ width: '100%' }}
           />
         </div>
@@ -149,7 +149,7 @@ const CalibrationPanel: React.FC = () => {
               plot_bgcolor: TRANSPARENT,
               font: { color: AXIS_FONT },
             }}
-            config={{ responsive: true, displayModeBar: false }}
+            config={{ responsive: true, showSendToCloud: false, displayModeBar: false }}
             style={{ width: '100%' }}
           />
         </div>
@@ -210,7 +210,7 @@ const CalibrationPanel: React.FC = () => {
             plot_bgcolor: TRANSPARENT,
             font: { color: AXIS_FONT },
           }}
-          config={{ responsive: true, displayModeBar: false }}
+          config={{ responsive: true, showSendToCloud: false, displayModeBar: false }}
           style={{ width: '100%' }}
         />
       </div>

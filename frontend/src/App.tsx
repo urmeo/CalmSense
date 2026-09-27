@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -16,13 +16,14 @@ import {
 
 // Components
 import Dashboard from './components/Dashboard';
-import SignalExplorer from './components/SignalExplorer';
-import ExplainabilityDashboard from './components/ExplainabilityDashboard';
 import ModelComparison from './components/ModelComparison';
-import CalibrationPanel from './components/CalibrationPanel';
 import About from './components/About';
 import ErrorBoundary from './components/ErrorBoundary';
 import results from './results.json';
+
+const SignalExplorer = lazy(() => import('./components/SignalExplorer'));
+const ExplainabilityDashboard = lazy(() => import('./components/ExplainabilityDashboard'));
+const CalibrationPanel = lazy(() => import('./components/CalibrationPanel'));
 
 // The calibration section is optional; only show it once the experiment has produced it.
 const hasCalibration = Boolean((results as any).calibration);
@@ -151,7 +152,7 @@ const Header: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) => {
         <div className="flex items-center space-x-4">
           <div className="hidden sm:flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-            <span>Model runs in-browser</span>
+            <span>Precomputed research results</span>
           </div>
         </div>
       </div>
@@ -195,16 +196,18 @@ const App: React.FC = () => {
             <Header onMenuClick={() => setSidebarOpen(true)} />
 
             <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-              <Routes>
-                <Route path="/" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
-                <Route path="/signals" element={<ErrorBoundary><SignalExplorer /></ErrorBoundary>} />
-                <Route path="/explain" element={<ErrorBoundary><ExplainabilityDashboard /></ErrorBoundary>} />
-                <Route path="/models" element={<ErrorBoundary><ModelComparison /></ErrorBoundary>} />
-                {hasCalibration && (
-                  <Route path="/calibration" element={<ErrorBoundary><CalibrationPanel /></ErrorBoundary>} />
-                )}
-                <Route path="/about" element={<ErrorBoundary><About /></ErrorBoundary>} />
-              </Routes>
+              <Suspense fallback={<p role="status" className="text-gray-600 dark:text-gray-300">Loading charts…</p>}>
+                <Routes>
+                  <Route path="/" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
+                  <Route path="/signals" element={<ErrorBoundary><SignalExplorer /></ErrorBoundary>} />
+                  <Route path="/explain" element={<ErrorBoundary><ExplainabilityDashboard /></ErrorBoundary>} />
+                  <Route path="/models" element={<ErrorBoundary><ModelComparison /></ErrorBoundary>} />
+                  {hasCalibration && (
+                    <Route path="/calibration" element={<ErrorBoundary><CalibrationPanel /></ErrorBoundary>} />
+                  )}
+                  <Route path="/about" element={<ErrorBoundary><About /></ErrorBoundary>} />
+                </Routes>
+              </Suspense>
             </main>
 
             {/* Footer */}
