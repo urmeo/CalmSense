@@ -1,9 +1,11 @@
 {
+  "feature_schema_version": 2,
+  "slope_time_unit": "second",
   "n_shared_features": 18,
   "within_wesad": {
-    "accuracy": 0.8734267427703267,
-    "f1_macro": 0.8494514478692596,
-    "balanced_accuracy": 0.8637080227665273
+    "accuracy": 0.8748761460805793,
+    "f1_macro": 0.851954818659015,
+    "balanced_accuracy": 0.8675536416010757
   },
   "within_noneeg": {
     "accuracy": 0.7198166147474223,
@@ -11,13 +13,17 @@
     "balanced_accuracy": 0.698948159778588
   },
   "wesad_to_noneeg": {
-    "accuracy": 0.6354810238305384,
-    "balanced_accuracy": 0.5731730845996221,
-    "f1_macro": 0.5693454438025572
+    "accuracy": 0.6345984112974404,
+    "balanced_accuracy": 0.5572990126939351,
+    "f1_macro": 0.5431095612873061
   },
   "noneeg_to_wesad": {
-    "accuracy": 0.5592635212888377,
-    "balanced_accuracy": 0.5003709413796701,
-    "f1_macro": 0.49872205579578194
+    "accuracy": 0.5420023014959724,
+    "balanced_accuracy": 0.4936766086684363,
+    "f1_macro": 0.49346514352665494
+  },
+  "provenance": {
+    "git_sha": "6ce5ff6582638fb30465cf79be84b7cd3ea4bdbf",
+    "generated_at": "2026-09-28T02:52:45.491594+00:00"
   }
 }

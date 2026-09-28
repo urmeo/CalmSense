@@ -136,14 +136,18 @@ class WindowedDataset(LoggerMixin):
     ) -> Tuple[pd.DataFrame, np.ndarray, np.ndarray]:
         subjects = subjects or self.loader.subjects or VALID_SUBJECTS
 
-        all_windows, all_raw, all_y = [], [], []
+        frames, all_raw, all_y = [], [], []
         for subject_id in subjects:
             windows, raws, ys = self._process_subject(subject_id)
-            all_windows.extend(windows)
+            if windows:
+                frames.append(self.features.extract_all_features(windows, show_progress=True))
+            del windows
             all_raw.extend(raws)
             all_y.extend(ys)
 
-        features_df = self.features.extract_all_features(all_windows, show_progress=True)
+        if not frames:
+            raise ValueError("No valid chest windows found for the requested subjects")
+        features_df = pd.concat(frames, ignore_index=True)
         features_df["label_name"] = features_df["label"].map(CONDITION_LABELS)
         x_raw = np.stack(all_raw) if all_raw else np.empty((0, len(CNN_CHANNELS), self.cnn_length))
 

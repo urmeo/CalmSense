@@ -41,17 +41,32 @@ def _stratified_split(y, frac, rng):
         n_eval = max(1, int(round(len(idx) * frac)))
         ev.extend(idx[:n_eval])
         pool.extend(idx[n_eval:])
-    return np.array(ev), np.array(pool)
+    return np.array(ev, dtype=int), np.array(pool, dtype=int)
 
 
 def _sample_k(y_pool, k, rng):
-    per = max(1, k // len(np.unique(y_pool)))
-    picks = []
-    for c in np.unique(y_pool):
-        idx = np.where(y_pool == c)[0]
+    """Use up to k available windows, balancing classes without exceeding the budget."""
+    if k < 0:
+        raise ValueError("Enrollment budget must be nonnegative")
+    target = min(k, len(y_pool))
+    if target == 0:
+        return np.array([], dtype=int)
+    buckets = []
+    classes, class_index = np.unique(y_pool, return_inverse=True)
+    for i in range(len(classes)):
+        idx = np.flatnonzero(class_index == i)
         rng.shuffle(idx)
-        picks.extend(idx[: min(per, len(idx))])
-    return np.array(picks)
+        buckets.append(idx)
+    counts = [min(target // len(buckets), len(idx)) for idx in buckets]
+    remaining = target - sum(counts)
+    while remaining:
+        for i, idx in enumerate(buckets):
+            if counts[i] < len(idx):
+                counts[i] += 1
+                remaining -= 1
+                if remaining == 0:
+                    break
+    return np.concatenate([idx[:count] for idx, count in zip(buckets, counts)])
 
 
 def _global_calibrator(factory, Xtr, ytr, gtr, method):
@@ -75,6 +90,7 @@ def compute(X, y, groups, model="rf", k_values=K_VALUES):
     logo = LeaveOneGroupOut()
     rng = np.random.RandomState(SEED)
     acc = {"uncalibrated": [], "global": [], **{k: [] for k in k_values}}
+    enrollment_counts = {k: [] for k in k_values}
 
     for train_idx, test_idx in logo.split(X, y, groups):
         Xtr, ytr, gtr = X[train_idx], y[train_idx], groups[train_idx]
@@ -101,6 +117,7 @@ def compute(X, y, groups, model="rf", k_values=K_VALUES):
 
         for k in k_values:
             pick = _sample_k(y_s[pool], k, rng)
+            enrollment_counts[k].append(len(pick))
             if len(np.unique(y_s[pool][pick])) < 2:
                 acc[k].append(_metrics(y_ev, raw_ev))
                 continue
@@ -119,6 +136,10 @@ def compute(X, y, groups, model="rf", k_values=K_VALUES):
         "uncalibrated": mean(acc["uncalibrated"]),
         "global": mean(acc["global"]),
         "fewshot": {str(k): mean(acc[k]) for k in k_values},
+        "enrollment_counts": {
+            str(k): {"min": min(counts), "max": max(counts)}
+            for k, counts in enrollment_counts.items()
+        },
     }
 
 
@@ -130,7 +151,7 @@ def _plot(out, path):
     plt.plot(
         ks, [out["fewshot"][str(k)]["ece"] for k in ks], "o-", color="#2ecc71", label="few-shot"
     )
-    plt.xlabel("Enrollment windows per subject")
+    plt.xlabel("Enrollment budget (windows/subject)")
     plt.ylabel("ECE (mean over subjects)")
     plt.title("Few-shot personalization closes the calibration gap")
     plt.legend()
@@ -140,8 +161,10 @@ def _plot(out, path):
 
 
 def run(synthetic=False, model="rf"):
-    RESULTS_DIR.mkdir(exist_ok=True)
-    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+    results_dir = RESULTS_DIR / "demo" if synthetic else RESULTS_DIR
+    figures_dir = FIGURES_DIR / "demo" if synthetic else FIGURES_DIR
+    results_dir.mkdir(parents=True, exist_ok=True)
+    figures_dir.mkdir(parents=True, exist_ok=True)
 
     if synthetic:
         from src.synthetic import features
@@ -158,9 +181,9 @@ def run(synthetic=False, model="rf"):
     out = compute(X, y, groups, model=model)
 
     out["provenance"] = provenance()
-    with open(RESULTS_DIR / "personalization.json", "w") as f:
+    with open(results_dir / "personalization.json", "w") as f:
         json.dump(out, f, indent=2)
-    _plot(out, FIGURES_DIR / "personalization.png")
+    _plot(out, figures_dir / "personalization.png")
 
     print(f"\n{'condition':18s} {'ECE':>7s} {'Brier':>7s}")
     print(
@@ -170,7 +193,7 @@ def run(synthetic=False, model="rf"):
     for k in out["k_values"]:
         f = out["fewshot"][str(k)]
         print(f"{'few-shot k=' + str(k):18s} {f['ece']:>7.3f} {f['brier']:>7.3f}")
-    print(f"\nWrote {RESULTS_DIR / 'personalization.json'}")
+    print(f"\nWrote {results_dir / 'personalization.json'}")
 
 
 if __name__ == "__main__":

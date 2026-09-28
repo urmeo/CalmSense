@@ -92,8 +92,8 @@ def compute(X, y, groups, inner_splits=3):
     return out
 
 
-def _defaults():
-    path = RESULTS_DIR / "metrics.json"
+def _defaults(results_dir):
+    path = results_dir / "metrics.json"
     if not path.exists():
         return {}
     with open(path) as f:
@@ -102,7 +102,7 @@ def _defaults():
 
 
 def _plot(tuned, defaults, path):
-    names = list(tuned)
+    names = [name for name in tuned if name != "provenance"]
     x = np.arange(len(names))
     plt.figure(figsize=(7, 4))
     plt.bar(x - 0.2, [defaults.get(n, 0) for n in names], 0.4, label="default", color="#95a5a6")
@@ -120,8 +120,10 @@ def _plot(tuned, defaults, path):
 
 
 def run(synthetic=False, inner_splits=3):
-    RESULTS_DIR.mkdir(exist_ok=True)
-    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+    results_dir = RESULTS_DIR / "demo" if synthetic else RESULTS_DIR
+    figures_dir = FIGURES_DIR / "demo" if synthetic else FIGURES_DIR
+    results_dir.mkdir(parents=True, exist_ok=True)
+    figures_dir.mkdir(parents=True, exist_ok=True)
 
     if synthetic:
         from src.synthetic import features
@@ -136,13 +138,13 @@ def run(synthetic=False, inner_splits=3):
 
     X, y, groups, _, _ = prepare_task(features_df, x_raw, [1, 2])
     tuned = compute(X, y, groups, inner_splits)
-    defaults = _defaults()
+    defaults = _defaults(results_dir)
 
     tuned["provenance"] = provenance()
-    with open(RESULTS_DIR / "tuning.json", "w") as f:
+    with open(results_dir / "tuning.json", "w") as f:
         json.dump(tuned, f, indent=2)
     if defaults:
-        _plot(tuned, defaults, FIGURES_DIR / "tuning.png")
+        _plot(tuned, defaults, figures_dir / "tuning.png")
 
     print(f"\n{'Model':20s} {'default':>8s} {'tuned':>8s}")
     for name, r in tuned.items():
@@ -151,7 +153,7 @@ def run(synthetic=False, inner_splits=3):
         d = defaults.get(name)
         d_str = "n/a" if d is None else f"{d:.3f}"
         print(f"{name:20s} {d_str:>8} {r['accuracy_mean']:>8.3f}")
-    print(f"\nWrote {RESULTS_DIR / 'tuning.json'}")
+    print(f"\nWrote {results_dir / 'tuning.json'}")
 
 
 if __name__ == "__main__":

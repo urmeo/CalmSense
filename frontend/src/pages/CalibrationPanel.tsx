@@ -12,6 +12,7 @@ const TRANSPARENT = 'rgba(0,0,0,0)';
 const AXIS_FONT = '#6B7280'; // gray-500: legible on both light and dark cards
 const COLORS = {
   within: '#E67E22',
+  matched: '#805AD5',
   loso: '#3182CE',
   recal: '#38A169',
   diagonal: '#9CA3AF',
@@ -31,19 +32,21 @@ const CalibrationPanel: React.FC = () => {
   const cal = (results as any).calibration as Calibration | undefined;
   if (!cal) return null;
 
-  const { loso, within_subject, recalibrated_isotonic, recalibrated_sigmoid, decision_curve } = cal;
+  const { loso, loso_matched, within_subject, recalibrated_isotonic, recalibrated_sigmoid, decision_curve } = cal;
   const dc = decision_curve;
 
   const evaluations = [
     { name: 'Within-subject', summary: within_subject, color: COLORS.within },
-    { name: 'LOSO', summary: loso, color: COLORS.loso },
-    { name: 'LOSO recalibrated', summary: recalibrated_isotonic, color: COLORS.recal },
+    { name: 'LOSO (matched)', summary: loso_matched, color: COLORS.matched },
+    { name: 'LOSO (all)', summary: loso, color: COLORS.loso },
+    { name: 'Recalibrated (all)', summary: recalibrated_isotonic, color: COLORS.recal },
   ];
   const rows = [
-    { key: 'Within-subject', s: within_subject },
-    { key: 'LOSO', s: loso },
-    { key: 'LOSO + isotonic', s: recalibrated_isotonic },
-    { key: 'LOSO + sigmoid', s: recalibrated_sigmoid },
+    { key: 'Within-subject (matched)', s: within_subject },
+    { key: 'LOSO (matched)', s: loso_matched },
+    { key: 'LOSO (all windows)', s: loso },
+    { key: 'LOSO + isotonic (all windows)', s: recalibrated_isotonic },
+    { key: 'LOSO + sigmoid (all windows)', s: recalibrated_sigmoid },
   ];
 
   return (
@@ -62,10 +65,10 @@ const CalibrationPanel: React.FC = () => {
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <SummaryCard icon={<Target className="w-6 h-6 text-blue-600" />} label="LOSO ECE" value={fmt(loso.ece)} />
+        <SummaryCard icon={<Target className="w-6 h-6 text-blue-600" />} label="LOSO ECE (all windows)" value={fmt(loso.ece)} />
         <SummaryCard
           icon={<AlertTriangle className="w-6 h-6 text-orange-500" />}
-          label="Calibration optimism (ECE)"
+          label="Calibration optimism (matched ECE)"
           value={signed(cal.calibration_optimism_gap_ece)}
         />
         <SummaryCard
@@ -77,10 +80,12 @@ const CalibrationPanel: React.FC = () => {
 
       {/* Optimism note */}
       <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-4 text-sm text-orange-800 dark:text-orange-200">
-        Within-subject validation reports an ECE of <strong>{fmt(within_subject.ece)}</strong>, but on
-        unseen subjects the same model is off by <strong>{fmt(loso.ece)}</strong>, a calibration
-        optimism gap of <strong>{signed(cal.calibration_optimism_gap_ece)}</strong>. A leak-free
-        isotonic recalibration brings LOSO ECE down to <strong>{fmt(recalibrated_isotonic.ece)}</strong>.
+        On the same non-overlapping window subset, within-subject ECE is{' '}
+        <strong>{fmt(within_subject.ece)}</strong> and matched LOSO ECE is{' '}
+        <strong>{fmt(loso_matched.ece)}</strong>, a calibration optimism gap of{' '}
+        <strong>{signed(cal.calibration_optimism_gap_ece)}</strong>. Across all windows, isotonic
+        recalibration reduces LOSO ECE from <strong>{fmt(loso.ece)}</strong> to{' '}
+        <strong>{fmt(recalibrated_isotonic.ece)}</strong>.
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -139,6 +144,7 @@ const CalibrationPanel: React.FC = () => {
             layout={{
               height: 380,
               margin: { l: 50, r: 20, t: 20, b: 50 },
+              xaxis: { automargin: true },
               yaxis: { title: 'ECE', rangemode: 'tozero' },
               paper_bgcolor: TRANSPARENT,
               plot_bgcolor: TRANSPARENT,
@@ -156,7 +162,7 @@ const CalibrationPanel: React.FC = () => {
           Decision-curve analysis
         </h3>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          Clinical net benefit across alert thresholds, versus alerting everyone or no one.
+          Illustrative net benefit across alert thresholds, versus alerting everyone or no one.
         </p>
         <Plot
           data={[

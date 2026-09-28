@@ -1,4 +1,4 @@
-"""Assemble every result file into the single JSON the dashboard reads."""
+"""Assemble the result sections used by the dashboard."""
 
 import json
 import sys
@@ -22,6 +22,7 @@ TASK_KEYS = [
     "best_model",
     "loso_accuracy",
     "loso_pooled_accuracy",
+    "loso_matched_accuracy",
     "within_subject_accuracy",
     "optimism_gap_pts",
 ]
@@ -54,20 +55,20 @@ def run():
     if shap:
         out["shap"] = shap[:12]
     for key, fname in [
-        ("stats", "stats.json"),
         ("wrist", "wrist.json"),
         ("cross_dataset", "cross_dataset.json"),
         ("calibration", "calibration.json"),
-        ("personalization", "personalization.json"),
-        ("tuning", "tuning.json"),
     ]:
         data = _load_json(fname)
         if data is not None:
+            if key == "wrist":
+                data = {"same_model_rf": data["same_model_rf"]}
+            elif key == "cross_dataset":
+                data = {"wesad_to_noneeg": data["wesad_to_noneeg"]}
+            else:
+                data.pop("gap_significance", None)
+                data.pop("provenance", None)
             out[key] = data
-    ablation = _load_csv("ablation.csv")
-    if ablation:
-        out["ablation"] = ablation
-
     if not FRONTEND.parent.exists():
         raise SystemExit(f"{FRONTEND.parent} missing")
     with open(FRONTEND, "w") as f:

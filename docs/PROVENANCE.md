@@ -12,14 +12,14 @@ Every headline result and the shipped classifier come from WESAD.
 | ----- | ----- |
 | Name | WESAD (Wearable Stress and Affect Detection) |
 | Authors | Schmidt, Reiss, Duerichen, Marberger, Van Laerhoven (Uni Siegen) |
-| Reference | Schmidt et al., ICMI 2018 (see `data/raw/README.md` for the BibTeX) |
+| Reference | Schmidt et al., ICMI 2018 (see [data/raw/README.md](../data/raw/README.md) for the BibTeX) |
 | Subjects used | S2 to S17 (15 subjects; S1 and S12 do not exist upstream) |
 | Source | UCI Machine Learning Repository, dataset 465 <https://archive.ics.uci.edu/dataset/465/wesad+wearable+stress+and+affect+detection> |
 | License / access | Research-only; behind a one-time research agreement. Not redistributed in this repository. |
 | Version | UCI distribution as of access; upstream ships no version tag or official checksum. |
 | Format | Per-subject `S*.pkl` (latin1 pickle): chest signals at 700 Hz (ACC/ECG/EMG/EDA/Temp/Resp), wrist signals (ACC 32 Hz, BVP 64 Hz, EDA/TEMP 4 Hz), labels at 700 Hz. |
 
-Download and layout instructions: `data/raw/README.md`. Because WESAD ships no
+Download and layout instructions: [data/raw/README.md](../data/raw/README.md). Because WESAD ships no
 official checksum, the SHA-256 reference values for each `S*.pkl`, computed from
 the official Uni-Siegen distribution, are listed there so a downloaded copy can be
 verified before use.
@@ -34,9 +34,13 @@ headline LOSO benchmark.
 | Name | Non-EEG Dataset for Assessment of Neurological Status |
 | Authors | Birjandtalab et al. |
 | Source | PhysioNet (downloaded as a zip via `make data`; records read with `wfdb`) |
-| Role | Second corpus for cross-dataset transfer; a separate, confounded pair, illustrative, not conclusive (see README Limitations). |
+| Role | Second corpus for cross-dataset transfer; a separate, confounded pair, illustrative, not conclusive (see [README Limitations](../README.md#limitations)). |
+
+The [transfer results](../results/cross_dataset.json) were rerun on all 15 WESAD and 20 Non-EEG
+subjects with version-2 portable caches and EDA/TEMP slopes per second. Corpus, protocol and label
+differences still confound the comparison; it does not isolate dataset shift.
 
 ## Shipped model
 
 The shipped model is a Random Forest (the best of Logistic Regression, Random Forest, XGBoost, LightGBM by LOSO accuracy) refit on all 869 WESAD binary windows, committed at `outputs/models/stress_classifier.joblib`.
-It is fit on all subjects; the reported performance is the separate LOSO evaluation (see README Results), and no pretrained third-party weights are used.
+It is fit on all subjects; the reported performance is the separate LOSO evaluation (see [README Results](../README.md#results)), and no pretrained third-party weights are used.

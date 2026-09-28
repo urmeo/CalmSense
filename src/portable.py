@@ -2,12 +2,11 @@
 
 The same statistics are computed for WESAD wrist signals and the PhysioNet
 Non-EEG dataset, so a model trained on one can be tested on the other. This is
-deliberately separate from the full 58-feature WESAD chest model served by the
-dashboard, cross-dataset transfer only works on features both devices
-share.
+deliberately separate from the full WESAD chest model: cross-dataset transfer
+only works on features both devices share.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -18,34 +17,40 @@ from .data.loader import WESADLoader
 WINDOW_SEC = 60.0
 OVERLAP = 0.5
 PURITY = 0.9
+PORTABLE_FEATURE_VERSION = 2
 
 
-def _stats(x: np.ndarray, prefix: str, keys: List[str]) -> Dict[str, float]:
-    x = np.asarray(x, dtype=float)
-    x = x[np.isfinite(x)]
+def _stats(
+    x: np.ndarray, prefix: str, keys: List[str], sampling_rate: float = 1.0
+) -> Dict[str, float]:
+    x = np.asarray(x, dtype=float).ravel()
+    finite = np.isfinite(x)
+    t = np.flatnonzero(finite) / sampling_rate
+    x = x[finite]
     out = {f"{prefix}_{k}": np.nan for k in keys}
     if len(x) < 2:
         return out
-    t = np.arange(len(x))
-    funcs = {
-        "mean": np.mean(x),
-        "std": np.std(x),
-        "min": np.min(x),
-        "max": np.max(x),
-        "range": np.ptp(x),
-        "slope": np.polyfit(t, x, 1)[0],
-        "energy": np.mean(x**2),
+    funcs: Dict[str, Callable[[np.ndarray], Any]] = {
+        "mean": np.mean,
+        "std": np.std,
+        "min": np.min,
+        "max": np.max,
+        "range": np.ptp,
+        "slope": lambda values: np.polyfit(t, values, 1)[0],
+        "energy": lambda values: np.mean(values**2),
     }
     for k in keys:
-        out[f"{prefix}_{k}"] = float(funcs[k])
+        out[f"{prefix}_{k}"] = float(funcs[k](x))
     return out
 
 
-def portable_features(eda, temp, acc_mag, hr) -> Dict[str, float]:
-    """18 device-agnostic features from one window (EDA 6, TEMP 5, ACC 3, HR 4)."""
+def portable_features(eda, temp, acc_mag, hr, *, eda_fs: float, temp_fs: float) -> Dict[str, float]:
+    """18 shared features, with EDA/TEMP slopes in signal units per second."""
+    if not all(np.isfinite(rate) and rate > 0 for rate in (eda_fs, temp_fs)):
+        raise ValueError("EDA and temperature sampling rates must be finite and positive")
     feats = {}
-    feats.update(_stats(eda, "EDA", ["mean", "std", "min", "max", "range", "slope"]))
-    feats.update(_stats(temp, "TEMP", ["mean", "std", "min", "max", "slope"]))
+    feats.update(_stats(eda, "EDA", ["mean", "std", "min", "max", "range", "slope"], eda_fs))
+    feats.update(_stats(temp, "TEMP", ["mean", "std", "min", "max", "slope"], temp_fs))
     feats.update(_stats(acc_mag, "ACC", ["mean", "std", "energy"]))
     feats.update(_stats(hr, "HR", ["mean", "std", "min", "max"]))
     return feats
@@ -96,7 +101,12 @@ def wesad_portable(subjects: Optional[List[str]] = None) -> pd.DataFrame:
                 a0, a1 = int(t * FS.WRIST_ACC), int((t + WINDOW_SEC) * FS.WRIST_ACC)
                 hr_win = beat_hr[(beat_t >= t) & (beat_t < t + WINDOW_SEC)]
                 row: Dict[str, Any] = portable_features(
-                    eda[e0:e1], temp[e0:e1], acc_mag[a0:a1], hr_win
+                    eda[e0:e1],
+                    temp[e0:e1],
+                    acc_mag[a0:a1],
+                    hr_win,
+                    eda_fs=FS.WRIST_EDA,
+                    temp_fs=FS.WRIST_TEMP,
                 )
                 row["subject"] = sid
                 row["label"] = 0 if lab == 1 else 1  # baseline=0, stress=1
