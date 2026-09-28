@@ -2,75 +2,42 @@
 
 ### A Machine Learning and Deep Learning Framework for Wearable Biosignal Analysis, Integrating 1D CNNs, Explainable AI, Probability Calibration, and Cross-Dataset Evaluation.
 
-ML: Logistic Regression, Random Forest, XGBoost, LightGBM
-
-DL: 1D-CNN, SHAP
-
 [Live demo](https://urmeo.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urmeo/CalmSense/blob/main/notebooks/CalmSense.ipynb)
 
 [![CalmSense dashboard](docs/demo.gif)](https://urmeo.github.io/CalmSense/)
 
 ## What this is
 
-- Detects stress vs baseline from wearable signals: ECG, EDA (skin conductance), temperature, respiration, motion.
-- Scored Leave-One-Subject-Out (LOSO): train on 14 people, test on the 15th, rotate.
-- Shows where the usual high numbers come from: subject leakage, motion, dataset shift, calibration.
-- Ships a static dashboard of the committed results (no backend). make demo runs the full pipeline offline on synthetic signals.
+WESAD stress-vs-baseline benchmark using ECG, EDA, temperature, respiration and motion.
+Leave-One-Subject-Out (LOSO): train on 14 subjects, test on the 15th, rotate.
+Static dashboard shows committed results; make demo runs offline on synthetic signals.
 
 ## Results
 
-Binary (baseline vs stress), 15 subjects, LOSO, mean over held-out subjects.
+Binary LOSO, means over 15 held-out subjects.
 
 <table width="780">
 <tr><th align="left" width="180">Model</th><th align="left" width="120">Accuracy</th><th align="left" width="120">F1 (macro)</th><th align="left" width="180">AUROC</th><th align="left" width="180">AUPRC</th></tr>
 <tr><td>Random Forest</td><td>0.913</td><td>0.898</td><td>0.973</td><td>0.960</td></tr>
-<tr><td>XGBoost</td><td>0.903</td><td>0.873</td><td>0.975</td><td>0.960</td></tr>
-<tr><td>Logistic Regression</td><td>0.902</td><td>0.883</td><td>0.959</td><td>0.947</td></tr>
-<tr><td>LightGBM</td><td>0.894</td><td>0.860</td><td>0.965</td><td>0.946</td></tr>
-<tr><td>1D-CNN (raw signal)</td><td>0.718</td><td>0.648</td><td>n/a</td><td>n/a</td></tr>
 </table>
 
-- The 4 feature models are a statistical tie (Friedman p = 0.81). RF 95% CI: [0.860, 0.960].
-- RF operating point (Youden J): threshold 0.45 gives sensitivity 0.90, specificity 0.91, PPV 0.85, NPV 0.94.
+No significant difference among feature models (Friedman p = 0.81); RF accuracy 95% CI: [0.860, 0.960].
+RF threshold (Youden J): 0.45 gives sensitivity 0.90, specificity 0.91, PPV 0.85, NPV 0.94.
 
-Key findings, one per check:
+- Leakage: same-person testing adds 13 points to 3-class accuracy (0.66 to 0.79); binary +5.7.
+- Motion: dropping motion features changes accuracy from 0.913 to 0.901.
+- Wrist: 0.893 vs chest 0.913 for the same model; best wrist 0.906, within noise.
+- Transfer: recorded balanced accuracies 0.57/0.50; slope-unit mismatch needs a rerun.
+- Calibration: isotonic recalibration lowers ECE from 0.070 to 0.025.
+- Personalization: five enrollment windows beat global; 20 lower ECE from 0.146 to 0.069.
 
-<table width="780">
-<tr><th align="left" width="220">Check</th><th align="left" width="230">Question</th><th align="left" width="330">Result</th></tr>
-<tr><td>Subject leakage</td><td>Does same-person testing inflate scores?</td><td>3-class 0.66 to 0.79 (+13 pts); binary +5.7 pts</td></tr>
-<tr><td>Motion confound</td><td>Is it just movement?</td><td>Drop all motion: 0.913 to 0.901</td></tr>
-<tr><td>Wrist vs chest</td><td>Is a cheap sensor enough?</td><td>0.893 vs 0.913 same model; best wrist 0.906, within noise</td></tr>
-<tr><td>Transfer check</td><td>Does it transfer to another dataset?</td><td>Recorded 0.57 and 0.50 balanced; slope-unit mismatch requires a rerun</td></tr>
-<tr><td>Calibration</td><td>Are the probabilities trustworthy?</td><td>ECE 0.070; isotonic map to 0.025</td></tr>
-<tr><td>Personalization</td><td>Does a short enrollment help?</td><td>5 windows beats global; 20 windows ECE 0.146 to 0.069</td></tr>
-</table>
+## Methods
 
-## Models
+58 features: HRV, EDA, temperature, respiration and motion. Logistic Regression, Random Forest, XGBoost and LightGBM use
+median imputation and scaling fit per fold. NeuroKit2/SciPy, SHAP, PyTorch and React/TypeScript
+support the pipeline and dashboard. [Model details](MODEL_CARD.md).
 
-<table width="780">
-<tr><th align="left" width="220">Model</th><th align="left" width="230">Type</th><th align="left" width="330">Key settings</th></tr>
-<tr><td>Logistic Regression</td><td>Linear</td><td>C=1.0, L2, class-balanced</td></tr>
-<tr><td>Random Forest</td><td>Bagged trees</td><td>200 trees, depth 10, class-balanced</td></tr>
-<tr><td>XGBoost</td><td>Boosted trees</td><td>200 trees, depth 7, lr 0.1</td></tr>
-<tr><td>LightGBM</td><td>Boosted trees</td><td>200 trees, 50 leaves, lr 0.1</td></tr>
-<tr><td>1D-CNN</td><td>Deep net on raw signal</td><td>Residual blocks, AdamW, early stopping</td></tr>
-</table>
-
-- Every model runs inside a median-impute -> standardize -> classifier pipeline, fit per fold, seeded.
-
-## Features (58)
-
-<table width="780">
-<tr><th align="left" width="220">Group</th><th align="left" width="230">Count</th><th align="left" width="330">Examples</th></tr>
-<tr><td>HRV time domain</td><td>12</td><td>MeanNN, SDNN, RMSSD, pNN50</td></tr>
-<tr><td>HRV frequency</td><td>8</td><td>LF/HF power, LF/HF ratio</td></tr>
-<tr><td>HRV nonlinear</td><td>10</td><td>SampEn, DFA, SD1/SD2, CSI</td></tr>
-<tr><td>EDA (skin conductance)</td><td>15</td><td>SCL level, SCR count, SCR amplitude</td></tr>
-<tr><td>Temperature + respiration</td><td>8</td><td>temp slope, respiration rate</td></tr>
-<tr><td>Accelerometer (motion)</td><td>5</td><td>magnitude mean, std, energy</td></tr>
-</table>
-
-## Graphs & charts
+## Charts
 
 <table width="780">
 <tr>
@@ -90,37 +57,18 @@ Key findings, one per check:
 </tr>
 </table>
 
-## Tech stack
-
-<table width="780">
-<tr><th align="left" width="220">Area</th><th align="left" width="560">Tools</th></tr>
-<tr><td>Modelling</td><td>scikit-learn, XGBoost, LightGBM, PyTorch</td></tr>
-<tr><td>Signal processing</td><td>NeuroKit2, SciPy</td></tr>
-<tr><td>Explainability</td><td>SHAP</td></tr>
-<tr><td>Dashboard</td><td>React, TypeScript</td></tr>
-<tr><td>Tooling</td><td>GitHub Actions, ruff, mypy, pytest</td></tr>
-</table>
-
 ## Limitations
 
-- 15 subjects, lab-induced stress. Underpowered, wide CIs. No clinical claim.
-- Ablation, calibration, and personalization are exploratory, not multiplicity-corrected.
-- The 1D-CNN is a small baseline, not a fair test of deep learning.
-- Cross-dataset uses one confounded pair, and EDA/TEMP slopes are per sample despite different sampling rates (4 Hz vs 8 Hz). The reported transfer scores need recomputing with harmonized slope units; they do not isolate dataset shift.
-
-## Future work
-
-- A third corpus (SWELL / AffectiveROAD) for leave-one-dataset-out generalization.
-- Real-world, non-lab stress data beyond the 15-subject benchmark.
-- Real-time streaming inference from a live wearable.
+- 15 lab subjects: wide confidence intervals, low power, no clinical claim.
+- Ablation, calibration and personalization are exploratory, without multiplicity correction; the raw-signal 1D-CNN is a small baseline.
+- Synthetic scores only exercise the pipeline; they are not evidence of performance on real subjects.
+- WESAD/PhysioNet Non-EEG transfer uses one confounded pair. EDA/TEMP slopes are per sample at different rates (4 Hz vs 8 Hz); scores require recomputation with harmonized units and do not isolate dataset shift. See [provenance](README.md).
 
 ## Ethics & data use
 
-- Physiological signals are sensitive personal data.
-- This is a research benchmark, not a product.
-- Data minimization: collect and keep only what an analysis needs.
-- No surveillance: do not monitor or penalize people without informed consent.
-- Datasets keep their own licenses and are not redistributed here.
+Research only. Physiological signals are sensitive personal data: minimize collection and retention;
+never monitor or penalize people without informed consent. Datasets retain their own
+licenses and are not redistributed.
 
 ## License
 
