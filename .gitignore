@@ -101,7 +101,6 @@ ipython_config.py
 
 # Raw data files (too large for git)
 data/raw/*
-!data/raw/.gitkeep
 !data/raw/README.md
 
 # Processed data
@@ -125,7 +124,6 @@ data/external/*
 *.pth
 *.ckpt
 outputs/models/*
-!outputs/models/.gitkeep
 !outputs/models/stress_classifier.joblib
 
 # =============================================================================
@@ -194,12 +192,10 @@ $RECYCLE.BIN/
 
 # Logs
 logs/*
-!logs/.gitkeep
 *.log
 
 # Figures: keep generated result PNGs
 outputs/figures/*
-!outputs/figures/.gitkeep
 !outputs/figures/*.png
 # Unreferenced figures (not shown in README/PAPER); make reproduce still generates them, not committed
 outputs/figures/binary_pca.png

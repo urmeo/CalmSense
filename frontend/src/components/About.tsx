@@ -5,7 +5,6 @@ import {
   Database,
   Cpu,
   Shield,
-  Users,
   ExternalLink,
 } from 'lucide-react';
 import results from '../results.json';
