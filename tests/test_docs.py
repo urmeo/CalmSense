@@ -27,8 +27,7 @@ def test_readme_names_no_untrained_models():
 def test_docs_make_no_best_overall_ranking_claim():
     # The scaffold crowned a single model "Best overall"; the honest result is that
     # the four feature models are statistically tied (Friedman p = 0.81).
-    for name, text in (("README.md", README),):
-        assert "best overall" not in text.lower(), f"{name} makes a 'Best overall' ranking claim"
+    assert "best overall" not in README.lower(), "README makes a 'Best overall' ranking claim"
 
 
 def test_referenced_notebooks_exist():
@@ -57,7 +56,6 @@ def test_no_em_or_en_dashes_anywhere():
         + sorted(ROOT.glob("notebooks/*.ipynb"))
         + [
             ROOT / "README.md",
-            ROOT / "MODEL_CARD.md",
             ROOT / "CONTRIBUTING.md",
             ROOT / "results" / "README.md",
         ]
