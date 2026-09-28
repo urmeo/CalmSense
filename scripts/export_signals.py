@@ -67,7 +67,7 @@ def run():
         }
         print(f"{sid}: {n} points ({n / OUT_FS:.0f}s real signal)")
 
-    out = PROJECT_ROOT / "frontend" / "src" / "signals.json"
+    out = PROJECT_ROOT / "frontend" / "src" / "data" / "signals.json"
     with open(out, "w") as f:
         json.dump(data, f)
     print(f"Wrote {out} ({out.stat().st_size // 1024} KB)")

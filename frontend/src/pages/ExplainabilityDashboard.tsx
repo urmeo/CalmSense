@@ -1,7 +1,7 @@
 import React from 'react';
-import Plot from 'react-plotly.js';
+import Plot from '../components/Plot';
 import { FileSearch, Info, AlertTriangle } from 'lucide-react';
-import results from '../results.json';
+import results from '../data/results.json';
 
 const prettify = (f: string) => f.replace(/_/g, ' ');
 
@@ -76,7 +76,7 @@ const ExplainabilityDashboard: React.FC = () => {
               paper_bgcolor: 'rgba(0,0,0,0)',
               plot_bgcolor: 'rgba(0,0,0,0)',
             }}
-            config={{ responsive: true, displayModeBar: false }}
+            config={{ responsive: true, showSendToCloud: false, displayModeBar: false }}
             style={{ width: '100%' }}
           />
         </div>
