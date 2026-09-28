@@ -54,6 +54,23 @@ def test_empty_enrollment_pool_can_index_labels():
     assert y[pool].size == 0
 
 
+def test_compute_reports_actual_enrollment_counts_below_budget():
+    from scripts.personalize import compute
+
+    # Non-overlapping windows and the evaluation half leave pools of 6, 8 and 10.
+    sizes = [24, 32, 40]
+    groups = np.repeat(["A", "B", "C"], sizes)
+    y = np.concatenate([np.repeat([0, 1], n // 2) for n in sizes])
+    rng = np.random.RandomState(3)
+    X = rng.normal(size=(len(y), 2))
+    output = compute(X, y, groups, model="lr", k_values=[5, 20])
+    assert output["n_subjects"] == 3
+    assert output["enrollment_counts"] == {
+        "5": {"min": 5, "max": 5},
+        "20": {"min": 6, "max": 10},
+    }
+
+
 def test_synthetic_run_preserves_recorded_results(tmp_path, monkeypatch):
     from scripts import personalize
     from src import synthetic
