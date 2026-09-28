@@ -58,7 +58,7 @@ Three-class (baseline, stress, amusement) accuracy is far lower at 0.66, close t
 ## Limitations and caveats
 
 - 15 lab subjects give wide confidence intervals and low power; no clinical claim is made.
-- The recorded transfer score is near chance (0.50 balanced accuracy), but mismatched EDA/TEMP slope units confound that comparison; see [the transfer limitation](PAPER.md#e-cross-dataset-generalization).
+- The recorded transfer score is near chance (0.50 balanced accuracy), but mismatched EDA/TEMP slope units confound that comparison; see [README limitations](README.md#limitations).
 - Ablation, calibration, and personalization are exploratory and not multiplicity-corrected.
 - Metrics other than the threshold-free AUROC and AUPRC are reported at a fixed threshold.
 - The synthetic demo data is near-separable by design; only the real WESAD run is meaningful.
@@ -67,4 +67,3 @@ Three-class (baseline, stress, amusement) accuracy is far lower at 0.66, close t
 
 - P. Schmidt et al., "Introducing WESAD, a Multimodal Dataset for Wearable Stress and Affect Detection," ICMI, 2018.
 - M. Mitchell et al., "Model Cards for Model Reporting," FAT*, 2019.
-- Full method and citations: [PAPER.md](PAPER.md).

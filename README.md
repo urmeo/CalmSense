@@ -1,8 +1,6 @@
 # CalmSense
 
-### The Accuracy You Read Is Not the Accuracy You Get: Leakage, Motion, Shift, and Calibration
-
-[Live demo](https://urmeo.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urmeo/CalmSense/blob/main/notebooks/CalmSense.ipynb) · [Paper](PAPER.md)
+[Live demo](https://urmeo.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urmeo/CalmSense/blob/main/notebooks/CalmSense.ipynb)
 
 [![CalmSense dashboard](docs/demo.gif)](https://urmeo.github.io/CalmSense/)
 
@@ -36,26 +34,6 @@ RF threshold (Youden J): 0.45 gives sensitivity 0.90, specificity 0.91, PPV 0.85
 58 features: HRV, EDA, temperature, respiration and motion. Logistic Regression, Random Forest, XGBoost and LightGBM use
 median imputation and scaling fit per fold. NeuroKit2/SciPy, SHAP, PyTorch and React/TypeScript
 support the pipeline and dashboard. [Model details](MODEL_CARD.md).
-
-## Charts
-
-<table width="780">
-<tr>
-<td align="center" width="260"><img src="outputs/figures/binary_model_comparison.png" width="250" alt="Model comparison"><br>Model comparison (LOSO)</td>
-<td align="center" width="260"><img src="outputs/figures/binary_optimism_gap.png" width="250" alt="Optimism gap"><br>Optimism gap (leakage)</td>
-<td align="center" width="260"><img src="outputs/figures/ablation.png" width="250" alt="Ablation"><br>Feature ablation</td>
-</tr>
-<tr>
-<td align="center" width="260"><img src="outputs/figures/chest_vs_wrist.png" width="250" alt="Wrist vs chest"><br>Wrist vs chest</td>
-<td align="center" width="260"><img src="outputs/figures/cross_dataset.png" width="250" alt="Cross-dataset"><br>Cross-dataset transfer</td>
-<td align="center" width="260"><img src="outputs/figures/calibration_reliability.png" width="250" alt="Reliability"><br>Calibration reliability</td>
-</tr>
-<tr>
-<td align="center" width="260"><img src="outputs/figures/personalization.png" width="250" alt="Personalization"><br>Few-shot personalization</td>
-<td align="center" width="260"><img src="outputs/figures/shap_beeswarm.png" width="250" alt="SHAP"><br>Top features (SHAP)</td>
-<td align="center" width="260"><img src="outputs/figures/binary_confusion.png" width="250" alt="Confusion"><br>Confusion matrix</td>
-</tr>
-</table>
 
 ## Limitations
 
