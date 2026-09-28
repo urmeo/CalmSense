@@ -30,13 +30,7 @@ class TemperatureFeatureExtractor(LoggerMixin):
         return signal
 
     def extract_all(self, temp: np.ndarray) -> Dict[str, float]:
-        features = {
-            "TEMP_mean": np.nan,
-            "TEMP_std": np.nan,
-            "TEMP_slope": np.nan,
-            "TEMP_min": np.nan,
-            "TEMP_max": np.nan,
-        }
+        features = dict.fromkeys(self.get_feature_descriptions(), np.nan)
 
         validated = self._validate_signal(temp)
         if validated is None:

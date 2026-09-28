@@ -72,16 +72,16 @@ class WindowedDataset(LoggerMixin):
         chest = data["chest"]
         labels = np.asarray(data["label"]).flatten()
 
-        ecg_filt = self.ecg.bandpass_filter(chest["ECG"].flatten())
+        ecg_filt = self.ecg.bandpass_filter(chest["ECG"])
         r_peaks = self.ecg.detect_r_peaks(ecg_filt)
 
-        eda_filt = self.eda.remove_artifacts(self.eda.lowpass_filter(chest["EDA"].flatten()))
+        eda_filt = self.eda.remove_artifacts(self.eda.lowpass_filter(chest["EDA"]))
         tonic, phasic = self.eda.decompose_eda(eda_filt)
         _, scr_features = self.eda.detect_scr_peaks(phasic)
         scr_idx = np.array([s["peak_idx"] for s in scr_features])
 
-        temp_filt = self.sig.process_temperature(chest["Temp"].flatten())
-        resp_filt = self.sig.process_respiration(chest["Resp"].flatten())
+        temp_filt = self.sig.process_temperature(chest["Temp"])
+        resp_filt = self.sig.process_respiration(chest["Resp"])
         acc_mag = np.sqrt(np.sum(np.asarray(chest["ACC"]) ** 2, axis=1))
 
         n = min(len(ecg_filt), len(labels))
