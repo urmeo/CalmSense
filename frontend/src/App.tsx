@@ -15,15 +15,15 @@ import {
 } from 'lucide-react';
 
 // Components
-import Dashboard from './components/Dashboard';
-import ModelComparison from './components/ModelComparison';
-import About from './components/About';
+import Dashboard from './pages/Dashboard';
+import ModelComparison from './pages/ModelComparison';
+import About from './pages/About';
 import ErrorBoundary from './components/ErrorBoundary';
-import results from './results.json';
+import results from './data/results.json';
 
-const SignalExplorer = lazy(() => import('./components/SignalExplorer'));
-const ExplainabilityDashboard = lazy(() => import('./components/ExplainabilityDashboard'));
-const CalibrationPanel = lazy(() => import('./components/CalibrationPanel'));
+const SignalExplorer = lazy(() => import('./pages/SignalExplorer'));
+const ExplainabilityDashboard = lazy(() => import('./pages/ExplainabilityDashboard'));
+const CalibrationPanel = lazy(() => import('./pages/CalibrationPanel'));
 
 // The calibration section is optional; only show it once the experiment has produced it.
 const hasCalibration = Boolean((results as any).calibration);

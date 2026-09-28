@@ -33,7 +33,7 @@ RF threshold (Youden J): 0.45 gives sensitivity 0.90, specificity 0.91, PPV 0.85
 
 58 features: HRV, EDA, temperature, respiration and motion. Logistic Regression, Random Forest, XGBoost and LightGBM use
 median imputation and scaling fit per fold. NeuroKit2/SciPy, SHAP, PyTorch and React/TypeScript
-support the pipeline and dashboard. [Model details](MODEL_CARD.md).
+support the pipeline and dashboard. [Model details](docs/MODEL_CARD.md).
 
 ## Limitations
 

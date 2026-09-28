@@ -1,7 +1,7 @@
 import React from 'react';
-import Plot from './Plot';
+import Plot from '../components/Plot';
 import { FileSearch, Info, AlertTriangle } from 'lucide-react';
-import results from '../results.json';
+import results from '../data/results.json';
 
 const prettify = (f: string) => f.replace(/_/g, ' ');
 
