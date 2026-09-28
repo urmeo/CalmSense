@@ -101,7 +101,6 @@ ipython_config.py
 
 # Raw data files (too large for git)
 data/raw/*
-!data/raw/.gitkeep
 !data/raw/README.md
 
 # Processed data
@@ -125,7 +124,6 @@ data/external/*
 *.pth
 *.ckpt
 outputs/models/*
-!outputs/models/.gitkeep
 !outputs/models/stress_classifier.joblib
 
 # =============================================================================
@@ -194,23 +192,13 @@ $RECYCLE.BIN/
 
 # Logs
 logs/*
-!logs/.gitkeep
 *.log
 
-# Figures: keep generated result PNGs
+# Generated figures
 outputs/figures/*
-!outputs/figures/.gitkeep
-!outputs/figures/*.png
-# Unreferenced figures (not shown in README/PAPER); make reproduce still generates them, not committed
-outputs/figures/binary_pca.png
-outputs/figures/multiclass_pca.png
-outputs/figures/multiclass_optimism_gap.png
-outputs/figures/multiclass_per_subject.png
-outputs/figures/calibration_gap.png
 
 # Demo (synthetic) outputs, never overwrite the committed real-WESAD results
 results/demo/
-outputs/figures/demo/
 outputs/models/demo/
 
 # Reports

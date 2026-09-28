@@ -13,7 +13,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 README = (ROOT / "README.md").read_text()
-PAPER = (ROOT / "PAPER.md").read_text()
 
 # Names that appear only in the scaffold: the project never trains these.
 PHANTOM_MODELS = ["Transformer", "BiLSTM", "CatBoost", "EfficientNet", "cross-modal attention"]
@@ -28,12 +27,11 @@ def test_readme_names_no_untrained_models():
 def test_docs_make_no_best_overall_ranking_claim():
     # The scaffold crowned a single model "Best overall"; the honest result is that
     # the four feature models are statistically tied (Friedman p = 0.81).
-    for name, text in (("README.md", README), ("PAPER.md", PAPER)):
-        assert "best overall" not in text.lower(), f"{name} makes a 'Best overall' ranking claim"
+    assert "best overall" not in README.lower(), "README makes a 'Best overall' ranking claim"
 
 
 def test_referenced_notebooks_exist():
-    refs = sorted(set(re.findall(r"notebooks/[\w./-]+\.ipynb", README + PAPER)))
+    refs = sorted(set(re.findall(r"notebooks/[\w./-]+\.ipynb", README)))
     missing = [ref for ref in refs if not (ROOT / ref).exists()]
     assert not missing, f"Docs reference notebooks that do not exist: {missing}"
 
@@ -58,9 +56,6 @@ def test_no_em_or_en_dashes_anywhere():
         + sorted(ROOT.glob("notebooks/*.ipynb"))
         + [
             ROOT / "README.md",
-            ROOT / "PAPER.md",
-            ROOT / "MODEL_CARD.md",
-            ROOT / "PROVENANCE.md",
             ROOT / "CONTRIBUTING.md",
             ROOT / "results" / "README.md",
             ROOT / "data" / "raw" / "README.md",
