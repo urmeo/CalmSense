@@ -10,7 +10,7 @@ Live demo: https://urmeo.github.io/CalmSense/
 
 - Dashboard: headline LOSO results and the within- vs. subject-independent optimism gap
 - Signal Explorer: real WESAD chest signals across baseline, stress, and amusement
-- Explainability: global mean absolute SHAP feature importance and the motion-confound note
+- Explainability: exploratory mean absolute SHAP importance from XGBoost fit and explained on all binary windows, plus the motion-confound note
 - Model Comparison: per-model accuracy, wrist-only, and cross-dataset results
 
 ## Development

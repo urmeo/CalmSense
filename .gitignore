@@ -104,17 +104,14 @@ data/raw/*
 
 # Processed data
 data/processed/*
-!data/processed/.gitkeep
 
 # Interim data
 data/interim/*
-!data/interim/.gitkeep
 
 # External data
 data/external/*
-!data/external/.gitkeep
 
-# Model files, except the small serving + in-browser models
+# Model files, except the benchmark snapshot and checksum
 *.pkl
 *.pickle
 *.h5
@@ -124,6 +121,7 @@ data/external/*
 *.ckpt
 outputs/models/*
 !outputs/models/stress_classifier.joblib
+!outputs/models/stress_classifier.joblib.sha256
 
 # =============================================================================
 # IDE / Editor
@@ -202,7 +200,6 @@ outputs/models/demo/
 
 # Reports
 outputs/reports/*
-!outputs/reports/.gitkeep
 
 # Temporary files
 tmp/

@@ -4,50 +4,46 @@
 
 [![CalmSense dashboard](docs/demo.gif)](https://urmeo.github.io/CalmSense/)
 
-## What this is
+WESAD stress-vs-baseline research benchmark: 58 features from ECG, EDA, temperature,
+respiration and motion. Leave-One-Subject-Out (LOSO) trains on 14 subjects and tests
+on the 15th. The dashboard displays committed results; the offline demo uses synthetic signals.
 
-WESAD stress-vs-baseline benchmark using ECG, EDA, temperature, respiration and motion.
-Leave-One-Subject-Out (LOSO): train on 14 subjects, test on the 15th, rotate.
-Static dashboard shows committed results; make demo runs offline on synthetic signals.
+## Run locally
+
+Python 3.11 or 3.12, from the repository root:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e .
+make demo
+```
+
+[Dataset setup](README.md) · [Frontend setup](frontend/README.md) · [Contributing and tests](CONTRIBUTING.md)
 
 ## Results
 
-Binary LOSO, means over 15 held-out subjects.
+Binary LOSO: accuracy/F1 average 15 held-out subjects; AUROC/AUPRC pool held-out predictions.
 
-<table width="780">
-<tr><th align="left" width="180">Model</th><th align="left" width="120">Accuracy</th><th align="left" width="120">F1 (macro)</th><th align="left" width="180">AUROC</th><th align="left" width="180">AUPRC</th></tr>
-<tr><td>Random Forest</td><td>0.913</td><td>0.898</td><td>0.973</td><td>0.960</td></tr>
-</table>
+| Model | Accuracy | Macro F1 | AUROC | AUPRC |
+| --- | --- | --- | --- | --- |
+| Random Forest | 0.913 | 0.898 | 0.973 | 0.960 |
 
-No significant difference among feature models (Friedman p = 0.81); RF accuracy 95% CI: [0.860, 0.960].
-RF threshold (Youden J): 0.45 gives sensitivity 0.90, specificity 0.91, PPV 0.85, NPV 0.94.
+RF accuracy 95% CI: [0.860, 0.960]. No significant difference among feature models (Friedman p = 0.81).
 
-- Leakage: same-person testing adds 13 points to 3-class accuracy (0.66 to 0.79); binary +5.7.
-- Motion: dropping motion features changes accuracy from 0.913 to 0.901.
-- Wrist: 0.893 vs chest 0.913 for the same model; best wrist 0.906, within noise.
-- Transfer: recorded balanced accuracies 0.57/0.50; slope-unit mismatch needs a rerun.
-- Calibration: isotonic recalibration lowers ECE from 0.070 to 0.025.
-- Personalization: five enrollment windows beat global; 20 lower ECE from 0.146 to 0.069.
+- Subject mixing inflates matched 3-class accuracy from 0.658 to 0.792; binary gains 5.7 points.
+- Dropping motion features changes accuracy from 0.913 to 0.901; wrist RF reaches 0.893.
+- Transfer balanced accuracy: 0.557 WESAD to PhysioNet, 0.494 in reverse, with consistent slope units.
+- Isotonic recalibration lowers ECE from 0.070 to 0.025. Personalization with 14 to 15 enrollment windows lowers ECE from 0.151 to 0.069.
 
-## Methods
-
-58 features: HRV, EDA, temperature, respiration and motion. Logistic Regression, Random Forest, XGBoost and LightGBM use
-median imputation and scaling fit per fold. NeuroKit2/SciPy, SHAP, PyTorch and React/TypeScript
-support the pipeline and dashboard. [Model details](docs/MODEL_CARD.md).
+Median imputation and scaling fit inside each fold. [Model and methods](docs/MODEL_CARD.md) · [Result provenance](results/README.md).
 
 ## Limitations
 
-- 15 lab subjects: wide confidence intervals, low power, no clinical claim.
-- Ablation, calibration and personalization are exploratory, without multiplicity correction; the raw-signal 1D-CNN is a small baseline.
-- Synthetic scores only exercise the pipeline; they are not evidence of performance on real subjects.
-- WESAD/PhysioNet Non-EEG transfer uses one confounded pair. EDA/TEMP slopes are per sample at different rates (4 Hz vs 8 Hz); scores require recomputation with harmonized units and do not isolate dataset shift. See [provenance](README.md).
+Only 15 lab subjects; wide uncertainty, no clinical claim. Transfer compares different datasets
+and stress tasks. Exploratory analyses lack multiplicity correction; the raw-signal CNN is a small baseline.
+SHAP describes training-data XGBoost, and the shipped RF is uncalibrated. Synthetic scores test functionality,
+not real-world performance.
 
-## Ethics & data use
-
-Research only. Physiological signals are sensitive personal data: minimize collection and retention;
-never monitor or penalize people without informed consent. Datasets retain their own
-licenses and are not redistributed.
-
-## License
-
-[MIT License](LICENSE)
+Physiological data is sensitive: minimize collection and retention, and require informed consent.
+Datasets retain their own licenses and are not redistributed. Code: [MIT License](LICENSE).

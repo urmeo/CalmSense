@@ -8,8 +8,13 @@ Those claims were removed in the 2026-05-28 rewrite. These tests fail if any of
 them reappear, or if the docs ever point at a notebook file that is not on disk.
 """
 
+import json
 import re
+import subprocess
+import sys
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 README = (ROOT / "README.md").read_text()
@@ -41,6 +46,41 @@ def test_no_scaffold_numbered_notebook_series():
     assert not re.search(r"notebooks/0[1-8]_", README), (
         "README references the scaffold's numbered 01-08 notebook series"
     )
+
+
+@pytest.mark.parametrize("location", ["empty", "root", "notebooks"])
+def test_notebook_setup_reuses_checkout(tmp_path, monkeypatch, location):
+    root = tmp_path / "CalmSense"
+
+    def checkout():
+        (root / "scripts").mkdir(parents=True)
+        (root / "scripts" / "calibration.py").touch()
+        (root / "pyproject.toml").touch()
+        (root / "notebooks").mkdir()
+
+    if location != "empty":
+        checkout()
+    start = {"empty": tmp_path, "root": root, "notebooks": root / "notebooks"}[location]
+    monkeypatch.chdir(start)
+    commands = []
+
+    def run(command, *, check):
+        assert check
+        commands.append(command)
+        if command[:2] == ["git", "clone"]:
+            assert Path(command[-1]) == root
+            checkout()
+
+    monkeypatch.setattr(subprocess, "run", run)
+    notebook = json.loads((ROOT / "notebooks" / "CalmSense.ipynb").read_text())
+    setup = next(cell for cell in notebook["cells"] if cell["cell_type"] == "code")
+    source = "".join(setup["source"])
+    for _ in range(2):
+        exec(compile(source, "notebook setup", "exec"), {})
+        assert Path.cwd() == root
+    assert sum(command[:2] == ["git", "clone"] for command in commands) == (location == "empty")
+    assert commands[-1] == [sys.executable, "-m", "pip", "install", "-q", "-e", "."]
+    assert not (root / "CalmSense").exists()
 
 
 def test_no_em_or_en_dashes_anywhere():
