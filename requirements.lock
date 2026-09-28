@@ -1,7 +1,7 @@
 # Provenance lock: the exact environment that produced everything in results/ and outputs/
 # (Python 3.9, neurokit2 0.2.7, scipy 1.13.1 — matches results/provenance.json).
-# It is NOT the supported install set. For a current install use requirements.txt or pyproject.toml,
-# which require Python >=3.11 and neurokit2 >=0.2.11. Regenerate this lock only together with results/.
+# It is NOT the supported install set. For a current install use pyproject.toml,
+# which requires Python >=3.11 and neurokit2 >=0.2.11. Regenerate this lock only together with results/.
 aiohappyeyeballs==2.6.1
 aiohttp==3.13.5
 aiosignal==1.4.0

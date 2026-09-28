@@ -2,9 +2,8 @@
 
 The same statistics are computed for WESAD wrist signals and the PhysioNet
 Non-EEG dataset, so a model trained on one can be tested on the other. This is
-deliberately separate from the full 58-feature WESAD chest model served by the
-dashboard, cross-dataset transfer only works on features both devices
-share.
+deliberately separate from the full WESAD chest model: cross-dataset transfer
+only works on features both devices share.
 """
 
 from typing import Any, Dict, List, Optional
