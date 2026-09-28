@@ -90,6 +90,7 @@ def compute(X, y, groups, model="rf", k_values=K_VALUES):
     logo = LeaveOneGroupOut()
     rng = np.random.RandomState(SEED)
     acc = {"uncalibrated": [], "global": [], **{k: [] for k in k_values}}
+    enrollment_counts = {k: [] for k in k_values}
 
     for train_idx, test_idx in logo.split(X, y, groups):
         Xtr, ytr, gtr = X[train_idx], y[train_idx], groups[train_idx]
@@ -116,6 +117,7 @@ def compute(X, y, groups, model="rf", k_values=K_VALUES):
 
         for k in k_values:
             pick = _sample_k(y_s[pool], k, rng)
+            enrollment_counts[k].append(len(pick))
             if len(np.unique(y_s[pool][pick])) < 2:
                 acc[k].append(_metrics(y_ev, raw_ev))
                 continue
@@ -134,6 +136,10 @@ def compute(X, y, groups, model="rf", k_values=K_VALUES):
         "uncalibrated": mean(acc["uncalibrated"]),
         "global": mean(acc["global"]),
         "fewshot": {str(k): mean(acc[k]) for k in k_values},
+        "enrollment_counts": {
+            str(k): {"min": min(counts), "max": max(counts)}
+            for k, counts in enrollment_counts.items()
+        },
     }
 
 
@@ -145,7 +151,7 @@ def _plot(out, path):
     plt.plot(
         ks, [out["fewshot"][str(k)]["ece"] for k in ks], "o-", color="#2ecc71", label="few-shot"
     )
-    plt.xlabel("Enrollment windows per subject")
+    plt.xlabel("Enrollment budget (windows/subject)")
     plt.ylabel("ECE (mean over subjects)")
     plt.title("Few-shot personalization closes the calibration gap")
     plt.legend()
