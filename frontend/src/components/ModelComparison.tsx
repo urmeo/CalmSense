@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import { Trophy, AlertTriangle, Activity } from 'lucide-react';
 import results from '../results.json';
+import SummaryCard from './SummaryCard';
 
 type Task = 'binary' | 'multiclass';
 
@@ -54,13 +55,13 @@ const ModelComparison: React.FC = () => {
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card icon={<Trophy className="w-6 h-6 text-green-600" />} label="Best model" value={best.model} />
-        <Card
+        <SummaryCard icon={<Trophy className="w-6 h-6 text-green-600" />} label="Best model" value={best.model} />
+        <SummaryCard
           icon={<Activity className="w-6 h-6 text-blue-600" />}
           label="LOSO accuracy"
           value={pct(best.accuracy_mean)}
         />
-        <Card
+        <SummaryCard
           icon={<AlertTriangle className="w-6 h-6 text-orange-500" />}
           label="Within-subject optimism"
           value={`+${gap.toFixed(1)} pts`}
@@ -177,21 +178,5 @@ const ModelComparison: React.FC = () => {
     </div>
   );
 };
-
-const Card: React.FC<{ icon: React.ReactNode; label: string; value: string }> = ({
-  icon,
-  label,
-  value,
-}) => (
-  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-    <div className="flex items-center space-x-3">
-      <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">{icon}</div>
-      <div>
-        <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
-        <p className="text-lg font-bold text-gray-900 dark:text-white">{value}</p>
-      </div>
-    </div>
-  </div>
-);
 
 export default ModelComparison;

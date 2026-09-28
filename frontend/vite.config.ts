@@ -5,4 +5,5 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   base: '/CalmSense/',
   plugins: [react(), tailwindcss()],
+  build: { license: { fileName: 'licenses.txt' } },
 });

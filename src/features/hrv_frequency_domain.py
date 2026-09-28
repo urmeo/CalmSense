@@ -192,16 +192,7 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
         return float(lf_freqs[peak_idx])
 
     def extract_all(self, rr_intervals: np.ndarray, method: str = "welch") -> Dict[str, float]:
-        features = {
-            "VLF_power": np.nan,
-            "LF_power": np.nan,
-            "HF_power": np.nan,
-            "Total_power": np.nan,
-            "LF_HF_ratio": np.nan,
-            "LFn": np.nan,
-            "HFn": np.nan,
-            "LF_peak_freq": np.nan,
-        }
+        features = dict.fromkeys(self.get_feature_descriptions(), np.nan)
 
         freqs, psd = self.compute_psd(rr_intervals, method=method)
 

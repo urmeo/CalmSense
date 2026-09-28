@@ -1,5 +1,5 @@
 import React from 'react';
-import Plot from 'react-plotly.js';
+import Plot from './Plot';
 import { FileSearch, Info, AlertTriangle } from 'lucide-react';
 import results from '../results.json';
 
