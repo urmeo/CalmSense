@@ -32,7 +32,6 @@ surface and it accepts no user input or uploads.
 ## Supply chain & secrets
 
 Supported dependency ranges are declared in pyproject.toml and audited in CI with pip-audit.
-requirements.lock records the historical environment for the committed research results.
 The full git history
 (all refs) is scanned for committed secrets with [gitleaks](https://github.com/gitleaks/gitleaks),
 last run: **0 findings**.
