@@ -290,7 +290,7 @@ def run(synthetic=False, model="rf", n_bins=N_BINS):
     if synthetic:
         print(
             "Note: synthetic stress is near-separable, so ECE is ~0 and the optimism gap is not "
-            "meaningful. Run `make reproduce` on real WESAD for the committed benchmark's numbers."
+            "meaningful. Run `make reproduce` on real WESAD for benchmark results."
         )
     print(f"Wrote {results_dir / 'calibration.json'} and 3 figures.")
 
