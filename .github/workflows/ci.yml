@@ -76,7 +76,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0  # scan full history, not just the tip commit
+          fetch-depth: 0  # resolve the push or pull-request commit range
       - uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -94,6 +94,9 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
+      - name: Test signal explorer
+        working-directory: frontend
+        run: node --test tests/*.test.cjs
       - name: Audit frontend dependencies
         working-directory: frontend
         run: npm audit --audit-level=moderate

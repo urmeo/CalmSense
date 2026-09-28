@@ -59,6 +59,11 @@ body {
   background: #1a202c;
 }
 
+.dark .js-plotly-plot :is([class$="tick"] text, text[class$="title"], .legendtext, .bartext-outside),
+.dark .recharts-cartesian-axis-tick-value {
+  fill: var(--color-gray-300) !important;
+}
+
 ::-webkit-scrollbar-thumb {
   background: #888;
   border-radius: 4px;
@@ -83,5 +88,16 @@ body {
   }
   50% {
     opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-pulse {
+    animation: none;
+  }
+
+  * {
+    transition: none !important;
   }
 }

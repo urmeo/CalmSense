@@ -19,6 +19,7 @@ Live demo: https://urmeo.github.io/CalmSense/
 npm install
 npm run dev      # http://localhost:5173
 npm run build    # production build (also run in CI deploy)
+node --test tests/*.test.cjs
 ```
 
 ## Regenerating dashboard assets

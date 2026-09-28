@@ -32,6 +32,5 @@ surface and it accepts no user input or uploads.
 ## Supply chain & secrets
 
 Supported dependency ranges are declared in pyproject.toml and audited in CI with pip-audit.
-The full git history
-(all refs) is scanned for committed secrets with [gitleaks](https://github.com/gitleaks/gitleaks),
-last run: **0 findings**.
+CI scans push and pull-request commit ranges for committed secrets with
+[gitleaks](https://github.com/gitleaks/gitleaks).

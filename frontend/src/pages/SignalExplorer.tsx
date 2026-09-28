@@ -67,31 +67,25 @@ const SignalExplorer: React.FC = () => {
     const range = xRange[1] - xRange[0];
     const center = (xRange[0] + xRange[1]) / 2;
     const newRange = Math.min(range * 2, duration);
-    setXRange([Math.max(0, center - newRange / 2), Math.min(duration, center + newRange / 2)]);
+    const start = Math.max(0, Math.min(center - newRange / 2, duration - newRange));
+    setXRange([start, start + newRange]);
   };
   const handleReset = () => setXRange([0, Math.round(duration)]);
 
   const visiblePanels = PANELS.filter((p) => (visibleSignals as any)[p.key]);
 
-  const buildTraces = () => {
-    const traces: any[] = [];
-    visiblePanels.forEach((panel, i) => {
-      const axis = i === 0 ? '' : String(i + 1);
-      panel.series.forEach((s) =>
-        traces.push({
-          x: signalData.time,
-          y: signalData[s.y],
-          type: 'scatter',
-          mode: 'lines',
-          name: s.name,
-          line: { color: s.color, width: 1 },
-          xaxis: 'x',
-          yaxis: `y${axis}`,
-        })
-      );
-    });
-    return traces;
-  };
+  const traces = visiblePanels.flatMap((panel, i) =>
+    panel.series.map((series) => ({
+      x: signalData.time,
+      y: signalData[series.y],
+      type: 'scatter',
+      mode: 'lines',
+      name: series.name,
+      line: { color: series.color, width: 1 },
+      xaxis: 'x',
+      yaxis: i === 0 ? 'y' : `y${i + 1}`,
+    }))
+  );
 
   const layout: any = {
     title: { text: `Signal Explorer: Subject ${selectedSubject}`, font: { size: 18 } },
@@ -193,7 +187,7 @@ const SignalExplorer: React.FC = () => {
 
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
         <Plot
-          data={buildTraces()}
+          data={traces}
           layout={layout}
           config={{ responsive: true, showSendToCloud: false, displayModeBar: true, modeBarButtonsToRemove: ['lasso2d', 'select2d'] }}
           style={{ width: '100%' }}
