@@ -36,6 +36,10 @@ headline LOSO benchmark.
 | Source | PhysioNet (downloaded as a zip via `make data`; records read with `wfdb`) |
 | Role | Second corpus for cross-dataset transfer; a separate, confounded pair, illustrative, not conclusive (see [README Limitations](../README.md#limitations)). |
 
+The [transfer results](../results/cross_dataset.json) were rerun on all 15 WESAD and 20 Non-EEG
+subjects with version-2 portable caches and EDA/TEMP slopes per second. Corpus, protocol and label
+differences still confound the comparison; it does not isolate dataset shift.
+
 ## Shipped model
 
 The shipped model is a Random Forest (the best of Logistic Regression, Random Forest, XGBoost, LightGBM by LOSO accuracy) refit on all 869 WESAD binary windows, committed at `outputs/models/stress_classifier.joblib`.
