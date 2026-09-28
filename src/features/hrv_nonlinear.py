@@ -216,18 +216,7 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
         return float(min(det, 1.0))
 
     def extract_all(self, rr_intervals: np.ndarray) -> Dict[str, float]:
-        features = {
-            "SampEn": np.nan,
-            "ApEn": np.nan,
-            "DFA_alpha1": np.nan,
-            "DFA_alpha2": np.nan,
-            "SD1": np.nan,
-            "SD2": np.nan,
-            "SD1_SD2_ratio": np.nan,
-            "CSI": np.nan,
-            "CVI": np.nan,
-            "RQA_DET": np.nan,
-        }
+        features = dict.fromkeys(self.get_feature_descriptions(), np.nan)
 
         rr = self._validate_input(rr_intervals)
         if rr is None:
