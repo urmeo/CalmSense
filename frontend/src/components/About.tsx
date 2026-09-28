@@ -19,6 +19,20 @@ const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+const FeatureCard: React.FC<{
+  icon: React.ReactNode;
+  title: string;
+  children: React.ReactNode;
+}> = ({ icon, title, children }) => (
+  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+    <div className="flex items-center space-x-3 mb-3">
+      {icon}
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
+    </div>
+    <ul className="space-y-2 text-gray-600 dark:text-gray-400">{children}</ul>
+  </div>
+);
+
 const About: React.FC = () => {
   return (
     <div className="space-y-8 animate-fade-in max-w-4xl mx-auto">
@@ -70,57 +84,33 @@ const About: React.FC = () => {
 
       {/* Features Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center space-x-3 mb-3">
-            <Database className="w-6 h-6 text-blue-500" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Dataset</h3>
-          </div>
-          <ul className="space-y-2 text-gray-600 dark:text-gray-400">
-            <li>• WESAD: Wearable Stress and Affect Detection</li>
-            <li>• 15 subjects with multimodal signals</li>
-            <li>• ECG, EDA, TEMP, RESP, ACC</li>
-            <li>• Three conditions: Baseline, Stress, Amusement</li>
-          </ul>
-        </div>
+        <FeatureCard icon={<Database className="w-6 h-6 text-blue-500" />} title="Dataset">
+          <li>• WESAD: Wearable Stress and Affect Detection</li>
+          <li>• 15 subjects with multimodal signals</li>
+          <li>• ECG, EDA, TEMP, RESP, ACC</li>
+          <li>• Three conditions: Baseline, Stress, Amusement</li>
+        </FeatureCard>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center space-x-3 mb-3">
-            <Cpu className="w-6 h-6 text-green-500" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Models</h3>
-          </div>
-          <ul className="space-y-2 text-gray-600 dark:text-gray-400">
-            <li>• Classical ML: Logistic Regression, Random Forest, XGBoost, LightGBM</li>
-            <li>• Deep Learning: residual 1D-CNN on raw signals</li>
-            <li>• Leakage-free per-fold imputation and scaling</li>
-            <li>• Leave-One-Subject-Out cross-validation</li>
-          </ul>
-        </div>
+        <FeatureCard icon={<Cpu className="w-6 h-6 text-green-500" />} title="Models">
+          <li>• Classical ML: Logistic Regression, Random Forest, XGBoost, LightGBM</li>
+          <li>• Deep Learning: residual 1D-CNN on raw signals</li>
+          <li>• Leakage-free per-fold imputation and scaling</li>
+          <li>• Leave-One-Subject-Out cross-validation</li>
+        </FeatureCard>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center space-x-3 mb-3">
-            <BookOpen className="w-6 h-6 text-purple-500" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Features</h3>
-          </div>
-          <ul className="space-y-2 text-gray-600 dark:text-gray-400">
-            <li>• {r.binary.n_features} physiological features extracted</li>
-            <li>• HRV time/frequency/nonlinear analysis</li>
-            <li>• EDA phasic/tonic decomposition</li>
-            <li>• 60s windows, 50% overlap</li>
-          </ul>
-        </div>
+        <FeatureCard icon={<BookOpen className="w-6 h-6 text-purple-500" />} title="Features">
+          <li>• {r.binary.n_features} physiological features extracted</li>
+          <li>• HRV time/frequency/nonlinear analysis</li>
+          <li>• EDA phasic/tonic decomposition</li>
+          <li>• 60s windows, 50% overlap</li>
+        </FeatureCard>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center space-x-3 mb-3">
-            <Shield className="w-6 h-6 text-orange-500" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Explainability</h3>
-          </div>
-          <ul className="space-y-2 text-gray-600 dark:text-gray-400">
-            <li>• SHAP values for global/local importance</li>
-            <li>• Top-biomarker contributions per prediction</li>
-            <li>• Optimism-gap analysis (LOSO vs within-subject)</li>
-            <li>• Clinical interpretation (Task Force 1996)</li>
-          </ul>
-        </div>
+        <FeatureCard icon={<Shield className="w-6 h-6 text-orange-500" />} title="Explainability">
+          <li>• SHAP values for global/local importance</li>
+          <li>• Top-biomarker contributions per prediction</li>
+          <li>• Optimism-gap analysis (LOSO vs within-subject)</li>
+          <li>• Clinical interpretation (Task Force 1996)</li>
+        </FeatureCard>
       </div>
 
       {/* Architecture */}

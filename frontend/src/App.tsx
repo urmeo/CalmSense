@@ -46,6 +46,7 @@ const Sidebar: React.FC<{
   toggleDarkMode: () => void;
 }> = ({ isOpen, onClose, darkMode, toggleDarkMode }) => {
   const location = useLocation();
+  const ThemeIcon = darkMode ? Sun : Moon;
 
   return (
     <>
@@ -118,17 +119,8 @@ const Sidebar: React.FC<{
                        text-white hover:bg-primary-500 dark:hover:bg-gray-700
                        transition-colors duration-200"
           >
-            {darkMode ? (
-              <>
-                <Sun className="w-5 h-5 mr-2" />
-                <span>Light Mode</span>
-              </>
-            ) : (
-              <>
-                <Moon className="w-5 h-5 mr-2" />
-                <span>Dark Mode</span>
-              </>
-            )}
+            <ThemeIcon className="w-5 h-5 mr-2" />
+            <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
           </button>
         </div>
       </aside>

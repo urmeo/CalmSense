@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import Plot from 'react-plotly.js';
+import Plot from './Plot';
 import { ZoomIn, ZoomOut, RefreshCw } from 'lucide-react';
 import realSignals from '../signals.json';
 

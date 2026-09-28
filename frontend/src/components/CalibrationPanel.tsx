@@ -1,7 +1,8 @@
 import React from 'react';
-import Plot from 'react-plotly.js';
+import Plot from './Plot';
 import { Gauge, Target, AlertTriangle, TrendingDown, Info } from 'lucide-react';
 import results from '../results.json';
+import SummaryCard from './SummaryCard';
 import { Calibration } from '../types';
 
 const fmt = (v: number) => v.toFixed(3);
@@ -16,6 +17,16 @@ const COLORS = {
   diagonal: '#9CA3AF',
 };
 
+const markerTrace = (x: number[], y: number[], name: string, color: string) => ({
+  x,
+  y,
+  type: 'scatter' as const,
+  mode: 'lines+markers' as const,
+  name,
+  line: { color },
+  marker: { color },
+});
+
 const CalibrationPanel: React.FC = () => {
   const cal = (results as any).calibration as Calibration | undefined;
   if (!cal) return null;
@@ -23,6 +34,11 @@ const CalibrationPanel: React.FC = () => {
   const { loso, within_subject, recalibrated_isotonic, recalibrated_sigmoid, decision_curve } = cal;
   const dc = decision_curve;
 
+  const evaluations = [
+    { name: 'Within-subject', summary: within_subject, color: COLORS.within },
+    { name: 'LOSO', summary: loso, color: COLORS.loso },
+    { name: 'LOSO recalibrated', summary: recalibrated_isotonic, color: COLORS.recal },
+  ];
   const rows = [
     { key: 'Within-subject', s: within_subject },
     { key: 'LOSO', s: loso },
@@ -46,13 +62,13 @@ const CalibrationPanel: React.FC = () => {
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card icon={<Target className="w-6 h-6 text-blue-600" />} label="LOSO ECE" value={fmt(loso.ece)} />
-        <Card
+        <SummaryCard icon={<Target className="w-6 h-6 text-blue-600" />} label="LOSO ECE" value={fmt(loso.ece)} />
+        <SummaryCard
           icon={<AlertTriangle className="w-6 h-6 text-orange-500" />}
           label="Calibration optimism (ECE)"
           value={signed(cal.calibration_optimism_gap_ece)}
         />
-        <Card
+        <SummaryCard
           icon={<TrendingDown className="w-6 h-6 text-green-600" />}
           label="Recalibration cuts ECE by"
           value={signed(cal.recalibration_reduction_ece)}
@@ -81,33 +97,12 @@ const CalibrationPanel: React.FC = () => {
                 name: 'Perfectly calibrated',
                 line: { color: COLORS.diagonal, dash: 'dot' },
               },
-              {
-                x: within_subject.reliability.map((r) => r.confidence),
-                y: within_subject.reliability.map((r) => r.accuracy),
-                type: 'scatter',
-                mode: 'lines+markers',
-                name: `Within-subject (ECE ${fmt(within_subject.ece)})`,
-                line: { color: COLORS.within },
-                marker: { color: COLORS.within },
-              },
-              {
-                x: loso.reliability.map((r) => r.confidence),
-                y: loso.reliability.map((r) => r.accuracy),
-                type: 'scatter',
-                mode: 'lines+markers',
-                name: `LOSO (ECE ${fmt(loso.ece)})`,
-                line: { color: COLORS.loso },
-                marker: { color: COLORS.loso },
-              },
-              {
-                x: recalibrated_isotonic.reliability.map((r) => r.confidence),
-                y: recalibrated_isotonic.reliability.map((r) => r.accuracy),
-                type: 'scatter',
-                mode: 'lines+markers',
-                name: `LOSO recalibrated (ECE ${fmt(recalibrated_isotonic.ece)})`,
-                line: { color: COLORS.recal },
-                marker: { color: COLORS.recal },
-              },
+              ...evaluations.map(({ name, summary, color }) => markerTrace(
+                summary.reliability.map((r) => r.confidence),
+                summary.reliability.map((r) => r.accuracy),
+                `${name} (ECE ${fmt(summary.ece)})`,
+                color
+              )),
             ]}
             layout={{
               height: 380,
@@ -132,11 +127,11 @@ const CalibrationPanel: React.FC = () => {
           <Plot
             data={[
               {
-                x: ['Within-subject', 'LOSO', 'LOSO recalibrated'],
-                y: [within_subject.ece, loso.ece, recalibrated_isotonic.ece],
+                x: evaluations.map((e) => e.name),
+                y: evaluations.map((e) => e.summary.ece),
                 type: 'bar',
-                marker: { color: [COLORS.within, COLORS.loso, COLORS.recal] },
-                text: [within_subject.ece, loso.ece, recalibrated_isotonic.ece].map(fmt),
+                marker: { color: evaluations.map((e) => e.color) },
+                text: evaluations.map((e) => fmt(e.summary.ece)),
                 textposition: 'outside',
                 hovertemplate: '%{x}: %{y:.3f}<extra></extra>',
               },
@@ -165,24 +160,8 @@ const CalibrationPanel: React.FC = () => {
         </p>
         <Plot
           data={[
-            {
-              x: dc.thresholds,
-              y: dc.net_benefit_uncalibrated,
-              type: 'scatter',
-              mode: 'lines+markers',
-              name: 'Uncalibrated',
-              line: { color: COLORS.loso },
-              marker: { color: COLORS.loso },
-            },
-            {
-              x: dc.thresholds,
-              y: dc.net_benefit_recalibrated,
-              type: 'scatter',
-              mode: 'lines+markers',
-              name: 'Recalibrated',
-              line: { color: COLORS.recal },
-              marker: { color: COLORS.recal },
-            },
+            markerTrace(dc.thresholds, dc.net_benefit_uncalibrated, 'Uncalibrated', COLORS.loso),
+            markerTrace(dc.thresholds, dc.net_benefit_recalibrated, 'Recalibrated', COLORS.recal),
             {
               x: dc.thresholds,
               y: dc.treat_all,
@@ -256,21 +235,5 @@ const CalibrationPanel: React.FC = () => {
     </div>
   );
 };
-
-const Card: React.FC<{ icon: React.ReactNode; label: string; value: string }> = ({
-  icon,
-  label,
-  value,
-}) => (
-  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-    <div className="flex items-center space-x-3">
-      <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">{icon}</div>
-      <div>
-        <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
-        <p className="text-lg font-bold text-gray-900 dark:text-white">{value}</p>
-      </div>
-    </div>
-  </div>
-);
 
 export default CalibrationPanel;
