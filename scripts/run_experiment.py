@@ -1,6 +1,7 @@
 """Reproduce the full CalmSense LOSO benchmark from raw WESAD data."""
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -64,6 +65,13 @@ def _fit_params(pipe, y_train):
     if pipe.named_steps["clf"].__class__.__name__ == "XGBClassifier":
         return {"clf__sample_weight": compute_sample_weight("balanced", y_train)}
     return {}
+
+
+def _save_model(model, path):
+    joblib.dump(model, path)
+    with path.open("rb") as f:
+        digest = hashlib.file_digest(f, "sha256").hexdigest()
+    path.with_suffix(path.suffix + ".sha256").write_text(f"{digest}  {path.name}\n")
 
 
 def loso_evaluate(pipeline_factory, X, y, groups):
@@ -137,6 +145,7 @@ def cnn_loso(x_raw, y, groups):
         "f1_macro_std": float(subj_df["f1_macro"].std()),
         "balanced_accuracy": float(balanced_accuracy_score(pooled_true, pooled_pred)),
         "per_subject": subj_df,
+        "pooled_accuracy": float(accuracy_score(pooled_true, pooled_pred)),
         "y_true": np.array(pooled_true),
         "y_pred": np.array(pooled_pred),
         "classes": np.unique(y),
@@ -409,7 +418,7 @@ def run():
             "per_subject": best[1]["per_subject"].to_dict("records"),
         }
 
-        # Serialize best classical model for the API
+        # Refit the best classical model on all binary windows.
         if task == "binary":
             top_clf = max(
                 [(k, results[k]) for k in CLASSIFIERS],
@@ -419,11 +428,11 @@ def run():
             importance.to_csv(results_dir / "shap_top_features.csv", index=False)
             final = build_pipeline(top_clf)
             final.fit(X, y, **_fit_params(final, y))
-            joblib.dump(
+            _save_model(
                 {"pipeline": final, "features": feature_cols, "classes": cfg["names"]},
                 models_dir / "stress_classifier.joblib",
             )
-            print(f"  Saved API model ({CLF_NAMES[top_clf]}) + SHAP.")
+            print(f"  Saved model ({CLF_NAMES[top_clf]}) + checksum + SHAP.")
 
     summary["provenance"] = provenance()
     with open(results_dir / "metrics.json", "w") as f:

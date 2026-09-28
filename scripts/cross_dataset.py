@@ -16,7 +16,7 @@ from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score
 from scripts.run_experiment import FIGURES_DIR, RESULTS_DIR, build_pipeline, loso_evaluate
 from src.config import PROCESSED_DATA_DIR
 from src.datasets import non_eeg
-from src.portable import wesad_portable
+from src.portable import PORTABLE_FEATURE_VERSION, wesad_portable
 from src.utils import provenance
 
 META = ["subject", "label"]
@@ -52,8 +52,11 @@ def within(df, feature_cols):
 
 
 def run():
-    cache_w = PROCESSED_DATA_DIR / "portable_wesad.parquet"
-    cache_n = PROCESSED_DATA_DIR / "portable_noneeg.parquet"
+    PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+    cache_w = PROCESSED_DATA_DIR / f"portable_wesad_v{PORTABLE_FEATURE_VERSION}.parquet"
+    cache_n = PROCESSED_DATA_DIR / f"portable_noneeg_v{PORTABLE_FEATURE_VERSION}.parquet"
     import pandas as pd
 
     wesad = pd.read_parquet(cache_w) if cache_w.exists() else wesad_portable()
@@ -72,6 +75,8 @@ def run():
     )
 
     out = {
+        "feature_schema_version": PORTABLE_FEATURE_VERSION,
+        "slope_time_unit": "second",
         "n_shared_features": len(feature_cols),
         "within_wesad": within(wesad, feature_cols),
         "within_noneeg": within(noneeg, feature_cols),

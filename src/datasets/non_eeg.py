@@ -18,7 +18,6 @@ DATA_DIR = (
     EXTERNAL_DATA_DIR / "noneeg" / "non-eeg-dataset-for-assessment-of-neurological-status-1.0.0"
 )
 ACC_FS = 8
-HR_FS = 1
 STRESS = {"CognitiveStress", "EmotionalStress"}
 RELAX = {"Relax"}
 
@@ -61,7 +60,14 @@ def build(subjects: Optional[list] = None) -> pd.DataFrame:
             for w0 in range(s0, s1 - win + 1, step):
                 w1 = w0 + win
                 hr_win = hr[w0 // ACC_FS : w1 // ACC_FS]
-                row = portable_features(eda[w0:w1], temp[w0:w1], acc_mag[w0:w1], hr_win)
+                row = portable_features(
+                    eda[w0:w1],
+                    temp[w0:w1],
+                    acc_mag[w0:w1],
+                    hr_win,
+                    eda_fs=ACC_FS,
+                    temp_fs=ACC_FS,
+                )
                 row["subject"] = sid
                 row["label"] = label
                 rows.append(row)

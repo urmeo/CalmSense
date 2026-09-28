@@ -95,11 +95,15 @@ class WristDataset(LoggerMixin):
 
     def build(self, subjects: Optional[List[str]] = None, cache: bool = True) -> pd.DataFrame:
         subjects = subjects or self.loader.subjects
-        all_windows = []
+        frames = []
         for s in subjects:
             windows, _ = self._process_subject(s)
-            all_windows.extend(windows)
-        df = self.features.extract_all_features(all_windows, show_progress=False)
+            if windows:
+                frames.append(self.features.extract_all_features(windows, show_progress=False))
+            del windows
+        if not frames:
+            raise ValueError("No valid wrist windows found for the requested subjects")
+        df = pd.concat(frames, ignore_index=True)
         df["label_name"] = df["label"].map(CONDITION_LABELS)
         if cache:
             PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
