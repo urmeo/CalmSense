@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import Plot from 'react-plotly.js';
+import Plot from '../components/Plot';
 import { ZoomIn, ZoomOut, RefreshCw } from 'lucide-react';
-import realSignals from '../signals.json';
+import realSignals from '../data/signals.json';
 
 // Real WESAD chest signals (baseline -> stress -> amusement), downsampled for display
 const subjects = Object.keys(realSignals);
@@ -194,7 +194,7 @@ const SignalExplorer: React.FC = () => {
         <Plot
           data={buildTraces()}
           layout={layout}
-          config={{ responsive: true, displayModeBar: true, modeBarButtonsToRemove: ['lasso2d', 'select2d'] }}
+          config={{ responsive: true, showSendToCloud: false, displayModeBar: true, modeBarButtonsToRemove: ['lasso2d', 'select2d'] }}
           style={{ width: '100%' }}
           onRelayout={(e: any) => {
             if (e['xaxis.range[0]'] !== undefined) {

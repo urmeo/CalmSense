@@ -11,7 +11,7 @@ import pandas as pd
 from src.config import PROJECT_ROOT
 
 RESULTS_DIR = PROJECT_ROOT / "results"
-FRONTEND = PROJECT_ROOT / "frontend" / "src" / "results.json"
+FRONTEND = PROJECT_ROOT / "frontend" / "src" / "data" / "results.json"
 
 # Keys the dashboard consumes per task (per-subject lists stay out of the bundle)
 TASK_KEYS = [
