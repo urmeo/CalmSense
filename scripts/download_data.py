@@ -18,6 +18,7 @@ NONEEG_URL = (
 NONEEG_DIR = EXTERNAL_DATA_DIR / "noneeg"
 WESAD_URL = "https://uni-siegen.sciebo.de/s/HGdUkoNlW1Ub0Gx/download"
 MAX_UNCOMPRESSED = 10 * 1024**3  # zip-bomb guard
+WESAD_MAX_UNCOMPRESSED = 32 * 1024**3  # official extracted files exceed 16 GiB
 
 # SHA-256 of the official WESAD S*.pkl files (verification instructions in README.md).
 WESAD_SHA256 = {
@@ -47,17 +48,19 @@ def verify_wesad() -> None:
     problems = []
     for sid, expected in WESAD_SHA256.items():
         path = root / sid / f"{sid}.pkl"
-        if not path.exists():
+        if not path.is_file():
             problems.append(f"{sid}: missing")
             continue
-        got = hashlib.sha256(path.read_bytes()).hexdigest()
+        with path.open("rb") as f:
+            got = hashlib.file_digest(f, "sha256").hexdigest()
         if got != expected:
             problems.append(f"{sid}: checksum mismatch")
     if problems:
         raise SystemExit(
             "WESAD integrity check FAILED:\n  "
             + "\n  ".join(problems)
-            + "\nRe-download from the official source (see README.md)."
+            + f"\nExisting files were preserved. Move {root} aside and run 'make wesad' "
+            "to re-download from the official source (see README.md)."
         )
     print(f"WESAD integrity OK: {len(WESAD_SHA256)} subjects verified.")
 
@@ -96,9 +99,31 @@ def _safe_extract(zip_path, dest, max_bytes=MAX_UNCOMPRESSED):
         z.extractall(dest)
 
 
+def verify_noneeg() -> None:
+    """Require the records and annotations consumed by the cross-dataset loader."""
+    target = NONEEG_DIR / "non-eeg-dataset-for-assessment-of-neurological-status-1.0.0"
+    missing = []
+    for subject in range(1, 21):
+        for record, extensions in [
+            ("AccTempEDA", ("hea", "dat", "atr")),
+            ("SpO2HR", ("hea", "dat")),
+        ]:
+            for extension in extensions:
+                path = target / f"Subject{subject}_{record}.{extension}"
+                if not path.is_file() or path.stat().st_size == 0:
+                    missing.append(path.name)
+    if missing:
+        raise SystemExit(
+            "Non-EEG dataset incomplete; missing or empty files:\n  "
+            + "\n  ".join(missing)
+            + f"\nExisting files were preserved. Move {target} aside and run 'make data'."
+        )
+
+
 def download_noneeg() -> None:
     target = NONEEG_DIR / "non-eeg-dataset-for-assessment-of-neurological-status-1.0.0"
     if target.exists():
+        verify_noneeg()
         print(f"Non-EEG already present at {target}")
         return
     NONEEG_DIR.mkdir(parents=True, exist_ok=True)
@@ -106,19 +131,21 @@ def download_noneeg() -> None:
     _download(NONEEG_URL, zip_path)
     _safe_extract(zip_path, NONEEG_DIR)
     zip_path.unlink()
+    verify_noneeg()
     print(f"Non-EEG ready at {target}")
 
 
 def download_wesad() -> None:
     target = RAW_DATA_DIR / "WESAD"
-    if (target / "S2" / "S2.pkl").exists():
+    if target.exists():
+        verify_wesad()
         print(f"WESAD already present at {target}")
         return
     RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
     zip_path = RAW_DATA_DIR / "WESAD.zip"
     print("WESAD is ~2 GB and covered by a research-only agreement.")
     _download(WESAD_URL, zip_path)
-    _safe_extract(zip_path, RAW_DATA_DIR)
+    _safe_extract(zip_path, RAW_DATA_DIR, max_bytes=WESAD_MAX_UNCOMPRESSED)
     zip_path.unlink()
     verify_wesad()
     print(f"WESAD ready at {target}")
@@ -142,10 +169,15 @@ if __name__ == "__main__":
     parser.add_argument(
         "--verify-wesad", action="store_true", help="check downloaded WESAD .pkl SHA-256 and exit"
     )
+    parser.add_argument(
+        "--verify-noneeg", action="store_true", help="check required Non-EEG files and exit"
+    )
     args = parser.parse_args()
 
     if args.verify_wesad:
         verify_wesad()
+    elif args.verify_noneeg:
+        verify_noneeg()
     elif args.check:
         _check(NONEEG_URL)
         _check(WESAD_URL)

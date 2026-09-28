@@ -15,9 +15,8 @@ from scripts.run_experiment import (
     CLF_NAMES,
     RESULTS_DIR,
     build_pipeline,
-    load_cached,
+    load_binary_task,
     loso_evaluate,
-    prepare_task,
 )
 from src.config import SEED
 from src.utils import paired_effect_size, provenance
@@ -46,11 +45,7 @@ def holm_bonferroni(pairs):
 
 
 def run():
-    cached = load_cached()
-    if cached is None:
-        raise SystemExit("No cached features. Run scripts/run_experiment.py first.")
-    features_df, x_raw = cached
-    X, y, groups, _, _ = prepare_task(features_df, x_raw, [1, 2])
+    X, y, groups, _, _ = load_binary_task()
 
     scores = {}
     for key in CLASSIFIERS:

@@ -1,6 +1,7 @@
 """Calibration metrics behave correctly on known inputs."""
 
 import numpy as np
+import pytest
 
 from src.calibration import (
     brier_score,
@@ -9,6 +10,26 @@ from src.calibration import (
     net_benefit,
     reliability_curve,
 )
+
+
+@pytest.mark.parametrize("bins", [0, -1])
+@pytest.mark.parametrize(
+    "metric", [expected_calibration_error, maximum_calibration_error, reliability_curve]
+)
+def test_calibration_rejects_nonpositive_bins(metric, bins):
+    with pytest.raises(ValueError, match="positive"):
+        metric([0, 0], [0.99, 0.99], bins)
+
+
+@pytest.mark.parametrize("matrix", [False, True])
+def test_calibration_bin_boundaries_and_empty_bins(matrix):
+    y = np.array([1, 0, 1, 0])
+    probabilities = np.array([0.5, 0.75, 1.0, 0.0])
+    if matrix:
+        probabilities = np.column_stack([1 - probabilities, probabilities])
+    # The two occupied bins contribute 0.5/4 and 0.25*3/4 to ECE.
+    assert expected_calibration_error(y, probabilities, 4) == pytest.approx(0.3125)
+    assert maximum_calibration_error(y, probabilities, 4) == 0.5
 
 
 def test_net_benefit_at_impossible_threshold_is_zero():

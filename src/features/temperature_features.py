@@ -36,6 +36,7 @@ class TemperatureFeatureExtractor(LoggerMixin):
         if validated is None:
             self.logger.warning("Invalid temperature signal, returning NaN features")
             return features
+        sample_times = np.flatnonzero(np.isfinite(np.asarray(temp).ravel())) / self.sampling_rate
         temp = validated
 
         try:
@@ -44,10 +45,7 @@ class TemperatureFeatureExtractor(LoggerMixin):
             features["TEMP_min"] = float(np.min(temp))
             features["TEMP_max"] = float(np.max(temp))
 
-            x = np.arange(len(temp)) / self.sampling_rate
-            if len(x) > 1:
-                slope, _, _, _, _ = stats.linregress(x, temp)
-                features["TEMP_slope"] = float(slope)
+            features["TEMP_slope"] = float(stats.linregress(sample_times, temp).slope)
 
             self.logger.debug(
                 f"Extracted 5 temperature features, mean={features['TEMP_mean']:.2f}°C"

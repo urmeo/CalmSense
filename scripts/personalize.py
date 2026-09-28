@@ -15,15 +15,14 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.model_selection import GroupKFold, LeaveOneGroupOut
+from sklearn.model_selection import LeaveOneGroupOut
 
-from scripts.calibration import _apply_calibrator, _fit_calibrator, _pos_proba
+from scripts.calibration import _apply_calibrator, _fit_calibrator, _global_calibrator, _pos_proba
 from scripts.run_experiment import (
     RESULTS_DIR,
     _fit_params,
     build_pipeline,
-    load_cached,
-    prepare_task,
+    load_binary_task,
 )
 from src import calibration as cal
 from src.config import FIGURES_DIR, SEED
@@ -67,17 +66,6 @@ def _sample_k(y_pool, k, rng):
                 if remaining == 0:
                     break
     return np.concatenate([idx[:count] for idx, count in zip(buckets, counts)])
-
-
-def _global_calibrator(factory, Xtr, ytr, gtr, method):
-    if len(np.unique(gtr)) < 2:
-        return None
-    oof = np.zeros(len(ytr))
-    for itr, ical in GroupKFold(n_splits=min(5, len(np.unique(gtr)))).split(Xtr, ytr, gtr):
-        p = factory()
-        p.fit(Xtr[itr], ytr[itr], **_fit_params(p, ytr[itr]))
-        oof[ical] = _pos_proba(p, Xtr[ical])
-    return _fit_calibrator(oof, ytr, method)
 
 
 def _metrics(y, p_pos):
@@ -166,18 +154,7 @@ def run(synthetic=False, model="rf"):
     results_dir.mkdir(parents=True, exist_ok=True)
     figures_dir.mkdir(parents=True, exist_ok=True)
 
-    if synthetic:
-        from src.synthetic import features
-
-        print("Using synthetic data (demo only).")
-        features_df, x_raw, _ = features(n_subjects=8, block_sec=150, seed=SEED)
-    else:
-        cached = load_cached()
-        if cached is None:
-            raise SystemExit("No cached features. Run scripts/run_experiment.py first.")
-        features_df, x_raw = cached
-
-    X, y, groups, _, _ = prepare_task(features_df, x_raw, [1, 2])
+    X, y, groups, _, _ = load_binary_task(synthetic=synthetic, n_subjects=8)
     out = compute(X, y, groups, model=model)
 
     out["provenance"] = provenance()

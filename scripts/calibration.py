@@ -22,9 +22,8 @@ from scripts.run_experiment import (
     RESULTS_DIR,
     _fit_params,
     build_pipeline,
-    load_cached,
+    load_binary_task,
     nonoverlap_mask,
-    prepare_task,
 )
 from src import calibration as cal
 from src.config import FIGURES_DIR, SEED
@@ -106,6 +105,17 @@ def _pos_proba(estimator, X):
     return np.zeros(len(X))
 
 
+def _global_calibrator(factory, Xtr, ytr, gtr, method):
+    if len(np.unique(gtr)) < 2:
+        return None
+    oof = np.zeros(len(ytr))
+    for itr, ical in GroupKFold(n_splits=min(5, len(np.unique(gtr)))).split(Xtr, ytr, gtr):
+        p = factory()
+        p.fit(Xtr[itr], ytr[itr], **_fit_params(p, ytr[itr]))
+        oof[ical] = _pos_proba(p, Xtr[ical])
+    return _fit_calibrator(oof, ytr, method)
+
+
 def loso_recalibrated_proba(factory, X, y, groups, method="isotonic"):
     """LOSO with a calibrator fit on out-of-fold training probabilities only."""
     logo = LeaveOneGroupOut()
@@ -116,18 +126,10 @@ def loso_recalibrated_proba(factory, X, y, groups, method="isotonic"):
         base.fit(Xtr, ytr, **_fit_params(base, ytr))
         raw_te = _pos_proba(base, X[test_idx])
 
-        n_groups = len(np.unique(gtr))
-        if n_groups < 2:
-            cal_pos = raw_te  # too few subjects to fit a calibrator
-        else:
-            oof = np.zeros(len(ytr))
-            inner = GroupKFold(n_splits=min(5, n_groups))
-            for itr, ical in inner.split(Xtr, ytr, gtr):
-                p = factory()
-                p.fit(Xtr[itr], ytr[itr], **_fit_params(p, ytr[itr]))
-                oof[ical] = _pos_proba(p, Xtr[ical])
-            calibrator = _fit_calibrator(oof, ytr, method)
-            cal_pos = _apply_calibrator(calibrator, raw_te, method)
+        calibrator = _global_calibrator(factory, Xtr, ytr, gtr, method)
+        cal_pos = (
+            _apply_calibrator(calibrator, raw_te, method) if calibrator is not None else raw_te
+        )
 
         pp.append(np.column_stack([1.0 - cal_pos, cal_pos]))
         yt.append(y[test_idx])
@@ -252,18 +254,7 @@ def run(synthetic=False, model="rf", n_bins=N_BINS):
     results_dir.mkdir(parents=True, exist_ok=True)
     figures_dir.mkdir(parents=True, exist_ok=True)
 
-    if synthetic:
-        from src.synthetic import features
-
-        print("Using synthetic data (demo only).")
-        features_df, x_raw, _ = features(n_subjects=6, block_sec=150, seed=SEED)
-    else:
-        cached = load_cached()
-        if cached is None:
-            raise SystemExit("No cached features. Run scripts/run_experiment.py first.")
-        features_df, x_raw = cached
-
-    X, y, groups, _, _ = prepare_task(features_df, x_raw, [1, 2])
+    X, y, groups, _, _ = load_binary_task(synthetic=synthetic)
     out = compute(X, y, groups, model=model, n_bins=n_bins)
 
     _plot_reliability(out, figures_dir / "calibration_reliability.png")

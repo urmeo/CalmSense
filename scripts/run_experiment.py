@@ -74,6 +74,32 @@ def _save_model(model, path):
     path.with_suffix(path.suffix + ".sha256").write_text(f"{digest}  {path.name}\n")
 
 
+def _subject_metrics(subject, y_true, y_pred):
+    return {
+        "subject": subject,
+        "n": len(y_true),
+        "accuracy": accuracy_score(y_true, y_pred),
+        "f1_macro": f1_score(y_true, y_pred, average="macro"),
+    }
+
+
+def _summarize_loso(pooled_true, pooled_pred, per_subject, classes):
+    pooled_true, pooled_pred = np.asarray(pooled_true), np.asarray(pooled_pred)
+    subj_df = pd.DataFrame(per_subject)
+    return {
+        "accuracy_mean": float(subj_df["accuracy"].mean()),
+        "accuracy_std": float(subj_df["accuracy"].std()),
+        "f1_macro_mean": float(subj_df["f1_macro"].mean()),
+        "f1_macro_std": float(subj_df["f1_macro"].std()),
+        "balanced_accuracy": float(balanced_accuracy_score(pooled_true, pooled_pred)),
+        "pooled_accuracy": float(accuracy_score(pooled_true, pooled_pred)),
+        "per_subject": subj_df,
+        "y_true": pooled_true,
+        "y_pred": pooled_pred,
+        "classes": classes,
+    }
+
+
 def loso_evaluate(pipeline_factory, X, y, groups):
     """Leak-free LOSO: impute + scale fit per fold."""
     logo = LeaveOneGroupOut()
@@ -88,30 +114,9 @@ def loso_evaluate(pipeline_factory, X, y, groups):
 
         pooled_true.extend(y[test_idx])
         pooled_pred.extend(pred)
-        per_subject.append(
-            {
-                "subject": groups[test_idx][0],
-                "n": len(test_idx),
-                "accuracy": accuracy_score(y[test_idx], pred),
-                "f1_macro": f1_score(y[test_idx], pred, average="macro"),
-            }
-        )
+        per_subject.append(_subject_metrics(groups[test_idx][0], y[test_idx], pred))
 
-    pooled_true = np.array(pooled_true)
-    pooled_pred = np.array(pooled_pred)
-    subj_df = pd.DataFrame(per_subject)
-    return {
-        "accuracy_mean": float(subj_df["accuracy"].mean()),
-        "accuracy_std": float(subj_df["accuracy"].std()),
-        "f1_macro_mean": float(subj_df["f1_macro"].mean()),
-        "f1_macro_std": float(subj_df["f1_macro"].std()),
-        "balanced_accuracy": float(balanced_accuracy_score(pooled_true, pooled_pred)),
-        "pooled_accuracy": float(accuracy_score(pooled_true, pooled_pred)),
-        "per_subject": subj_df,
-        "y_true": pooled_true,
-        "y_pred": pooled_pred,
-        "classes": classes,
-    }
+    return _summarize_loso(pooled_true, pooled_pred, per_subject, classes)
 
 
 def cnn_loso(x_raw, y, groups):
@@ -128,28 +133,9 @@ def cnn_loso(x_raw, y, groups):
         pred = model.predict(x_raw[test_idx])
         pooled_true.extend(y[test_idx])
         pooled_pred.extend(pred)
-        per_subject.append(
-            {
-                "subject": groups[test_idx][0],
-                "n": len(test_idx),
-                "accuracy": accuracy_score(y[test_idx], pred),
-                "f1_macro": f1_score(y[test_idx], pred, average="macro"),
-            }
-        )
+        per_subject.append(_subject_metrics(groups[test_idx][0], y[test_idx], pred))
 
-    subj_df = pd.DataFrame(per_subject)
-    return {
-        "accuracy_mean": float(subj_df["accuracy"].mean()),
-        "accuracy_std": float(subj_df["accuracy"].std()),
-        "f1_macro_mean": float(subj_df["f1_macro"].mean()),
-        "f1_macro_std": float(subj_df["f1_macro"].std()),
-        "balanced_accuracy": float(balanced_accuracy_score(pooled_true, pooled_pred)),
-        "per_subject": subj_df,
-        "pooled_accuracy": float(accuracy_score(pooled_true, pooled_pred)),
-        "y_true": np.array(pooled_true),
-        "y_pred": np.array(pooled_pred),
-        "classes": np.unique(y),
-    }
+    return _summarize_loso(pooled_true, pooled_pred, per_subject, np.unique(y))
 
 
 def nonoverlap_mask(groups):
@@ -305,6 +291,20 @@ def prepare_task(features_df, x_raw, keep):
     return X, y, groups, feature_cols, x_raw[mask]
 
 
+def load_binary_task(synthetic=False, n_subjects=6):
+    if synthetic:
+        from src.synthetic import features
+
+        print("Using synthetic data (demo only).")
+        features_df, x_raw, _ = features(n_subjects=n_subjects, block_sec=150, seed=SEED)
+    else:
+        cached = load_cached()
+        if cached is None:
+            raise SystemExit("No cached features. Run scripts/run_experiment.py first.")
+        features_df, x_raw = cached
+    return prepare_task(features_df, x_raw, [1, 2])
+
+
 def run():
     parser = argparse.ArgumentParser()
     parser.add_argument("--subjects", nargs="+", default=None)
@@ -314,10 +314,11 @@ def run():
     args = parser.parse_args()
     set_seed(SEED)
 
-    # Synthetic runs write to demo/ so they never overwrite the committed real-WESAD results.
-    results_dir = RESULTS_DIR / "demo" if args.synthetic else RESULTS_DIR
-    figures_dir = FIGURES_DIR / "demo" if args.synthetic else FIGURES_DIR
-    models_dir = MODELS_DIR / "demo" if args.synthetic else MODELS_DIR
+    # Demo and subset runs must not replace the full-WESAD artifacts.
+    subdir = "demo" if args.synthetic else "subset" if args.subjects else None
+    results_dir = RESULTS_DIR / subdir if subdir else RESULTS_DIR
+    figures_dir = FIGURES_DIR / subdir if subdir else FIGURES_DIR
+    models_dir = MODELS_DIR / subdir if subdir else MODELS_DIR
     results_dir.mkdir(parents=True, exist_ok=True)
     figures_dir.mkdir(parents=True, exist_ok=True)
     models_dir.mkdir(parents=True, exist_ok=True)
@@ -332,7 +333,9 @@ def run():
         cached = None if (args.rebuild or args.subjects) else load_cached()
         if cached is None:
             print("Building dataset from raw WESAD...")
-            features_df, x_raw, _ = WindowedDataset().build(subjects=args.subjects)
+            features_df, x_raw, _ = WindowedDataset().build(
+                subjects=args.subjects, cache=not args.subjects
+            )
         else:
             print("Loaded cached dataset.")
             features_df, x_raw = cached
@@ -439,7 +442,8 @@ def run():
         json.dump(summary, f, indent=2)
 
     print(f"\nResults written to {results_dir}")
-    print("Run scripts/build_dashboard_data.py to refresh the dashboard.")
+    if subdir is None:
+        print("Run scripts/build_dashboard_data.py to refresh the dashboard.")
 
 
 if __name__ == "__main__":

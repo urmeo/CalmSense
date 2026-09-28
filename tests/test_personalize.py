@@ -72,7 +72,7 @@ def test_compute_reports_actual_enrollment_counts_below_budget():
 
 
 def test_synthetic_run_preserves_recorded_results(tmp_path, monkeypatch):
-    from scripts import personalize
+    from scripts import personalize, run_experiment
     from src import synthetic
 
     results = tmp_path / "results"
@@ -86,7 +86,7 @@ def test_synthetic_run_preserves_recorded_results(tmp_path, monkeypatch):
     monkeypatch.setattr(personalize, "RESULTS_DIR", results)
     monkeypatch.setattr(personalize, "FIGURES_DIR", figures)
     monkeypatch.setattr(synthetic, "features", lambda **kwargs: (None, None, None))
-    monkeypatch.setattr(personalize, "prepare_task", lambda *args: (None,) * 5)
+    monkeypatch.setattr(run_experiment, "prepare_task", lambda *args: (None,) * 5)
     monkeypatch.setattr(
         personalize,
         "compute",

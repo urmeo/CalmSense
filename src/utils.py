@@ -79,7 +79,8 @@ def paired_effect_size(a, b) -> dict:
     """Paired Cohen's d and (small-sample-corrected) Hedges' g for two per-subject vectors.
 
     Complements p-values: reports the standardized magnitude of a - b, which is what
-    matters at N=15 where significance is low-powered.
+    matters at N=15 where significance is low-powered. A nonzero constant difference
+    has undefined standardized effect; return None so result JSON remains valid.
     """
     import numpy as np
 
@@ -87,6 +88,8 @@ def paired_effect_size(a, b) -> dict:
     diff = a - b
     n = len(diff)
     sd = diff.std(ddof=1)
+    if n and np.ptp(diff) == 0 and diff[0] != 0:
+        return {"cohens_d": None, "hedges_g": None, "n": int(n)}
     d = float(diff.mean() / sd) if sd > 0 else 0.0
     g = d * (1 - 3 / (4 * n - 1)) if n > 1 else d  # Hedges correction for small n
     return {"cohens_d": d, "hedges_g": float(g), "n": int(n)}

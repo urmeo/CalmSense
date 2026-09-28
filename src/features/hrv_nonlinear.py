@@ -1,7 +1,9 @@
 from typing import Dict, Tuple
 
 import numpy as np
+from numpy.lib.stride_tricks import sliding_window_view
 from scipy import stats
+from scipy.spatial.distance import cdist, pdist
 
 from ..config import FEATURE_PARAMS
 from .hrv_base import BaseHRVExtractor
@@ -20,13 +22,8 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
         r_val = r * np.std(rr)
 
         def _count_matches(template_len: int) -> int:
-            count = 0
-            for i in range(n - template_len):
-                for j in range(i + 1, n - template_len):
-                    dist = np.max(np.abs(rr[i : i + template_len] - rr[j : j + template_len]))
-                    if dist < r_val:
-                        count += 1
-            return count
+            patterns = sliding_window_view(rr, template_len)[:-1]
+            return int(np.count_nonzero(pdist(patterns, metric="chebyshev") < r_val))
 
         b = _count_matches(m)
         a = _count_matches(m + 1)
@@ -44,20 +41,11 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
         r_val = r * np.std(rr)
 
         def _phi(template_len: int) -> float:
-            patterns = np.array([rr[i : i + template_len] for i in range(n - template_len + 1)])
-            n_patterns = len(patterns)
-
-            if n_patterns == 0:
-                return 0.0
-
-            counts = np.zeros(n_patterns)
-            for i in range(n_patterns):
-                for j in range(n_patterns):
-                    dist = np.max(np.abs(patterns[i] - patterns[j]))
-                    if dist <= r_val:
-                        counts[i] += 1
-
-            probs = counts / n_patterns
+            patterns = sliding_window_view(rr, template_len)
+            counts = np.count_nonzero(
+                cdist(patterns, patterns, metric="chebyshev") <= r_val, axis=1
+            )
+            probs = counts / len(patterns)
             return float(np.mean(np.log(probs + FEATURE_PARAMS.EPSILON)))
 
         phi_m = _phi(m)

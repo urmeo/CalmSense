@@ -20,6 +20,8 @@ def _confidence_correct(y: Array, proba: Array):
 
 
 def _bin_index(conf: np.ndarray, n_bins: int) -> np.ndarray:
+    if n_bins < 1:
+        raise ValueError("n_bins must be positive")
     edges = np.linspace(0.0, 1.0, n_bins + 1)
     return np.clip(np.digitize(conf, edges[1:-1]), 0, n_bins - 1)
 
@@ -43,26 +45,17 @@ def reliability_curve(y: Array, proba: Array, n_bins: int = 15) -> List[Dict[str
 
 
 def expected_calibration_error(y: Array, proba: Array, n_bins: int = 15) -> float:
-    conf, correct = _confidence_correct(y, proba)
-    idx = _bin_index(conf, n_bins)
-    n = len(conf)
     ece = 0.0
-    for b in range(n_bins):
-        mask = idx == b
-        if mask.any():
-            ece += mask.sum() / n * abs(correct[mask].mean() - conf[mask].mean())
+    for row in reliability_curve(y, proba, n_bins):
+        ece += row["count"] / len(y) * abs(row["accuracy"] - row["confidence"])
     return float(ece)
 
 
 def maximum_calibration_error(y: Array, proba: Array, n_bins: int = 15) -> float:
-    conf, correct = _confidence_correct(y, proba)
-    idx = _bin_index(conf, n_bins)
-    gaps = [
-        abs(correct[idx == b].mean() - conf[idx == b].mean())
-        for b in range(n_bins)
-        if (idx == b).any()
-    ]
-    return float(max(gaps)) if gaps else 0.0
+    return max(
+        (abs(row["accuracy"] - row["confidence"]) for row in reliability_curve(y, proba, n_bins)),
+        default=0.0,
+    )
 
 
 def brier_score(y: Array, proba: Array) -> float:

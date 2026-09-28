@@ -24,10 +24,8 @@ from scripts.run_experiment import (
     FIGURES_DIR,
     RESULTS_DIR,
     build_pipeline,
-    load_cached,
-    prepare_task,
+    load_binary_task,
 )
-from src.config import SEED
 from src.utils import provenance
 
 GRIDS = {
@@ -125,18 +123,7 @@ def run(synthetic=False, inner_splits=3):
     results_dir.mkdir(parents=True, exist_ok=True)
     figures_dir.mkdir(parents=True, exist_ok=True)
 
-    if synthetic:
-        from src.synthetic import features
-
-        print("Using synthetic data (demo only).")
-        features_df, x_raw, _ = features(n_subjects=6, block_sec=150, seed=SEED)
-    else:
-        cached = load_cached()
-        if cached is None:
-            raise SystemExit("No cached features. Run scripts/run_experiment.py first.")
-        features_df, x_raw = cached
-
-    X, y, groups, _, _ = prepare_task(features_df, x_raw, [1, 2])
+    X, y, groups, _, _ = load_binary_task(synthetic=synthetic)
     tuned = compute(X, y, groups, inner_splits)
     defaults = _defaults(results_dir)
 

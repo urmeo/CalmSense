@@ -52,10 +52,7 @@ def test_threshold_metrics_failure_preserves_existing_results(tmp_path, monkeypa
     snapshot = tmp_path / "threshold_metrics.json"
     snapshot.write_text('{"snapshot": true}\n')
     monkeypatch.setattr(threshold_metrics, "RESULTS_DIR", tmp_path)
-    monkeypatch.setattr(threshold_metrics, "load_cached", lambda: (None, None))
-    monkeypatch.setattr(
-        threshold_metrics, "prepare_task", lambda *args: (None, [], None, None, None)
-    )
+    monkeypatch.setattr(threshold_metrics, "load_binary_task", lambda: (None, [], None, None, None))
 
     def fail(*args):
         raise ValueError("model fitting failed")

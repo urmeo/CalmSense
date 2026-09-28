@@ -20,9 +20,11 @@ OUT_FS = 30  # display rate
 
 def _slice(signal, labels, label, want):
     idx = np.where(labels == label)[0]
-    if len(idx) < want:
+    runs = np.split(idx, np.flatnonzero(np.diff(idx) > 1) + 1)
+    run = max(runs, key=len)
+    if len(run) < want:
         return None
-    start = idx[len(idx) // 2 - want // 2]
+    start = run[len(run) // 2 - want // 2]
     return signal[start : start + want]
 
 

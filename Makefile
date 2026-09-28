@@ -30,10 +30,8 @@ data:
 # Prerequisites: WESAD (make wesad) and PhysioNet Non-EEG (make data) must be downloaded first;
 # on macOS, xgboost/lightgbm also need OpenMP (brew install libomp).
 reproduce:
-	@test -f data/raw/WESAD/S2/S2.pkl || \
-		{ echo "ERROR: Raw WESAD not found. Run 'make wesad' first; see README.md."; exit 1; }
-	@test -f data/external/noneeg/non-eeg-dataset-for-assessment-of-neurological-status-1.0.0/Subject1_AccTempEDA.hea || \
-		{ echo "ERROR: PhysioNet Non-EEG not found. Run 'make data' first; see README.md."; exit 1; }
+	python scripts/download_data.py --verify-wesad
+	python scripts/download_data.py --verify-noneeg
 	python scripts/run_experiment.py
 	python scripts/ablation.py
 	python scripts/wrist.py
@@ -45,7 +43,7 @@ reproduce:
 	python scripts/threshold_metrics.py
 	python scripts/build_dashboard_data.py
 	python scripts/export_signals.py
-	python scripts/stamp_provenance.py
+	python scripts/stamp_provenance.py --overwrite
 
 test:
 	pytest tests/ -q

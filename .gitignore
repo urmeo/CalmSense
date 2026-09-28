@@ -196,6 +196,7 @@ outputs/figures/*
 
 # Demo (synthetic) outputs, never overwrite the committed real-WESAD results
 results/demo/
+results/subset/
 outputs/models/demo/
 
 # Reports

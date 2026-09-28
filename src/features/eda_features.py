@@ -35,6 +35,7 @@ class EDAFeatureExtractor(LoggerMixin):
         validated = self._validate_signal(scl)
         if validated is None:
             return features
+        sample_times = np.flatnonzero(np.isfinite(np.asarray(scl).ravel())) / self.sampling_rate
         scl = validated
 
         try:
@@ -43,10 +44,7 @@ class EDAFeatureExtractor(LoggerMixin):
             features["SCL_min"] = float(np.min(scl))
             features["SCL_max"] = float(np.max(scl))
 
-            x = np.arange(len(scl)) / self.sampling_rate
-            if len(x) > 1:
-                slope, _, _, _, _ = stats.linregress(x, scl)
-                features["SCL_slope"] = float(slope)
+            features["SCL_slope"] = float(stats.linregress(sample_times, scl).slope)
 
         except Exception as e:
             self.logger.warning(f"Tonic feature extraction failed: {e}")

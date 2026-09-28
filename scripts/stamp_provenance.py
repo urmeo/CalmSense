@@ -1,9 +1,9 @@
-"""Write results/provenance.json: the exact context the committed numbers came from.
+"""Write results/provenance.json after a full reproduction.
 
-Closes the reproducibility loop for an auditor: which commit, which seed, which package
-versions, which dataset. Run at the end of `make reproduce` (and standalone any time).
+Run at the end of `make reproduce`; replacing an existing stamp requires --overwrite.
 """
 
+import argparse
 import hashlib
 import json
 import sys
@@ -54,7 +54,13 @@ def _dataset_fingerprint() -> dict:
     }
 
 
-def run():
+def run(*, overwrite=False):
+    path = PROJECT_ROOT / "results" / "provenance.json"
+    if path.exists() and not overwrite:
+        raise SystemExit(
+            "Existing provenance preserved. Use --overwrite only after a full reproduction "
+            "(the final step of 'make reproduce')."
+        )
     prov = {
         **provenance(),
         "seed": SEED,
@@ -62,7 +68,6 @@ def run():
         "packages": _package_versions(),
         "data": _dataset_fingerprint(),
     }
-    path = PROJECT_ROOT / "results" / "provenance.json"
     path.parent.mkdir(exist_ok=True)
     with open(path, "w") as f:
         json.dump(prov, f, indent=2)
@@ -74,4 +79,8 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--overwrite", action="store_true", help="replace lineage after a full reproduction"
+    )
+    run(overwrite=parser.parse_args().overwrite)

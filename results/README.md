@@ -34,6 +34,8 @@ headline metrics are unchanged.
 
 `provenance.json` preserves the original environment and records package versions for the three
 targeted reruns under `analysis_reruns`; each result file carries its own code revision.
+The stamping script preserves existing provenance by default; `make reproduce` replaces it only
+after every experiment and export succeeds.
 
 The stamped JSONs (calibration.json, cross_dataset.json, personalization.json, threshold_metrics.json) carry a
 provenance block (git_sha, generated_at) recording exactly which commit produced them; the

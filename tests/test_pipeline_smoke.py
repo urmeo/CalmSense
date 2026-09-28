@@ -108,7 +108,7 @@ def test_calibration_outputs_are_valid(synth):
 def test_synthetic_tuning_preserves_recorded_results(tmp_path, monkeypatch, demo_defaults):
     import json
 
-    from scripts import tuning
+    from scripts import run_experiment, tuning
     from src import synthetic
 
     results = tmp_path / "results"
@@ -128,7 +128,7 @@ def test_synthetic_tuning_preserves_recorded_results(tmp_path, monkeypatch, demo
     monkeypatch.setattr(tuning, "RESULTS_DIR", results)
     monkeypatch.setattr(tuning, "FIGURES_DIR", figures)
     monkeypatch.setattr(synthetic, "features", lambda **kwargs: (None, None, None))
-    monkeypatch.setattr(tuning, "prepare_task", lambda *args: (None,) * 5)
+    monkeypatch.setattr(run_experiment, "prepare_task", lambda *args: (None,) * 5)
     monkeypatch.setattr(tuning, "compute", lambda *args: {"Random Forest": {"accuracy_mean": 0.75}})
     plotted_defaults = []
     plot = tuning._plot

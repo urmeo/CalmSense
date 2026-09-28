@@ -26,8 +26,7 @@ from scripts.run_experiment import (
     RESULTS_DIR,
     _fit_params,
     build_pipeline,
-    load_cached,
-    prepare_task,
+    load_binary_task,
 )
 from src.utils import provenance
 
@@ -71,11 +70,7 @@ def operating_point(y_true, p1):
 
 
 def run():
-    cached = load_cached()
-    if cached is None:
-        raise SystemExit("No cached features. Run scripts/run_experiment.py first.")
-    features_df, x_raw = cached
-    X, y, groups, _, _ = prepare_task(features_df, x_raw, [1, 2])  # binary: baseline vs stress
+    X, y, groups, _, _ = load_binary_task()
 
     out = {"task": "binary", "n_windows": int(len(y)), "models": []}
     for key in FEATURE_MODELS:

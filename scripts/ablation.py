@@ -15,9 +15,8 @@ from scripts.run_experiment import (
     FIGURES_DIR,
     RESULTS_DIR,
     build_pipeline,
-    load_cached,
+    load_binary_task,
     loso_evaluate,
-    prepare_task,
 )
 
 # Canonical feature-group prefixes; every feature column is named "<GROUP>_...".
@@ -42,12 +41,7 @@ def _group_of(col: str) -> str:
 
 def run():
     RESULTS_DIR.mkdir(exist_ok=True)
-    cached = load_cached()
-    if cached is None:
-        raise SystemExit("No cached features. Run scripts/run_experiment.py first.")
-    features_df, x_raw = cached
-
-    X, y, groups, feature_cols, _ = prepare_task(features_df, x_raw, [1, 2])
+    X, y, groups, feature_cols, _ = load_binary_task()
 
     # Fail loudly if any feature is unaccounted for: the "All features" subset must
     # cover every column, or the ablation would silently compare the wrong sets.

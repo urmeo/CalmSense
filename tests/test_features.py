@@ -1,9 +1,39 @@
 """Feature extractors produce correct values on known signals."""
 
 import numpy as np
+import pytest
 
 from src.features.hrv_time_domain import HRVTimeDomainExtractor
 from src.preprocessing.ecg_processor import ECGProcessor
+
+
+@pytest.mark.parametrize("missing", [False, True])
+@pytest.mark.parametrize("sampling_rate", [4, 700])
+def test_slopes_keep_original_sample_times(sampling_rate, missing):
+    from src.features.eda_features import EDAFeatureExtractor
+    from src.features.temperature_features import TemperatureFeatureExtractor
+
+    values = 25.0 + 0.1 * np.arange(30) / sampling_rate
+    if missing:
+        values[5:15] = np.nan
+    temperature = TemperatureFeatureExtractor(sampling_rate).extract_all(values)
+    tonic = EDAFeatureExtractor(sampling_rate).extract_tonic_features(values)
+    assert temperature["TEMP_slope"] == pytest.approx(0.1)
+    assert tonic["SCL_slope"] == pytest.approx(0.1)
+
+
+def test_entropy_preserves_reference_values_and_degenerate_inputs():
+    from src.features.hrv_nonlinear import HRVNonlinearExtractor
+
+    extractor = HRVNonlinearExtractor()
+    rr = 800 + 30 * np.random.RandomState(42).randn(120)
+    assert extractor.compute_sample_entropy(rr) == pytest.approx(1.934860312862147)
+    assert extractor.compute_approximate_entropy(rr) == pytest.approx(0.6134612324264683)
+    constant = np.full(120, 800.0)
+    assert np.isnan(extractor.compute_sample_entropy(constant))
+    assert extractor.compute_approximate_entropy(constant) == 0.0
+    for compute in (extractor.compute_sample_entropy, extractor.compute_approximate_entropy):
+        assert np.isnan(compute(rr[:3]))
 
 
 def test_missing_eda_preserves_feature_order_and_zero_event_counts():

@@ -1,5 +1,9 @@
 """Provenance stamping and effect-size helpers."""
 
+import json
+
+import pytest
+
 from src.utils import paired_effect_size, provenance
 
 
@@ -23,3 +27,10 @@ def test_paired_effect_size_matches_hand_calc():
 def test_paired_effect_size_zero_when_identical():
     es = paired_effect_size([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
     assert es["cohens_d"] == 0.0 and es["hedges_g"] == 0.0
+
+
+@pytest.mark.parametrize("difference", [1.0, -1.0, 0.1])
+def test_paired_effect_size_constant_nonzero_difference_is_undefined(difference):
+    effect = paired_effect_size([difference] * 3, [0.0] * 3)
+    assert effect == {"cohens_d": None, "hedges_g": None, "n": 3}
+    assert json.loads(json.dumps(effect, allow_nan=False)) == effect
