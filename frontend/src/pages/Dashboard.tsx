@@ -52,7 +52,7 @@ const FeatureImportanceChart: React.FC = () => {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-        Top biomarkers (mean |SHAP|, binary model)
+        Top features (XGBoost, training-data SHAP)
       </h3>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
@@ -76,7 +76,7 @@ const FeatureImportanceChart: React.FC = () => {
 // The project's signature finding: subject-independent vs within-subject accuracy
 const OptimismGapChart: React.FC = () => {
   const b = r.binary || {};
-  const loso = b.loso_pooled_accuracy ?? b.loso_accuracy;
+  const loso = b.loso_matched_accuracy ?? b.loso_pooled_accuracy ?? b.loso_accuracy;
   const within = b.within_subject_accuracy;
   const data = [
     { name: 'LOSO\n(subject-independent)', value: loso, color: '#3182CE' },
@@ -177,7 +177,7 @@ const Dashboard: React.FC = () => {
         <MetricCard title="Binary LOSO accuracy" value={pct(b.loso_accuracy)} icon={<Activity className="w-6 h-6 text-blue-600" />} color="blue" />
         <MetricCard title="3-class LOSO accuracy" value={pct(m.loso_accuracy)} icon={<Brain className="w-6 h-6 text-green-600" />} color="green" />
         <MetricCard title="Features" value={b.n_features} icon={<Layers className="w-6 h-6 text-purple-600" />} color="purple" />
-        <MetricCard title="Best model" value={b.best_model} icon={<Award className="w-6 h-6 text-orange-600" />} color="orange" />
+        <MetricCard title="Highest mean accuracy" value={b.best_model} icon={<Award className="w-6 h-6 text-orange-600" />} color="orange" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -28,6 +28,7 @@ export interface Calibration {
   n_windows: number;
   n_bins: number;
   loso: CalibrationSummary;
+  loso_matched: CalibrationSummary;
   within_subject: CalibrationSummary;
   recalibrated_isotonic: CalibrationSummary;
   recalibrated_sigmoid: CalibrationSummary;

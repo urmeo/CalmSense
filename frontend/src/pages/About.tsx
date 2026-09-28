@@ -52,7 +52,7 @@ const About: React.FC = () => {
 
       {/* Badges */}
       <div className="flex flex-wrap justify-center gap-2">
-        {['Python 3.9+', 'PyTorch', 'React', 'WESAD Dataset'].map((badge) => (
+        {['Python 3.11+', 'PyTorch', 'React', 'WESAD Dataset'].map((badge) => (
           <span
             key={badge}
             className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 rounded-full text-sm font-medium"
@@ -74,7 +74,7 @@ const About: React.FC = () => {
           Leave-One-Subject-Out comparison of classical models and a 1D-CNN.
         </p>
         <p className="mt-4 text-gray-600 dark:text-gray-400 leading-relaxed">
-          Every result uses <strong>Leave-One-Subject-Out</strong> cross-validation, so models are always tested
+          Headline benchmarks use <strong>Leave-One-Subject-Out</strong> cross-validation, so models are tested
           on people they never trained on. The best binary model ({r.binary.best_model}) reaches{' '}
           <strong>{pct(r.binary.loso_accuracy)}</strong> for stress detection, and the best three-class model
           ({r.multiclass.best_model}) reaches <strong>{pct(r.multiclass.loso_accuracy)}</strong>{' '}
@@ -106,10 +106,10 @@ const About: React.FC = () => {
         </FeatureCard>
 
         <FeatureCard icon={<Shield className="w-6 h-6 text-orange-500" />} title="Explainability">
-          <li>• SHAP values for global/local importance</li>
-          <li>• Top-biomarker contributions per prediction</li>
+          <li>• Global SHAP feature importance</li>
+          <li>• XGBoost explanations on fitted data</li>
           <li>• Optimism-gap analysis (LOSO vs within-subject)</li>
-          <li>• Clinical interpretation (Task Force 1996)</li>
+          <li>• Research only; no clinical validation</li>
         </FeatureCard>
       </div>
 

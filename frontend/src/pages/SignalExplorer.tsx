@@ -148,6 +148,7 @@ const SignalExplorer: React.FC = () => {
           <p className="text-gray-500 dark:text-gray-400">Real WESAD chest signals across conditions</p>
         </div>
         <select
+          aria-label="Subject"
           value={selectedSubject}
           onChange={(e) => setSelectedSubject(e.target.value)}
           className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
