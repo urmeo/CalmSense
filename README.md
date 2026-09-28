@@ -33,14 +33,14 @@ RF threshold (Youden J): 0.45 gives sensitivity 0.90, specificity 0.91, PPV 0.85
 
 58 features: HRV, EDA, temperature, respiration and motion. Logistic Regression, Random Forest, XGBoost and LightGBM use
 median imputation and scaling fit per fold. NeuroKit2/SciPy, SHAP, PyTorch and React/TypeScript
-support the pipeline and dashboard. [Model details](MODEL_CARD.md).
+support the pipeline and dashboard. [Model details](docs/MODEL_CARD.md).
 
 ## Limitations
 
 - 15 lab subjects: wide confidence intervals, low power, no clinical claim.
 - Ablation, calibration and personalization are exploratory, without multiplicity correction; the raw-signal 1D-CNN is a small baseline.
 - Synthetic scores only exercise the pipeline; they are not evidence of performance on real subjects.
-- WESAD/PhysioNet Non-EEG transfer uses one confounded pair. EDA/TEMP slopes are per sample at different rates (4 Hz vs 8 Hz); scores require recomputation with harmonized units and do not isolate dataset shift. See [provenance](PROVENANCE.md).
+- WESAD/PhysioNet Non-EEG transfer uses one confounded pair. EDA/TEMP slopes are per sample at different rates (4 Hz vs 8 Hz); scores require recomputation with harmonized units and do not isolate dataset shift. See [provenance](docs/PROVENANCE.md).
 
 ## Ethics & data use
 

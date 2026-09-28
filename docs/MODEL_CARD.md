@@ -2,7 +2,7 @@
 
 This card describes the model shipped in this repository.
 It follows the model-card format (Mitchell et al., 2019). Numbers are the committed WESAD
-snapshot; see [results/README.md](results/README.md) and results/provenance.json for provenance.
+snapshot; see [results/README.md](../results/README.md) and results/provenance.json for provenance.
 
 ## Model details
 
@@ -58,7 +58,7 @@ Three-class (baseline, stress, amusement) accuracy is far lower at 0.66, close t
 ## Limitations and caveats
 
 - 15 lab subjects give wide confidence intervals and low power; no clinical claim is made.
-- The recorded transfer score is near chance (0.50 balanced accuracy), but mismatched EDA/TEMP slope units confound that comparison; see [README limitations](README.md#limitations).
+- The recorded transfer score is near chance (0.50 balanced accuracy), but mismatched EDA/TEMP slope units confound that comparison; see [README limitations](../README.md#limitations).
 - Ablation, calibration, and personalization are exploratory and not multiplicity-corrected.
 - Metrics other than the threshold-free AUROC and AUPRC are reported at a fixed threshold.
 - The synthetic demo data is near-separable by design; only the real WESAD run is meaningful.

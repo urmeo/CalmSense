@@ -1,8 +1,8 @@
 import React from 'react';
-import Plot from './Plot';
+import Plot from '../components/Plot';
 import { Gauge, Target, AlertTriangle, TrendingDown, Info } from 'lucide-react';
-import results from '../results.json';
-import SummaryCard from './SummaryCard';
+import results from '../data/results.json';
+import SummaryCard from '../components/SummaryCard';
 import { Calibration } from '../types';
 
 const fmt = (v: number) => v.toFixed(3);

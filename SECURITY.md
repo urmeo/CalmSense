@@ -26,7 +26,7 @@ CalmSense is research software, not a medical device or production service.
 ## Static dashboard (no backend)
 
 The dashboard has no server and runs no model: it renders the committed experiment output
-(frontend/src/results.json, frontend/src/signals.json), so there is no server-side attack
+(frontend/src/data/results.json, frontend/src/data/signals.json), so there is no server-side attack
 surface and it accepts no user input or uploads.
 
 ## Supply chain & secrets

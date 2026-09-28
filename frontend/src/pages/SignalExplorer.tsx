@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import Plot from './Plot';
+import Plot from '../components/Plot';
 import { ZoomIn, ZoomOut, RefreshCw } from 'lucide-react';
-import realSignals from '../signals.json';
+import realSignals from '../data/signals.json';
 
 // Real WESAD chest signals (baseline -> stress -> amusement), downsampled for display
 const subjects = Object.keys(realSignals);
