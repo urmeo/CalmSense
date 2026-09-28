@@ -5,14 +5,14 @@
     {
       "model": "Logistic Regression",
       "available": true,
-      "auroc": 0.9585878725352684,
-      "auprc": 0.9469452051370291
+      "auroc": 0.9586806078801858,
+      "auprc": 0.9470772853552286
     },
     {
       "model": "Random Forest",
       "available": true,
-      "auroc": 0.9733038125818678,
-      "auprc": 0.9595197877358985,
+      "auroc": 0.9733501802543267,
+      "auprc": 0.9596003538472915,
       "operating_point": {
         "rule": "Youden J (max sensitivity + specificity - 1)",
         "threshold": 0.453935991916671,
@@ -25,18 +25,18 @@
     {
       "model": "XGBoost",
       "available": true,
-      "auroc": 0.9745963114516559,
-      "auprc": 0.9599561593722432
+      "auroc": 0.9727358085942481,
+      "auprc": 0.9565412830431063
     },
     {
       "model": "LightGBM",
       "available": true,
-      "auroc": 0.9652995931236742,
-      "auprc": 0.9464156222226663
+      "auroc": 0.9627203913431555,
+      "auprc": 0.9417300722984862
     }
   ],
   "provenance": {
-    "git_sha": "1b3e9c90f82291de883baf453b1842755e7ef1f3",
-    "generated_at": "2026-07-03T05:22:15.983803+00:00"
+    "git_sha": "6ce5ff6582638fb30465cf79be84b7cd3ea4bdbf",
+    "generated_at": "2026-09-28T02:55:59.326816+00:00"
   }
 }
