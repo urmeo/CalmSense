@@ -5,7 +5,7 @@ import results from '../data/results.json';
 
 const prettify = (f: string) => f.replace(/_/g, ' ');
 
-// Real global feature importance: mean |SHAP| from the trained Random Forest
+// Global feature importance from XGBoost fitted and explained on the binary benchmark data
 const shap: { feature: string; mean_abs_shap: number }[] = (results as any).shap || [];
 const importance = shap
   .slice()
@@ -23,8 +23,8 @@ const ExplainabilityDashboard: React.FC = () => {
           <FileSearch className="w-6 h-6" /> Explainability
         </h1>
         <p className="text-gray-500 dark:text-gray-400">
-          Global feature importance (mean |SHAP|) from the trained Random Forest, over the
-          held-out predictions.
+          Global feature importance (mean |SHAP|) from XGBoost fitted and explained on the
+          binary benchmark data. These explanations are not held-out evaluation results.
         </p>
       </div>
 
@@ -90,10 +90,9 @@ const ExplainabilityDashboard: React.FC = () => {
         <div className="space-y-4 text-sm text-gray-700 dark:text-gray-300">
           {importance.length > 0 ? (
             <p>
-              The strongest single contributor is <strong>{importance[0].feature}</strong>, a motion
-              feature. Autonomic biomarkers follow: heart-rate-interval features (HRV MedianNN /
-              MeanNN) and electrodermal activity (EDA SCR / SCL), which track the sympathetic arousal
-              expected under acute stress (Task Force, 1996).
+              The largest mean absolute SHAP value belongs to <strong>{importance[0].feature}</strong>.
+              The ranking also includes heart-rate variability (HRV) and electrodermal activity
+              (EDA) features.
             </p>
           ) : (
             <p>Run the experiment to populate SHAP values.</p>
@@ -111,7 +110,6 @@ const ExplainabilityDashboard: React.FC = () => {
             <Info className="w-5 h-5 text-blue-500 mt-0.5 shrink-0" />
             <p className="text-blue-800 dark:text-blue-300">
               <strong>Disclaimer:</strong> research demonstration only, not a medical device.
-              Reference ranges follow Task Force (1996) HRV guidelines.
             </p>
           </div>
         </div>

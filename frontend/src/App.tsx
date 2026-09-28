@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -47,6 +47,34 @@ const Sidebar: React.FC<{
 }> = ({ isOpen, onClose, darkMode, toggleDarkMode }) => {
   const location = useLocation();
   const ThemeIcon = darkMode ? Sun : Moon;
+  const sidebarRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const sidebar = sidebarRef.current;
+    const controls = sidebar?.querySelectorAll<HTMLElement>('a[href], button');
+    controls?.[0]?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!window.matchMedia('(max-width: 1023px)').matches) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+      } else if (event.key === 'Tab' && controls?.length) {
+        const first = controls[0];
+        const last = controls[controls.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   return (
     <>
@@ -60,12 +88,14 @@ const Sidebar: React.FC<{
 
       {/* Sidebar */}
       <aside
+        id="navigation"
+        ref={sidebarRef}
         className={`
           fixed top-0 left-0 z-30 h-full w-64
           bg-primary-700 dark:bg-gray-900
           transform transition-transform duration-300 ease-in-out
-          lg:translate-x-0 lg:static
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+          lg:visible lg:translate-x-0 lg:static
+          ${isOpen ? 'visible translate-x-0' : 'invisible -translate-x-full'}
         `}
       >
         {/* Logo */}
@@ -94,6 +124,7 @@ const Sidebar: React.FC<{
                 key={item.path}
                 to={item.path}
                 onClick={onClose}
+                aria-current={isActive ? 'page' : undefined}
                 className={`
                   flex items-center space-x-3 px-4 py-3 rounded-lg
                   transition-colors duration-200
@@ -129,13 +160,20 @@ const Sidebar: React.FC<{
 };
 
 // Header component
-const Header: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) => {
+const Header: React.FC<{
+  onMenuClick: () => void;
+  menuOpen: boolean;
+  menuButtonRef: React.Ref<HTMLButtonElement>;
+}> = ({ onMenuClick, menuOpen, menuButtonRef }) => {
   return (
     <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
       <div className="flex items-center justify-between px-4 py-3">
         <button
+          ref={menuButtonRef}
           onClick={onMenuClick}
           aria-label="Open navigation menu"
+          aria-expanded={menuOpen}
+          aria-controls="navigation"
           className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
         >
           <Menu className="w-6 h-6 text-gray-600 dark:text-gray-300" />
@@ -155,21 +193,27 @@ const Header: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) => {
 // Main App component
 const App: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('darkMode');
-    return saved ? JSON.parse(saved) : false;
+    try {
+      return localStorage.getItem('darkMode') === 'true';
+    } catch {
+      return false;
+    }
   });
 
   useEffect(() => {
-    localStorage.setItem('darkMode', JSON.stringify(darkMode));
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    document.documentElement.classList.toggle('dark', darkMode);
+    try {
+      localStorage.setItem('darkMode', String(darkMode));
+    } catch {}
   }, [darkMode]);
 
   const toggleDarkMode = () => setDarkMode(!darkMode);
+  const closeSidebar = useCallback(() => {
+    setSidebarOpen(false);
+    menuButtonRef.current?.focus();
+  }, []);
 
   return (
     <Router basename={import.meta.env.BASE_URL}>
@@ -178,14 +222,18 @@ const App: React.FC = () => {
           {/* Sidebar */}
           <Sidebar
             isOpen={sidebarOpen}
-            onClose={() => setSidebarOpen(false)}
+            onClose={closeSidebar}
             darkMode={darkMode}
             toggleDarkMode={toggleDarkMode}
           />
 
           {/* Main content */}
           <div className="flex-1 flex flex-col overflow-hidden">
-            <Header onMenuClick={() => setSidebarOpen(true)} />
+            <Header
+              onMenuClick={() => setSidebarOpen(true)}
+              menuOpen={sidebarOpen}
+              menuButtonRef={menuButtonRef}
+            />
 
             <main className="flex-1 overflow-y-auto p-4 lg:p-6">
               <Suspense fallback={<p role="status" className="text-gray-600 dark:text-gray-300">Loading charts…</p>}>

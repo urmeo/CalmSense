@@ -25,8 +25,8 @@ const ModelComparison: React.FC = () => {
     (a: any, b: any) => b.accuracy_mean - a.accuracy_mean
   );
   const best = models[0];
-  const losoPooled = data.loso_pooled_accuracy ?? data.loso_accuracy;
-  const gap = (data.within_subject_accuracy - losoPooled) * 100;
+  const losoMatched = data.loso_matched_accuracy ?? data.loso_pooled_accuracy ?? data.loso_accuracy;
+  const gap = (data.within_subject_accuracy - losoMatched) * 100;
   const shap = (results as any).shap || [];
 
   const barData = models.map((m: any) => ({
@@ -40,10 +40,12 @@ const ModelComparison: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Model Comparison</h1>
           <p className="text-gray-500 dark:text-gray-400">
-            Leave-One-Subject-Out cross-validation on WESAD (15 subjects). No data leakage.
+            Leave-One-Subject-Out cross-validation on WESAD (15 subjects). Feature-model imputation
+            and scaling are fitted within each training fold.
           </p>
         </div>
         <select
+          aria-label="Classification task"
           value={task}
           onChange={(e) => setTask(e.target.value as Task)}
           className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg text-sm"
@@ -55,7 +57,7 @@ const ModelComparison: React.FC = () => {
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <SummaryCard icon={<Trophy className="w-6 h-6 text-green-600" />} label="Best model" value={best.model} />
+        <SummaryCard icon={<Trophy className="w-6 h-6 text-green-600" />} label="Highest mean accuracy" value={best.model} />
         <SummaryCard
           icon={<Activity className="w-6 h-6 text-blue-600" />}
           label="LOSO accuracy"
@@ -71,7 +73,7 @@ const ModelComparison: React.FC = () => {
       {/* Optimism note */}
       <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-4 text-sm text-orange-800 dark:text-orange-200">
         The same model scores <strong>{pct(data.within_subject_accuracy)}</strong> under within-subject
-        5-fold but only <strong>{pct(losoPooled)}</strong> when tested on unseen subjects, the
+        5-fold but only <strong>{pct(losoMatched)}</strong> when tested on unseen subjects, the
         gap that inflates many reported WESAD results.
       </div>
 
@@ -79,20 +81,21 @@ const ModelComparison: React.FC = () => {
       {(results as any).cross_dataset && (results as any).wrist && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-sm">
-            <p className="font-semibold text-gray-900 dark:text-white mb-1">Wrist-only is enough</p>
+            <p className="font-semibold text-gray-900 dark:text-white mb-1">Binary wrist comparison</p>
             <p className="text-gray-600 dark:text-gray-400">
-              With the same model, Empatica E4 wrist signals reach{' '}
+              Random Forest on Empatica E4 wrist signals reaches{' '}
               <strong>{pct((results as any).wrist.same_model_rf.wrist)}</strong> vs{' '}
               {pct((results as any).wrist.same_model_rf.chest)} for the chest, a{' '}
-              {(results as any).wrist.same_model_rf.drop_pts.toFixed(1)}-pt drop. No chest strap needed.
+              {(results as any).wrist.same_model_rf.drop_pts.toFixed(1)}-pt drop.
             </p>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-sm">
-            <p className="font-semibold text-gray-900 dark:text-white mb-1">It doesn't cross datasets</p>
+            <p className="font-semibold text-gray-900 dark:text-white mb-1">Binary transfer result</p>
             <p className="text-gray-600 dark:text-gray-400">
-              Trained on WESAD, tested on PhysioNet Non-EEG, balanced accuracy falls to{' '}
-              <strong>{pct((results as any).cross_dataset.wesad_to_noneeg.balanced_accuracy)}</strong>,
-              near chance. Within-dataset success is not real-world generalization.
+              Trained on WESAD and tested on PhysioNet Non-EEG, balanced accuracy is{' '}
+              <strong>{pct((results as any).cross_dataset.wesad_to_noneeg.balanced_accuracy)}</strong>.
+              EDA/TEMP slopes use consistent per-second units. The datasets use different stress
+              tasks, so this comparison does not isolate dataset shift.
             </p>
           </div>
         </div>
@@ -155,10 +158,10 @@ const ModelComparison: React.FC = () => {
           </ResponsiveContainer>
         </div>
 
-        {/* Top SHAP biomarkers */}
+        {/* Global SHAP features */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Top biomarkers (mean |SHAP|)
+            Top features (binary XGBoost, training data)
           </h3>
           {shap.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
