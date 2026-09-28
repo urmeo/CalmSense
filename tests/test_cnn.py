@@ -29,3 +29,26 @@ def test_cnn_generalizes_to_held_out_split():
     assert np.allclose(proba.sum(axis=1), 1.0, atol=1e-4)
     # accuracy on data the model never saw
     assert (model.predict(X_te) == y_te).mean() > 0.7
+
+
+def test_cnn_loso_reports_pooled_accuracy(monkeypatch):
+    from scripts.run_experiment import cnn_loso
+    from src.models.dl import cnn_1d
+
+    class ConstantClassifier:
+        def __init__(self, **kwargs):
+            pass
+
+        def fit(self, X, y):
+            return self
+
+        def predict(self, X):
+            return np.zeros(len(X), dtype=int)
+
+    monkeypatch.setattr(cnn_1d, "CNN1DClassifier", ConstantClassifier)
+    # Unequal subject sizes distinguish pooled accuracy from the subject mean.
+    result = cnn_loso(
+        np.zeros((6, 1, 8)), np.array([0, 0, 1, 1, 1, 1]), np.array([0, 0, 1, 1, 1, 1])
+    )
+    assert result["accuracy_mean"] == 0.5
+    assert result["pooled_accuracy"] == pytest.approx(1 / 3)

@@ -7,8 +7,8 @@ point for the shipped model (random forest) at the Youden-J threshold: sensitivi
 specificity, PPV, NPV. Same folds as scripts/run_experiment.py, so the numbers line up.
 
 Run inside `make reproduce` (needs cached features from run_experiment.py first).
-xgboost/lightgbm need OpenMP (brew install libomp on macOS); models that cannot import
-are skipped with an "available": false marker rather than failing the whole run.
+xgboost/lightgbm need OpenMP (brew install libomp on macOS). Dependency or fitting
+failures stop the run before the existing result file is replaced.
 """
 
 import json
@@ -21,7 +21,14 @@ import numpy as np
 from sklearn.metrics import average_precision_score, roc_auc_score, roc_curve
 from sklearn.model_selection import LeaveOneGroupOut
 
-from scripts.run_experiment import CLF_NAMES, RESULTS_DIR, build_pipeline, load_cached, prepare_task
+from scripts.run_experiment import (
+    CLF_NAMES,
+    RESULTS_DIR,
+    _fit_params,
+    build_pipeline,
+    load_cached,
+    prepare_task,
+)
 from src.utils import provenance
 
 FEATURE_MODELS = ["lr", "rf", "xgb", "lgbm"]
@@ -34,7 +41,7 @@ def loso_pos_proba(key, X, y, groups):
     p1, true = [], []
     for train_idx, test_idx in logo.split(X, y, groups):
         pipe = build_pipeline(key)
-        pipe.fit(X[train_idx], y[train_idx])
+        pipe.fit(X[train_idx], y[train_idx], **_fit_params(pipe, y[train_idx]))
         clf = pipe.named_steps["clf"]
         pos = list(clf.classes_).index(1)  # column for the positive (stress) class
         p1.extend(pipe.predict_proba(X[test_idx])[:, pos])
@@ -73,12 +80,7 @@ def run():
     out = {"task": "binary", "n_windows": int(len(y)), "models": []}
     for key in FEATURE_MODELS:
         name = CLF_NAMES[key]
-        try:
-            y_true, p1 = loso_pos_proba(key, X, y, groups)
-        except Exception as e:  # missing OpenMP for xgb/lgbm, etc.
-            out["models"].append({"model": name, "available": False, "reason": str(e)[:80]})
-            print(f"  {name:20s} skipped ({str(e)[:40]})")
-            continue
+        y_true, p1 = loso_pos_proba(key, X, y, groups)
         row = {
             "model": name,
             "available": True,

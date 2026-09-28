@@ -1,6 +1,7 @@
 """Guards against the data-leakage traps that invalidate WESAD results."""
 
 import numpy as np
+import pytest
 
 from scripts.run_experiment import (
     build_pipeline,
@@ -9,6 +10,60 @@ from scripts.run_experiment import (
     nonoverlap_mask,
 )
 from src.dataset import WindowedDataset
+
+
+def test_threshold_metrics_balance_xgboost_per_fold(monkeypatch):
+    from sklearn.utils.class_weight import compute_sample_weight
+
+    from scripts import threshold_metrics
+
+    fits = []
+
+    class XGBClassifier:
+        classes_ = np.array([0, 1])
+
+    class RecordingPipeline:
+        named_steps = {"clf": XGBClassifier()}
+
+        def fit(self, X, y, **kwargs):
+            fits.append((y.copy(), kwargs))
+            return self
+
+        def predict_proba(self, X):
+            return np.tile([0.75, 0.25], (len(X), 1))
+
+    monkeypatch.setattr(threshold_metrics, "build_pipeline", lambda key: RecordingPipeline())
+    y = np.tile([0, 0, 0, 1], 3)
+    true, probabilities = threshold_metrics.loso_pos_proba(
+        "xgb", np.zeros((12, 2)), y, np.repeat([0, 1, 2], 4)
+    )
+    np.testing.assert_array_equal(true, y)
+    np.testing.assert_array_equal(probabilities, np.full(12, 0.25))
+    assert len(fits) == 3
+    for train_y, kwargs in fits:
+        np.testing.assert_array_equal(
+            kwargs["clf__sample_weight"], compute_sample_weight("balanced", train_y)
+        )
+
+
+def test_threshold_metrics_failure_preserves_existing_results(tmp_path, monkeypatch):
+    from scripts import threshold_metrics
+
+    snapshot = tmp_path / "threshold_metrics.json"
+    snapshot.write_text('{"snapshot": true}\n')
+    monkeypatch.setattr(threshold_metrics, "RESULTS_DIR", tmp_path)
+    monkeypatch.setattr(threshold_metrics, "load_cached", lambda: (None, None))
+    monkeypatch.setattr(
+        threshold_metrics, "prepare_task", lambda *args: (None, [], None, None, None)
+    )
+
+    def fail(*args):
+        raise ValueError("model fitting failed")
+
+    monkeypatch.setattr(threshold_metrics, "loso_pos_proba", fail)
+    with pytest.raises(ValueError, match="model fitting failed"):
+        threshold_metrics.run()
+    assert snapshot.read_text() == '{"snapshot": true}\n'
 
 
 def test_pipeline_imputes_and_scales_inside_the_fold():
