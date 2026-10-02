@@ -10,9 +10,13 @@ them reappear, or if the docs ever point at a notebook file that is not on disk.
 
 import re
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
+
+import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 README = (ROOT / "README.md").read_text()
+
 
 # Names that appear only in the scaffold: the project never trains these.
 PHANTOM_MODELS = ["Transformer", "BiLSTM", "CatBoost", "EfficientNet", "cross-modal attention"]
@@ -27,8 +31,37 @@ def test_readme_names_no_untrained_models():
 def test_docs_make_no_best_overall_ranking_claim():
     # The scaffold crowned a single model "Best overall"; the honest result is that
     # the four feature models are statistically tied (Friedman p = 0.81).
-    for name, text in (("README.md", README),):
-        assert "best overall" not in text.lower(), f"{name} makes a 'Best overall' ranking claim"
+    assert "best overall" not in README.lower(), "README makes a 'Best overall' ranking claim"
+
+
+def test_readme_local_links_and_images_exist():
+    """Check the overview's Markdown destinations and HTML image sources."""
+    refs = re.findall(r"\]\(([^\s)]+)\)", README) + re.findall(r'src="([^"]+)"', README)
+    for ref in refs:
+        url = urlsplit(ref)
+        if url.scheme or not url.path:
+            continue
+        assert (ROOT / unquote(url.path)).exists(), f"Missing README asset: {ref}"
+
+
+def test_readme_table_update_is_idempotent(tmp_path, monkeypatch):
+    """Updating the overview must preserve its prose and use the committed results."""
+    from scripts import update_readme_tables as tables
+
+    path = tmp_path / "README.md"
+    path.write_text(README)
+    monkeypatch.setattr(tables, "README", path)
+    tables.main()
+    assert path.read_text() == README
+    tables.main()
+    assert path.read_text() == README
+
+
+def test_readme_table_update_rejects_missing_markers():
+    from scripts.update_readme_tables import _replace
+
+    with pytest.raises(SystemExit, match="not found in README.md"):
+        _replace("overview without generated tables", "calibration", "replacement")
 
 
 def test_referenced_notebooks_exist():
