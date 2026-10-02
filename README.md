@@ -15,158 +15,75 @@ DL: 1D-CNN, SHAP
 - Detects stress vs baseline from wearable signals: ECG, EDA (skin conductance), temperature, respiration, motion.
 - Scored Leave-One-Subject-Out (LOSO): train on 14 people, test on the 15th, rotate.
 - Shows where the usual high numbers come from: subject leakage, motion, dataset shift, calibration.
-- Ships a static dashboard of the committed results (no backend). make demo runs the full pipeline offline on synthetic signals.
+- Ships a static dashboard of the committed results (no backend). `make demo` runs the full pipeline offline on synthetic signals.
 
-## Data and evaluation protocol
+| **15** | **58** | **869** | **1,032** |
+| :--: | :--: | :--: | :--: |
+| WESAD subjects | Features | Binary windows | Three-class windows |
 
-WESAD supplies 15 participants with chest RespiBAN signals at 700 Hz and wrist Empatica E4 signals
-(BVP 64 Hz, EDA/temperature 4 Hz, accelerometer 32 Hz). Binary classification compares baseline
-with stress; the three-class task adds amusement. Meditation is excluded as a recovery state.
-PhysioNet Non-EEG supplies 20 participants for the separate transfer check. Dataset sources,
-access terms, and integrity checks are in [Dataset download and integrity](#dataset-download-and-integrity);
-raw datasets are not redistributed.
+## Results
 
-Signals are filtered, ECG R-peaks receive ectopic correction, and EDA is separated into tonic and
-phasic components. Windows last 60 seconds, overlap by 50%, and require at least 90% of samples
-to share one retained label. The committed benchmark has 869 binary and 1,032 three-class windows.
+**15-fold LOSO** · baseline vs stress; three-class adds amusement.
 
-All benchmark folds hold out an entire subject. Median imputation, standardization, and class
-balancing are fit on training subjects only. The 1D-CNN operates on raw signal windows and uses
-its own training and normalization path. Leakage comparisons use matched non-overlapping windows;
-recalibration uses out-of-fold predictions from training subjects; personalization reserves a
-separate half of the held-out subject's non-overlapping windows for evaluation.
+| Model | Binary acc | Binary F1 | AUROC* | AUPRC* | 3-class acc | 3-class F1 |
+| :-- | --: | --: | --: | --: | --: | --: |
+| Random Forest | 0.913 | 0.898 | 0.973 | 0.960 | 0.637 | 0.535 |
+| XGBoost | 0.903 | 0.873 | 0.975 | 0.960 | 0.633 | 0.552 |
+| Logistic Regression | 0.902 | 0.883 | 0.959 | 0.947 | 0.670 | 0.613 |
+| LightGBM | 0.894 | 0.860 | 0.965 | 0.946 | 0.658 | 0.568 |
+| 1D-CNN | 0.718 | 0.648 | n/a | n/a | 0.626 | 0.543 |
 
-### Shipped model
+Accuracy / macro-F1: subject means. *AUROC/AUPRC: separate pooled pass; see notes below.
 
-The [shipped Random Forest](outputs/models/stress_classifier.joblib) is refit on all 869 WESAD
-binary windows. Its reported performance comes from the separate LOSO evaluation above;
-the shipped model has seen all 15 subjects. No pretrained third-party weights are used.
+**RF 95% CI: [0.860, 0.960]** · four feature models statistically tied (**p = 0.806**).
 
-### Models
+<details>
+<summary>6 checks · numeric summary</summary>
 
-| Model | Type | Key settings |
-| --- | --- | --- |
-| Logistic Regression | Linear | C=1.0, L2, class-balanced |
-| Random Forest | Bagged trees | 200 trees, depth 10, class-balanced |
-| XGBoost | Boosted trees | 200 trees, depth 7, learning rate 0.1 |
-| LightGBM | Boosted trees | 200 trees, 50 leaves, learning rate 0.1 |
-| 1D-CNN | Deep net on raw signal | Residual blocks, AdamW, early stopping |
+| Check | Result |
+| :-- | :-- |
+| Subject leakage | Binary **0.907 → 0.964** (+5.7 pp) · three-class **0.658 → 0.792** (+13.3 pp) |
+| Motion ablation | **0.913 → 0.901** without motion |
+| Chest / wrist | **0.913 / 0.893** · same RF |
+| Transfer | **0.573 / 0.500** balanced accuracy |
+| Isotonic calibration | ECE **0.070 → 0.025** |
+| Personalization | ECE **0.146 → 0.069** · requested 20 windows |
 
-*The four feature models share the impute/scale/classifier pipeline; the CNN is a small baseline.*
+</details>
 
-### Features (58)
+## Graphs & charts
 
-| Group | Count | Examples |
-| --- | ---: | --- |
-| HRV time domain | 12 | MeanNN, SDNN, RMSSD, pNN50 |
-| HRV frequency | 8 | LF/HF power, LF/HF ratio |
-| HRV nonlinear | 10 | SampEn, DFA, SD1/SD2, CSI |
-| EDA (skin conductance) | 15 | SCL level, SCR count, SCR amplitude |
-| Temperature + respiration | 8 | Temperature slope, respiration rate |
-| Accelerometer (motion) | 5 | Magnitude mean, standard deviation, energy |
+Click figures to enlarge.
 
-*Feature extraction summarizes cardiac, autonomic, respiratory, thermal, and movement signals per window.*
-
-## Benchmark results
-
-### Binary classification
-
-| Model | Accuracy | F1 (macro) | AUROC | AUPRC |
-| --- | ---: | ---: | ---: | ---: |
-| Random Forest | 0.913 | 0.898 | 0.973 | 0.960 |
-| XGBoost | 0.903 | 0.873 | 0.975 | 0.960 |
-| Logistic Regression | 0.902 | 0.883 | 0.959 | 0.947 |
-| LightGBM | 0.894 | 0.860 | 0.965 | 0.946 |
-| 1D-CNN (raw signal) | 0.718 | 0.648 | n/a | n/a |
-
-*Accuracy and macro-F1 are means over the 15 held-out subjects from
-[metrics.json](results/metrics.json). AUROC and AUPRC are pooled out-of-fold metrics from the
-separate [threshold analysis](results/threshold_metrics.json), rather than subject means;
-AUPRC is computed as average precision. The XGBoost threshold pass omits the benchmark's sample
-weights, so its AUROC/AUPRC describe a separate fit. CNN threshold metrics were not committed.*
-
-<p align="center"><img src="outputs/figures/binary_model_comparison.png" width="560" alt="Binary LOSO accuracy for four feature models, with error bars across subjects"></p>
-
-*Random Forest has the highest mean accuracy, but the four feature models are not significantly
-different (Friedman p = 0.806; all Holm-corrected pairwise p = 1.0). Error bars show standard
-deviation across subjects, not confidence intervals. The RF bootstrap 95% CI for mean accuracy
-is [0.860, 0.960], from [stats.json](results/stats.json).*
-
-The pooled RF operating point selected by Youden J has threshold 0.454, sensitivity 0.902,
-specificity 0.913, PPV 0.850, and NPV 0.945. It is selected and summarized on the same pooled
-out-of-fold predictions, so it is an exploratory operating point rather than an independently
-validated deployment threshold.
-
-### Three-class classification and confusion matrices
-
-| Model | Accuracy | F1 (macro) |
-| --- | ---: | ---: |
-| Logistic Regression | 0.670 | 0.613 |
-| LightGBM | 0.658 | 0.568 |
-| Random Forest | 0.637 | 0.535 |
-| XGBoost | 0.633 | 0.552 |
-| 1D-CNN | 0.626 | 0.543 |
-
-*Subject means from [metrics.json](results/metrics.json): adding amusement makes the task substantially
-harder. These full-benchmark values are distinct from the matched-window leakage comparison below.*
-
-<table>
+<table width="100%">
 <tr>
-<td align="center"><img src="outputs/figures/binary_confusion.png" width="340" alt="Row-normalized binary Random Forest confusion matrix"><br><strong>Binary: Random Forest</strong><br>Stress recall is about 0.87 at the classifier's default decision rule.</td>
-<td align="center"><img src="outputs/figures/multiclass_confusion.png" width="340" alt="Row-normalized three-class Logistic Regression confusion matrix"><br><strong>Three-class: Logistic Regression</strong><br>Baseline and amusement are frequently confused.</td>
+<td align="center" valign="top" width="50%"><strong>Binary accuracy · LOSO</strong><br><a href="outputs/figures/binary_model_comparison.png"><img src="outputs/figures/binary_model_comparison.png" width="390" alt="Feature-model binary LOSO accuracy with subject standard deviation error bars"></a><br><sub>RF <b>0.913</b> · four feature models</sub></td>
+<td align="center" valign="top" width="50%"><strong>Three-class accuracy · LOSO</strong><br><a href="outputs/figures/multiclass_model_comparison.png"><img src="outputs/figures/multiclass_model_comparison.png" width="390" alt="Feature-model three-class LOSO accuracy with subject standard deviation error bars"></a><br><sub>LR <b>0.670</b> · four feature models</sub></td>
+</tr>
+<tr>
+<td align="center" valign="top" width="50%"><strong>Subject leakage</strong><br><a href="outputs/figures/binary_optimism_gap.png"><img src="outputs/figures/binary_optimism_gap.png" width="390" alt="Binary accuracy on matched non-overlapping windows under LOSO and subject-mixed testing"></a><br><sub><b>0.907 → 0.964</b> · +5.7 pp</sub></td>
+<td align="center" valign="top" width="50%"><strong>Across the 15 subjects</strong><br><a href="outputs/figures/binary_per_subject.png"><img src="outputs/figures/binary_per_subject.png" width="390" alt="Binary Random Forest LOSO accuracy for each held-out subject"></a><br><sub><b>0.712 to 1.000</b> · RF accuracy</sub></td>
+</tr>
+<tr>
+<td align="center" valign="top" width="50%"><strong>Feature ablation</strong><br><a href="outputs/figures/ablation.png"><img src="outputs/figures/ablation.png" width="390" alt="Random Forest binary LOSO accuracy for feature subsets"></a><br><sub>All <b>0.913</b> · no motion <b>0.901</b></sub></td>
+<td align="center" valign="top" width="50%"><strong>Chest vs wrist</strong><br><a href="outputs/figures/chest_vs_wrist.png"><img src="outputs/figures/chest_vs_wrist.png" width="390" alt="Same-model Random Forest binary LOSO accuracy for chest and wrist"></a><br><sub>RF: <b>0.913 vs 0.893</b></sub></td>
+</tr>
+<tr>
+<td align="center" valign="top" width="50%"><strong>Cross-dataset transfer</strong><br><a href="outputs/figures/cross_dataset.png"><img src="outputs/figures/cross_dataset.png" width="390" alt="Within-dataset and cross-dataset balanced accuracy on 18 shared features"></a><br><sub>Balanced accuracy: <b>0.573 / 0.500</b></sub></td>
+<td align="center" valign="top" width="50%"><strong>SHAP explainability</strong><br><a href="outputs/figures/shap_beeswarm.png"><img src="outputs/figures/shap_beeswarm.png" width="390" alt="Global signed SHAP contributions and feature values for the full-data gradient-boosted model"></a><br><sub>Full-data fit: motion · heart rate · EDA · respiration</sub></td>
+</tr>
+<tr>
+<td align="center" valign="top" width="50%"><strong>Probability calibration</strong><br><a href="outputs/figures/calibration_reliability.png"><img src="outputs/figures/calibration_reliability.png" width="390" alt="Confidence versus accuracy before and after training-subject isotonic recalibration"></a><br><sub>Full LOSO ECE: <b>0.070 → 0.025</b></sub></td>
+<td align="center" valign="top" width="50%"><strong>Few-shot personalization</strong><br><a href="outputs/figures/personalization.png"><img src="outputs/figures/personalization.png" width="390" alt="Mean per-subject calibration error against requested enrollment budget"></a><br><sub>ECE: <b>0.146 → 0.069</b> · requested 20</sub></td>
+</tr>
+<tr>
+<td align="center" valign="top" width="50%"><strong>Binary confusion · RF</strong><br><a href="outputs/figures/binary_confusion.png"><img src="outputs/figures/binary_confusion.png" width="390" alt="Pooled row-normalized binary Random Forest confusion matrix at default classifier decisions"></a><br><sub>Stress recall <b>≈0.87</b> · default decisions</sub></td>
+<td align="center" valign="top" width="50%"><strong>Three-class confusion · LR</strong><br><a href="outputs/figures/multiclass_confusion.png"><img src="outputs/figures/multiclass_confusion.png" width="390" alt="Pooled row-normalized three-class Logistic Regression confusion matrix"></a><br><sub>Baseline ↔ amusement confusion</sub></td>
 </tr>
 </table>
 
-*Rows are true classes and columns are predictions, normalized per true class and pooled across
-LOSO folds. These matrices use the default classifier decisions, not the Youden J threshold above.*
-
-## What the analyses show
-
-### Subject leakage
-
-<p align="center"><img src="outputs/figures/binary_optimism_gap.png" width="520" alt="Matched-window binary accuracy: LOSO 0.907 versus subject-mixed five-fold 0.964"></p>
-
-*On the same non-overlapping windows, subject-mixed five-fold testing raises pooled binary accuracy
-from 0.907 (LOSO) to 0.964, a 5.7 percentage-point gap. Three-class pooled accuracy rises from
-0.658 to 0.792, a 13.3-point gap. These are matched-window scores from
-[metrics.json](results/metrics.json), not the full-benchmark subject means.*
-
-### Feature ablation: motion and autonomic signals
-
-<p align="center"><img src="outputs/figures/ablation.png" width="560" alt="Random Forest binary LOSO accuracy for six feature subsets"></p>
-
-*Removing all motion features changes mean RF accuracy from 0.913 to 0.901; HRV plus EDA reaches
-0.890. Motion alone reaches 0.885, so movement is predictive too. This supports a physiological
-contribution without establishing freedom from confounding. Error bars are subject standard
-deviations; see [ablation.csv](results/ablation.csv).*
-
-### Chest versus wrist
-
-<p align="center"><img src="outputs/figures/chest_vs_wrist.png" width="520" alt="Same-model Random Forest binary LOSO accuracy for chest and wrist sensors"></p>
-
-*Using the same RF model, chest accuracy is 0.913 and wrist accuracy is 0.893. Wrist XGBoost reaches
-0.906 in [wrist.json](results/wrist.json). The roughly two-point RF difference is descriptive;
-15 subjects and wide uncertainty do not establish sensor equivalence.*
-
-### Cross-dataset transfer
-
-<p align="center"><img src="outputs/figures/cross_dataset.png" width="560" alt="Balanced accuracy within WESAD and Non-EEG and in both transfer directions"></p>
-
-*On a separate 18-feature space shared by the devices, within-dataset balanced accuracy is 0.864
-for WESAD and 0.699 for Non-EEG. Transfer reaches 0.573 from WESAD to Non-EEG and 0.500 in reverse;
-see [cross_dataset.json](results/cross_dataset.json). These are balanced accuracies, not headline
-accuracies from the 58-feature chest benchmark. One confounded pair cannot separate device and
-domain shift from differences in stressor and label definitions; stronger generalization claims
-need at least three corpora with matched stress constructs.*
-
-### SHAP explainability
-
-<p align="center"><img src="outputs/figures/shap_beeswarm.png" width="560" alt="Global SHAP feature importance and signed contributions for the gradient-boosted model"></p>
-
-*The full-data gradient-boosted model emphasizes motion, heart-rate level, skin-conductance responses,
-and respiration. The beeswarm shows signed feature contributions and feature values; the dashboard
-uses [global mean absolute SHAP importance](results/shap_top_features.csv). This explains a model
-fit on all data, rather than providing held-out evidence of causality or individual reliability.*
+<details>
+<summary>Calibration and personalization · full metrics</summary>
 
 ### Probability calibration
 
@@ -179,17 +96,8 @@ fit on all data, rather than providing held-out evidence of causality or individ
 | LOSO, all windows + isotonic | 0.025 | 0.271 | 0.129 |
 <!-- AUTOGEN:calibration END -->
 
-*Binary RF calibration from [calibration.json](results/calibration.json). Lower ECE, MCE, and Brier
-are better. ECE/MCE use 15 confidence bins; Brier scores the probability of stress. The subject-mixed
-and matched LOSO rows use identical non-overlapping windows. The all-window LOSO and isotonic rows
-use the full pooled out-of-fold set. Isotonic reduces ECE, while maximum bin error does not improve.*
-
-<p align="center"><img src="outputs/figures/calibration_reliability.png" width="520" alt="Reliability diagram for subject-mixed, full LOSO, and isotonic-recalibrated predictions"></p>
-
-*The existing plot shows confidence against accuracy: full LOSO ECE falls from 0.070 to 0.025 after
-isotonic recalibration fit only on training subjects' out-of-fold probabilities. Its subject-mixed
-curve uses fewer, non-overlapping windows; assess leakage on the matched table rows. The matched
-per-subject Brier gap is +0.066 (95% bootstrap CI [0.035, 0.106], paired Wilcoxon p < 0.001).*
+15 bins; pooled binary RF predictions. Isotonic uses training-subject OOF probabilities.
+The plot shows full LOSO and subject-mixed curves; compare matched windows in the table.
 
 ### Personalization through probability recalibration
 
@@ -203,107 +111,159 @@ per-subject Brier gap is +0.066 (95% bootstrap CI [0.035, 0.106], paired Wilcoxo
 | Per-subject, budget 20 | 0.069 | 0.058 |
 <!-- AUTOGEN:personalization END -->
 
-*Mean per-subject scores on a reserved evaluation half from
-[personalization.json](results/personalization.json). Enrollment uses the other half of non-overlapping
-windows; the base classifier is not retrained. These averages use a different evaluation set and
-aggregation from the pooled calibration table above.*
+Subject means on a reserved half; no classifier retraining. Budgets are requests:
+5 draws 4 balanced windows; class availability can reduce enrollment.
 
-<p align="center"><img src="outputs/figures/personalization.png" width="520" alt="Mean per-subject ECE versus requested enrollment budget, compared with no and global recalibration"></p>
+</details>
 
-*The committed curve improves from ECE 0.146 without recalibration to 0.108 globally and 0.069 at
-the requested 20-window budget. Budget labels are requests, not verified counts: the current
-class-balanced sampler draws 4 windows for a request of 5 when both classes are available and can
-draw fewer if a class has too few windows. The stored results are retained without regeneration.*
+<details>
+<summary>Protocol and metric notes</summary>
 
-## Run and reproduce
+### Data and evaluation protocol
 
-Use Python 3.11 or 3.12. From the repository root:
+| Dataset | Subjects | Role |
+| :-- | --: | :-- |
+| WESAD | 15 | Primary LOSO benchmark |
+| PhysioNet Non-EEG | 20 | Transfer only |
+
+60 s windows · 50% overlap · ≥90% label agreement; meditation excluded.
+Imputation/scaling/balancing/calibration use training subjects only.
+Leakage gaps use matched non-overlapping windows; chart error bars are subject SDs.
+Chest/wrist differences do not establish sensor equivalence.
+
+*AUROC/AUPRC: pooled OOF [threshold pass](results/threshold_metrics.json);
+AUPRC is average precision. XGBoost omits benchmark sample weights; CNN values unavailable.
+
+RF Youden J: **0.454** threshold · sensitivity **0.902** · specificity **0.913** ·
+PPV **0.850** · NPV **0.945**. Selected on the evaluated predictions; exploratory.
+Confusion matrices instead use default decisions, pooled and row-normalized.
+
+### Cross-dataset transfer
+
+18 shared features; balanced accuracy. Within WESAD **0.864**; within Non-EEG **0.699**.
+Transfer is confounded by devices, stressors, and labels. SHAP explains a full-data fit;
+it is not causal or held-out evidence.
+
+### Shipped model
+
+The [shipped RF](outputs/models/stress_classifier.joblib) is refit on all 869 binary windows;
+LOSO evaluates separate fits. No pretrained third-party weights.
+
+Sources: [benchmark](results/metrics.json) · [statistics](results/stats.json) ·
+[ablation](results/ablation.csv) · [wrist](results/wrist.json) · [transfer](results/cross_dataset.json).
+
+</details>
+
+<details>
+<summary>Run and reproduce · datasets and integrity</summary>
+
+Python **3.11 / 3.12**. From the repository root:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 make install-dev
-make demo
+make demo                     # offline synthetic smoke check
 ```
-
-`make demo` is an offline synthetic smoke check; its near-separable signals provide no scientific
-evidence. The dashboard displays the committed WESAD snapshot independently of that check.
-
-For real-data reproduction, follow [Dataset download and integrity](#dataset-download-and-integrity),
-then run `make reproduce`. On macOS, XGBoost and LightGBM
-also need OpenMP (`brew install libomp`). This regenerates scientific outputs and updates the
-README's calibration and personalization tables through `scripts/update_readme_tables.py`.
-
-[results/README.md](results/README.md) describes the fixed snapshot and provenance.
-`requirements.lock` records its published environment; newer NeuroKit2 versions can change wrist
-and transfer results, as recorded in commit `61d0d2c`. The dashboard setup is in
-[frontend/README.md](frontend/README.md), module structure in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
-and contribution checks in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Dataset download and integrity
 
-WESAD is the primary benchmark dataset. Obtain it from the
-[official UCI source](https://archive.ics.uci.edu/dataset/465/wesad+wearable+stress+and+affect+detection)
-and accept its research agreement. The separate PhysioNet Non-EEG dataset downloads directly
-and is used only for cross-dataset transfer.
+WESAD: [official UCI source](https://archive.ics.uci.edu/dataset/465/wesad+wearable+stress+and+affect+detection),
+research agreement; not redistributed. Non-EEG downloads directly.
 
 ```bash
-make wesad   # WESAD (~2 GB) -> data/raw/WESAD
-make data    # PhysioNet Non-EEG -> data/external/noneeg
+make wesad                    # data/raw/WESAD
+make data                     # data/external/noneeg
 python scripts/download_data.py --verify-wesad
+make reproduce                # regenerates scientific outputs
 ```
 
-For a manual WESAD download, extract `WESAD.zip` into `data/raw/`. The loader expects
-`data/raw/WESAD/S2/S2.pkl` through `S17/S17.pkl`, excluding S12 (15 subjects; S1 is also absent).
-Each pickle uses `latin1` encoding and contains `signal.chest`, `signal.wrist`, and `label`:
-chest ACC/ECG/EMG/EDA/Temp/Resp and labels are sampled at 700 Hz; wrist ACC at 32 Hz,
-BVP at 64 Hz, and EDA/TEMP at 4 Hz.
-Labels 1, 2, and 3 mean baseline, stress, and amusement; labels 0 and 4 to 7 are excluded.
-Only load pickles from the official source or ones you generated yourself; see
-[SECURITY.md](SECURITY.md).
+Manual extraction: `data/raw/WESAD/S2/S2.pkl` through `S17/S17.pkl`, excluding S12.
+`latin1` pickles: chest ACC/ECG/EMG/EDA/Temp/Resp and labels **700 Hz**;
+wrist ACC **32 Hz**, BVP **64 Hz**, EDA/TEMP **4 Hz**.
+Labels: **1** baseline · **2** stress · **3** amusement; **0, 4 to 7** excluded.
+Binary uses 1/2; three-class uses 1/2/3.
 
-The UCI distribution has no version tag or official checksums. The verification command compares all 15 subject files
-against the SHA-256 reference values computed from the official Uni-Siegen distribution and
-committed in [scripts/download_data.py](scripts/download_data.py). Re-download from the official
-source if verification reports missing files or mismatches.
+No official version tag/checksums; verification uses all 15 committed SHA-256 references.
+Trusted pickles only: [security](SECURITY.md). macOS OpenMP: `brew install libomp`.
+`requirements.lock` records the published environment; newer NeuroKit2 can change wrist/transfer
+results (commit `61d0d2c`). `make demo` provides no scientific evidence.
+
+Tables: `python scripts/update_readme_tables.py`. [Results snapshot](results/README.md) ·
+[Dashboard setup](frontend/README.md) · [Architecture](docs/ARCHITECTURE.md) · [Contributing](CONTRIBUTING.md).
+
+</details>
+
+## Models
+
+<details>
+<summary>5 models · settings</summary>
+
+<table width="100%">
+<tr><th align="left" width="220">Model</th><th align="left" width="230">Type</th><th align="left" width="330">Key settings</th></tr>
+<tr><td>Logistic Regression</td><td>Linear</td><td>C=1.0, L2, class-balanced</td></tr>
+<tr><td>Random Forest</td><td>Bagged trees</td><td>200 trees, depth 10, class-balanced</td></tr>
+<tr><td>XGBoost</td><td>Boosted trees</td><td>200 trees, depth 7, lr 0.1</td></tr>
+<tr><td>LightGBM</td><td>Boosted trees</td><td>200 trees, 50 leaves, lr 0.1</td></tr>
+<tr><td>1D-CNN</td><td>Deep net on raw signal</td><td>Residual blocks, AdamW, early stopping</td></tr>
+</table>
+
+Feature models: fold-local imputation/scaling. CNN: raw windows.
+
+</details>
+
+## Features (58)
+
+<details>
+<summary>6 groups · counts and examples</summary>
+
+<table width="100%">
+<tr><th align="left" width="220">Group</th><th align="left" width="230">Count</th><th align="left" width="330">Examples</th></tr>
+<tr><td>HRV time domain</td><td>12</td><td>MeanNN, SDNN, RMSSD, pNN50</td></tr>
+<tr><td>HRV frequency</td><td>8</td><td>LF/HF power, LF/HF ratio</td></tr>
+<tr><td>HRV nonlinear</td><td>10</td><td>SampEn, DFA, SD1/SD2, CSI</td></tr>
+<tr><td>EDA (skin conductance)</td><td>15</td><td>SCL level, SCR count, SCR amplitude</td></tr>
+<tr><td>Temperature + respiration</td><td>8</td><td>temp slope, respiration rate</td></tr>
+<tr><td>Accelerometer (motion)</td><td>5</td><td>magnitude mean, std, energy</td></tr>
+</table>
+
+</details>
 
 ## Tech stack
 
-| Area | Tools |
-| --- | --- |
-| Modelling | scikit-learn, XGBoost, LightGBM, PyTorch |
-| Signal processing | NeuroKit2, SciPy |
-| Explainability | SHAP |
-| Dashboard | React, TypeScript |
-| Tooling | GitHub Actions, ruff, mypy, pytest |
+<details>
+<summary>Python research pipeline · React dashboard</summary>
 
-*The Python pipeline produces research artifacts; the React dashboard presents committed JSON.*
+<table width="100%">
+<tr><th align="left" width="220">Area</th><th align="left" width="560">Tools</th></tr>
+<tr><td>Modelling</td><td>scikit-learn, XGBoost, LightGBM, PyTorch</td></tr>
+<tr><td>Signal processing</td><td>NeuroKit2, SciPy</td></tr>
+<tr><td>Explainability</td><td>SHAP</td></tr>
+<tr><td>Dashboard</td><td>React, TypeScript</td></tr>
+<tr><td>Tooling</td><td>GitHub Actions, ruff, mypy, pytest</td></tr>
+</table>
+
+</details>
 
 ## Limitations
 
-- 15 subjects, lab-induced stress. Underpowered, wide CIs. No clinical claim.
-- Ablation, calibration, and personalization are exploratory, not multiplicity-corrected.
-- The 1D-CNN is a small baseline, not a fair test of deep learning.
-- Cross-dataset uses one confounded pair. Illustrative, not conclusive.
-- Calibration improvements do not validate a clinical alert threshold or deployment in other populations.
+- **15 lab subjects** · wide CIs · weak CNN baseline · no clinical claim.
+- Exploratory ablation/calibration/personalization; no multiplicity correction. One confounded transfer pair.
 
 ## Future work
 
-- A third corpus (SWELL / AffectiveROAD) for leave-one-dataset-out generalization.
-- Real-world, non-lab stress data beyond the 15-subject benchmark.
-- Real-time streaming inference from a live wearable.
+Third matched corpus · free-living data · streaming wearable inference.
 
 ## Ethics & data use
 
-- Physiological signals are sensitive personal data.
-- This is a research benchmark, not a product.
-- Data minimization: collect and keep only what an analysis needs.
-- No surveillance: do not monitor or penalize people without informed consent.
-- Datasets keep their own licenses and are not redistributed here.
+Sensitive signals: informed consent, minimal collection, research use only. Dataset licenses apply.
 
-## Scientific references
+## License
 
-Dataset and method attribution retained with the project:
+[MIT](LICENSE) · [Software citation](CITATION.cff)
+
+<details>
+<summary>Scientific references · dataset and method attribution</summary>
 
 - Schmidt, Reiss, Duerichen, Marberger, and Van Laerhoven. "Introducing WESAD, a Multimodal Dataset for Wearable Stress and Affect Detection." ICMI, 2018.
 - Birjandtalab, Cogan, Pouyan, and Nourani. "A Non-EEG Dataset for Assessment of Neurological Status." IEEE BHI / PhysioNet, 2016.
@@ -320,9 +280,6 @@ Dataset and method attribution retained with the project:
 
 ### WESAD dataset citation
 
-<details>
-<summary>BibTeX</summary>
-
 ```bibtex
 @inproceedings{schmidt2018wesad,
   title     = {Introducing WESAD, a Multimodal Dataset for Wearable Stress and Affect Detection},
@@ -333,8 +290,5 @@ Dataset and method attribution retained with the project:
 }
 ```
 
+
 </details>
-
-## License and citation
-
-[MIT License](LICENSE). Cite the software using [CITATION.cff](CITATION.cff).
