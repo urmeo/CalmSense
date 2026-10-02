@@ -200,7 +200,7 @@ logs/*
 outputs/figures/*
 !outputs/figures/.gitkeep
 !outputs/figures/*.png
-# Unreferenced figures (not shown in README); make reproduce still generates them, not committed
+# Unreferenced figures; make reproduce still generates them, not committed
 outputs/figures/binary_pca.png
 outputs/figures/multiclass_pca.png
 outputs/figures/multiclass_optimism_gap.png
