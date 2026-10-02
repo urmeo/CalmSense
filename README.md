@@ -23,8 +23,8 @@ WESAD supplies 15 participants with chest RespiBAN signals at 700 Hz and wrist E
 (BVP 64 Hz, EDA/temperature 4 Hz, accelerometer 32 Hz). Binary classification compares baseline
 with stress; the three-class task adds amusement. Meditation is excluded as a recovery state.
 PhysioNet Non-EEG supplies 20 participants for the separate transfer check. Dataset sources,
-access terms, and integrity checks are in [Dataset download and integrity](#dataset-download-and-integrity) and
-[README.md](README.md); raw datasets are not redistributed.
+access terms, and integrity checks are in [Dataset download and integrity](#dataset-download-and-integrity);
+raw datasets are not redistributed.
 
 Signals are filtered, ECG R-peaks receive ectopic correction, and EDA is separated into tonic and
 phasic components. Windows last 60 seconds, overlap by 50%, and require at least 90% of samples
@@ -35,6 +35,12 @@ balancing are fit on training subjects only. The 1D-CNN operates on raw signal w
 its own training and normalization path. Leakage comparisons use matched non-overlapping windows;
 recalibration uses out-of-fold predictions from training subjects; personalization reserves a
 separate half of the held-out subject's non-overlapping windows for evaluation.
+
+### Shipped model
+
+The [shipped Random Forest](outputs/models/stress_classifier.joblib) is refit on all 869 WESAD
+binary windows. Its reported performance comes from the separate LOSO evaluation above;
+the shipped model has seen all 15 subjects. No pretrained third-party weights are used.
 
 ### Models
 
@@ -249,13 +255,14 @@ python scripts/download_data.py --verify-wesad
 
 For a manual WESAD download, extract `WESAD.zip` into `data/raw/`. The loader expects
 `data/raw/WESAD/S2/S2.pkl` through `S17/S17.pkl`, excluding S12 (15 subjects; S1 is also absent).
-Each pickle contains `signal.chest`, `signal.wrist`, and `label`; see
-[README.md](README.md) for channels, sampling rates, and the `latin1` encoding.
+Each pickle uses `latin1` encoding and contains `signal.chest`, `signal.wrist`, and `label`:
+chest ACC/ECG/EMG/EDA/Temp/Resp and labels are sampled at 700 Hz; wrist ACC at 32 Hz,
+BVP at 64 Hz, and EDA/TEMP at 4 Hz.
 Labels 1, 2, and 3 mean baseline, stress, and amusement; labels 0 and 4 to 7 are excluded.
 Only load pickles from the official source or ones you generated yourself; see
 [SECURITY.md](SECURITY.md).
 
-WESAD provides no official checksums. The verification command compares all 15 subject files
+The UCI distribution has no version tag or official checksums. The verification command compares all 15 subject files
 against the SHA-256 reference values computed from the official Uni-Siegen distribution and
 committed in [scripts/download_data.py](scripts/download_data.py). Re-download from the official
 source if verification reports missing files or mismatches.

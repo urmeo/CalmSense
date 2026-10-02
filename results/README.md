@@ -4,7 +4,8 @@ These files are a **fixed snapshot** of the WESAD benchmark (subjects S2 to S17)
 make reproduce on the full dataset. WESAD is not redistributed (see
 [README dataset download and integrity](../README.md#dataset-download-and-integrity)), so a clean clone cannot regenerate them without first
 downloading WESAD; make demo reproduces the same pipeline on synthetic data instead. For dataset and
-shipped-model lineage, see [../README.md](../README.md).
+shipped-model lineage, see [README data protocol](../README.md#data-and-evaluation-protocol) and
+[shipped model](../README.md#shipped-model).
 
 | File | Produced by |
 | ---- | ----------- |
