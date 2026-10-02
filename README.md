@@ -23,7 +23,7 @@ WESAD supplies 15 participants with chest RespiBAN signals at 700 Hz and wrist E
 (BVP 64 Hz, EDA/temperature 4 Hz, accelerometer 32 Hz). Binary classification compares baseline
 with stress; the three-class task adds amusement. Meditation is excluded as a recovery state.
 PhysioNet Non-EEG supplies 20 participants for the separate transfer check. Dataset sources,
-access terms, and checksums are in [README.md](README.md) and
+access terms, and integrity checks are in [Dataset download and integrity](#dataset-download-and-integrity) and
 [README.md](README.md); raw datasets are not redistributed.
 
 Signals are filtered, ECG R-peaks receive ectopic correction, and EDA is separated into tonic and
@@ -223,8 +223,8 @@ make demo
 `make demo` is an offline synthetic smoke check; its near-separable signals provide no scientific
 evidence. The dashboard displays the committed WESAD snapshot independently of that check.
 
-For real-data reproduction, obtain the datasets with `make wesad` and `make data`, following
-[README.md](README.md), then run `make reproduce`. On macOS, XGBoost and LightGBM
+For real-data reproduction, follow [Dataset download and integrity](#dataset-download-and-integrity),
+then run `make reproduce`. On macOS, XGBoost and LightGBM
 also need OpenMP (`brew install libomp`). This regenerates scientific outputs and updates the
 README's calibration and personalization tables through `scripts/update_readme_tables.py`.
 
@@ -233,6 +233,32 @@ README's calibration and personalization tables through `scripts/update_readme_t
 and transfer results, as recorded in commit `61d0d2c`. The dashboard setup is in
 [frontend/README.md](frontend/README.md), module structure in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
 and contribution checks in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+### Dataset download and integrity
+
+WESAD is the primary benchmark dataset. Obtain it from the
+[official UCI source](https://archive.ics.uci.edu/dataset/465/wesad+wearable+stress+and+affect+detection)
+and accept its research agreement. The separate PhysioNet Non-EEG dataset downloads directly
+and is used only for cross-dataset transfer.
+
+```bash
+make wesad   # WESAD (~2 GB) -> data/raw/WESAD
+make data    # PhysioNet Non-EEG -> data/external/noneeg
+python scripts/download_data.py --verify-wesad
+```
+
+For a manual WESAD download, extract `WESAD.zip` into `data/raw/`. The loader expects
+`data/raw/WESAD/S2/S2.pkl` through `S17/S17.pkl`, excluding S12 (15 subjects; S1 is also absent).
+Each pickle contains `signal.chest`, `signal.wrist`, and `label`; see
+[README.md](README.md) for channels, sampling rates, and the `latin1` encoding.
+Labels 1, 2, and 3 mean baseline, stress, and amusement; labels 0 and 4 to 7 are excluded.
+Only load pickles from the official source or ones you generated yourself; see
+[SECURITY.md](SECURITY.md).
+
+WESAD provides no official checksums. The verification command compares all 15 subject files
+against the SHA-256 reference values computed from the official Uni-Siegen distribution and
+committed in [scripts/download_data.py](scripts/download_data.py). Re-download from the official
+source if verification reports missing files or mismatches.
 
 ## Tech stack
 
@@ -284,6 +310,23 @@ Dataset and method attribution retained with the project:
 - Benchekroun et al. "Cross Dataset Analysis for Generalizability of HRV-Based Stress Detection Models." Sensors 23(4), 1807, 2023.
 - Prajod, Mahesh, and André. "Stressor Type Matters! Exploring Factors Influencing Cross-Dataset Generalizability of Physiological Stress Detection." ICMI Companion, 2024.
 - Vos et al. "Ensemble Machine Learning Model Trained on a New Synthesized Dataset Generalizes Well for Stress Prediction Using Wearable Devices." Journal of Biomedical Informatics, 2023.
+
+### WESAD dataset citation
+
+<details>
+<summary>BibTeX</summary>
+
+```bibtex
+@inproceedings{schmidt2018wesad,
+  title     = {Introducing WESAD, a Multimodal Dataset for Wearable Stress and Affect Detection},
+  author    = {Schmidt, Philip and Reiss, Attila and Duerichen, Robert and Marberger, Claus and Van Laerhoven, Kristof},
+  booktitle = {Proceedings of the 20th ACM International Conference on Multimodal Interaction},
+  pages     = {400--408},
+  year      = {2018}
+}
+```
+
+</details>
 
 ## License and citation
 

@@ -37,7 +37,7 @@ class WESADLoader(LoggerMixin):
                 f"WESAD data path not found: {self.data_path}\n"
                 "Please download the dataset from: "
                 "https://archive.ics.uci.edu/ml/datasets/WESAD\n"
-                "See README.md for instructions."
+                "See README.md (Dataset download and integrity) for instructions."
             )
 
     def _discover_subjects(self) -> List[str]:
