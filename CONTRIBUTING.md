@@ -44,7 +44,7 @@ def build(subjects: Optional[list] = None) -> pd.DataFrame:
 ```
 
 Then wire it into `scripts/cross_dataset.py` alongside WESAD and Non-EEG, and add its download to
-`scripts/download_data.py` (with a SHA-256, see `README.md`). Keep the feature space
+`scripts/download_data.py` (with a SHA-256, see [README dataset integrity](README.md#dataset-download-and-integrity)). Keep the feature space
 *device-agnostic* (HRV/EDA/TEMP/ACC summaries), harmonize labels to the binary stress vs. non-stress
 contrast, and remember: a robust leave-one-dataset-out claim needs **≥3 corpora with matched stress
 constructs** (see [README: Cross-dataset transfer](README.md#cross-dataset-transfer)).

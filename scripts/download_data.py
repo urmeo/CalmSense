@@ -57,7 +57,7 @@ def verify_wesad() -> None:
         raise SystemExit(
             "WESAD integrity check FAILED:\n  "
             + "\n  ".join(problems)
-            + "\nRe-download from the official source (see README.md)."
+            + "\nRe-download from the official source (see README.md: Dataset download and integrity)."
         )
     print(f"WESAD integrity OK: {len(WESAD_SHA256)} subjects verified.")
 
