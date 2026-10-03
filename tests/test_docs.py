@@ -92,7 +92,6 @@ def test_no_em_or_en_dashes_anywhere():
         + [
             ROOT / "README.md",
             ROOT / "CONTRIBUTING.md",
-            ROOT / "outputs" / "results" / "README.md",
         ]
     )
     en_dash, em_dash = chr(0x2013), chr(0x2014)  # by codepoint, so this guard never flags itself

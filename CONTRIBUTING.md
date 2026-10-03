@@ -28,7 +28,7 @@ python -m pytest tests/ -q  # CI enforces ≥60% coverage on src/
   *inside* each LOSO fold; if you touch the evaluation path, prove the test subject stays unseen.
 - **Don't commit generated artifacts** in `outputs/generated/` or local datasets in `data/`.
   Committed `outputs/results/` and `outputs/figures/` preserve research snapshots;
-  see [result provenance](outputs/results/README.md).
+  see [result provenance](README.md#result-provenance).
 - **Commit messages:** short and concrete (1 to 3 words describing what changed), e.g. honest readme,
   fix leak, dedup windowing.
 

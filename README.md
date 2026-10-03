@@ -99,7 +99,8 @@ Click figures to enlarge.
 
 15 bins; pooled binary RF predictions. Isotonic uses training-subject OOF probabilities.
 The plot compares full-window LOSO and its isotonic recalibration; matched windows are separate rows.
-Brier is positive-class probability MSE; historical two-class sums are halved for display, preserving the source JSON.
+Binary Brier is stress-probability MSE; multiclass sums squared class errors. Historical calibration's
+two-class scores and paired Brier gap/CI are halved for display; source JSON, ECE, curves and p-values are preserved.
 
 ### Personalization through probability recalibration
 
@@ -115,6 +116,7 @@ Brier is positive-class probability MSE; historical two-class sums are halved fo
 
 Subject means on a reserved half; no classifier retraining. Budgets are requests:
 5 draws 4 balanced windows; class availability can reduce enrollment. Brier uses the same positive-class MSE convention.
+Enrollment and evaluation windows are disjoint.
 
 </details>
 
@@ -145,6 +147,7 @@ Confusion matrices instead use default decisions, pooled and row-normalized.
 Separate wrist-feature RF; 18 shared features; version 2 slopes per second; balanced accuracy. Within WESAD **0.868**; within Non-EEG **0.699**.
 Raw-data rerun: 15 WESAD / 20 Non-EEG subjects. [Original transfer snapshot](outputs/results/historical/cross_dataset_v1.json) retained.
 Uses NeuroKit2 0.2.12; heart-rate extraction also differs from the historical 0.2.7 environment.
+Portable features preserve sample timestamps when non-finite values are omitted.
 Transfer is confounded by devices, stressors, and labels. SHAP explains a full-data fit;
 it is not causal or held-out evidence.
 
@@ -157,6 +160,12 @@ No pretrained third-party weights. [Checksum verification](SECURITY.md).
 
 Sources: [benchmark](outputs/results/metrics.json) · [statistics](outputs/results/stats.json) ·
 [ablation](outputs/results/ablation.csv) · [wrist](outputs/results/wrist.json) · [transfer](outputs/results/cross_dataset.json).
+
+### Result provenance
+
+Historical records retain timestamps, environments and hashes; some source SHAs no longer resolve.
+Transfer source hashes identify the implementation; its recorded base SHA excludes uncommitted changes.
+The [archived transfer plot](outputs/figures/historical/cross_dataset_v1.png) shows **0.573 / 0.500** with old per-sample slopes.
 
 </details>
 
@@ -215,8 +224,28 @@ python scripts/build_dashboard_data.py
 python scripts/stamp_provenance.py
 ```
 
-Tables: `python scripts/update_readme_tables.py`. [Results snapshot](outputs/results/README.md) ·
-[Dashboard setup](frontend/README.md) · [Architecture](#architecture) · [Contributing](CONTRIBUTING.md).
+Tables: `python scripts/update_readme_tables.py`. [Result provenance](#result-provenance) ·
+[Dashboard setup](#dashboard-development) · [Architecture](#architecture) · [Contributing](CONTRIBUTING.md).
+
+### Dashboard development
+
+Node **24** and npm. From `frontend/`:
+
+```bash
+node tooling.mjs install
+node tooling.mjs dev
+node tooling.mjs build    # TypeScript check and production build
+node tooling.mjs preview
+node tooling.mjs audit
+node tooling.mjs update   # Dependency edits: review source lock changes
+```
+
+Edit `frontend/config/*.mjs`; commands generate ignored npm/TypeScript JSON files.
+GitHub dependency discovery does not read the custom manifest.
+CI installs locked dependencies, blocks moderate or higher frontend audit findings, builds once and publishes `outputs/generated/site/`
+under `/CalmSense/` with a deep-link fallback after all checks pass on `main` (push or manual run).
+From the repository root: `python scripts/build_dashboard_data.py` refreshes dashboard results;
+`python scripts/export_signals.py` refreshes signal snapshots and requires WESAD.
 
 </details>
 
@@ -229,7 +258,7 @@ Wearable signals pass through preprocessing, windowing, and a LOSO benchmark.
 Feature models use extracted features; the CNN uses raw signal windows.
 The static dashboard displays exported experiment results.
 
-[Shipped model](#shipped-model) · [Data protocol](#data-and-evaluation-protocol) · [Results snapshot](outputs/results/README.md)
+[Shipped model](#shipped-model) · [Data protocol](#data-and-evaluation-protocol) · [Result provenance](#result-provenance)
 
 ### Repository layout
 
@@ -240,7 +269,20 @@ The static dashboard displays exported experiment results.
 | `frontend/src/pages/` · `components/` | Dashboard views and shared UI |
 | `frontend/config/` · `frontend/tooling.mjs` | Configuration sources and dashboard commands |
 | `data/` | Local raw datasets |
-| [outputs/](outputs/README.md) | Results, figures, model + SHA-256, dashboard exports and ignored generated files |
+| [outputs/](#outputs) | Results, figures, model + SHA-256, dashboard exports and ignored generated files |
+
+### Outputs
+
+| Under `outputs/` | Contents |
+| --- | --- |
+| `results/` | Committed metrics, tables, history and provenance |
+| `figures/` | Committed research plots and `demo.gif` |
+| `models/` | Shipped model and checksum |
+| `dashboard/` | Committed results and signal modules |
+| `generated/` | Ignored caches, figures, logs, site builds and synthetic runs |
+
+Experiments refresh `results/` and `models/`; local plots use `generated/figures/`.
+Synthetic outputs stay in `generated/demo/{results,figures,models}/`; committed figures remain separate.
 
 ### Pipeline stages
 
@@ -263,9 +305,9 @@ The static dashboard displays exported experiment results.
   in `outputs/generated/demo/`.
   Near-separable synthetic signals produce no meaningful calibration or optimism evidence.
 - **Portable features:** version 2 EDA/TEMP slopes are per second; caches use versioned sidecars.
-  [Results history](outputs/results/README.md) identifies the earlier slope-unit mismatch.
+  [Result provenance](#result-provenance) identifies the earlier slope-unit mismatch.
 - **Reproduction:** default `SEED = 42`; [experiment commands](#reproduce-experiments) regenerate
-  `outputs/results/` and local `outputs/generated/figures/`. Provenance is recorded in [outputs/results/README.md](outputs/results/README.md).
+  `outputs/results/` and local `outputs/generated/figures/`; see [result provenance](#result-provenance).
   Committed `outputs/figures/` remain a separate snapshot.
 
 ### Data flow
