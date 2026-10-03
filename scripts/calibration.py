@@ -174,6 +174,7 @@ def compute(X, y, groups, model="rf", n_bins=N_BINS):
         "positive_class": POSITIVE,
         "n_windows": int(len(y_loso)),
         "n_bins": n_bins,
+        "brier_definition": cal.BINARY_BRIER_DEFINITION,
         "loso": loso,
         "loso_matched": loso_matched,
         "within_subject": within,
@@ -191,9 +192,8 @@ def _plot_reliability(out, path):
     plt.figure(figsize=(5, 5))
     plt.plot([0, 1], [0, 1], "k:", label="perfect")
     for key, color, label in [
-        ("within_subject", "#e67e22", "within-subject"),
-        ("loso", "#3498db", "LOSO"),
-        ("recalibrated_isotonic", "#2ecc71", "LOSO recalibrated"),
+        ("loso", "#3498db", "LOSO, all windows"),
+        ("recalibrated_isotonic", "#2ecc71", "LOSO, all windows + isotonic"),
     ]:
         rows = out[key]["reliability"]
         plt.plot(
@@ -213,15 +213,15 @@ def _plot_reliability(out, path):
 
 
 def _plot_gap(out, path):
-    keys = ["within_subject", "loso_matched", "recalibrated_isotonic"]
-    labels = ["Within-subject", "LOSO", "LOSO recalibrated"]
+    keys = ["within_subject", "loso_matched"]
+    labels = ["Subject-mixed", "LOSO matched"]
     eces = [out[k]["ece"] for k in keys]
     plt.figure(figsize=(4.5, 4))
-    bars = plt.bar(labels, eces, color=["#e67e22", "#3498db", "#2ecc71"])
+    bars = plt.bar(labels, eces, color=["#e67e22", "#3498db"])
     for b, v in zip(bars, eces):
         plt.text(b.get_x() + b.get_width() / 2, v + 0.002, f"{v:.3f}", ha="center")
     plt.ylabel("Expected calibration error")
-    plt.title("Calibration optimism and its correction")
+    plt.title("Calibration gap on matched non-overlapping windows")
     plt.tight_layout()
     plt.savefig(path, dpi=150)
     plt.close()

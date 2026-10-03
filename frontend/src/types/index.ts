@@ -27,7 +27,9 @@ export interface Calibration {
   positive_class: string;
   n_windows: number;
   n_bins: number;
+  brier_definition: string;
   loso: CalibrationSummary;
+  loso_matched: CalibrationSummary;
   within_subject: CalibrationSummary;
   recalibrated_isotonic: CalibrationSummary;
   recalibrated_sigmoid: CalibrationSummary;

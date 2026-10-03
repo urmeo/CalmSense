@@ -1,6 +1,11 @@
-"""Provenance stamping and effect-size helpers."""
+"""Provenance stamping, artifact verification, and effect-size helpers."""
 
-from src.utils import paired_effect_size, provenance
+import hashlib
+
+import joblib
+import pytest
+
+from src.utils import load_verified_joblib, paired_effect_size, provenance, save_verified_joblib
 
 
 def test_provenance_has_sha_and_timestamp():
@@ -23,3 +28,31 @@ def test_paired_effect_size_matches_hand_calc():
 def test_paired_effect_size_zero_when_identical():
     es = paired_effect_size([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
     assert es["cohens_d"] == 0.0 and es["hedges_g"] == 0.0
+
+
+def test_saved_model_and_checksum_stay_in_sync(tmp_path):
+    path = tmp_path / "models" / "stress_classifier.joblib"
+    first = {"features": ["ECG"], "classes": ["baseline", "stress"]}
+    save_verified_joblib(first, path)
+    first_digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    assert load_verified_joblib(path) == first
+
+    updated = {"features": ["ECG", "EDA"], "classes": ["baseline", "stress"]}
+    save_verified_joblib(updated, path)
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    assert digest != first_digest
+    assert path.with_name(path.name + ".sha256").read_text() == f"{digest}  {path.name}\n"
+    assert load_verified_joblib(path) == updated
+
+
+def test_tampered_model_is_rejected_before_unpickling(tmp_path, monkeypatch):
+    path = tmp_path / "stress_classifier.joblib"
+    save_verified_joblib({"features": ["ECG"]}, path)
+    path.write_bytes(b"tampered model")
+
+    def refuse_unpickling(*args, **kwargs):
+        pytest.fail("Tampered artifact reached joblib.load")
+
+    monkeypatch.setattr(joblib, "load", refuse_unpickling)
+    with pytest.raises(ValueError, match="SHA-256 mismatch"):
+        load_verified_joblib(path)

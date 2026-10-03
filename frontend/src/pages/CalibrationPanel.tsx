@@ -11,9 +11,9 @@ const signed = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(3)}`;
 const TRANSPARENT = 'rgba(0,0,0,0)';
 const AXIS_FONT = '#6B7280'; // gray-500: legible on both light and dark cards
 const COLORS = {
-  within: '#E67E22',
   loso: '#3182CE',
   recal: '#38A169',
+  sigmoid: '#805AD5',
   diagonal: '#9CA3AF',
 };
 
@@ -31,19 +31,20 @@ const CalibrationPanel: React.FC = () => {
   const cal = (results as any).calibration as Calibration | undefined;
   if (!cal) return null;
 
-  const { loso, within_subject, recalibrated_isotonic, recalibrated_sigmoid, decision_curve } = cal;
+  const { loso, loso_matched, within_subject, recalibrated_isotonic, recalibrated_sigmoid, decision_curve } = cal;
   const dc = decision_curve;
 
   const evaluations = [
-    { name: 'Within-subject', summary: within_subject, color: COLORS.within },
     { name: 'LOSO', summary: loso, color: COLORS.loso },
-    { name: 'LOSO recalibrated', summary: recalibrated_isotonic, color: COLORS.recal },
+    { name: 'LOSO + isotonic', summary: recalibrated_isotonic, color: COLORS.recal },
+    { name: 'LOSO + sigmoid', summary: recalibrated_sigmoid, color: COLORS.sigmoid },
   ];
   const rows = [
-    { key: 'Within-subject', s: within_subject },
-    { key: 'LOSO', s: loso },
-    { key: 'LOSO + isotonic', s: recalibrated_isotonic },
-    { key: 'LOSO + sigmoid', s: recalibrated_sigmoid },
+    { key: 'Subject-mixed · matched non-overlapping', s: within_subject },
+    { key: 'LOSO · matched non-overlapping', s: loso_matched },
+    { key: 'LOSO · all windows', s: loso },
+    { key: 'LOSO + isotonic · all windows', s: recalibrated_isotonic },
+    { key: 'LOSO + sigmoid · all windows', s: recalibrated_sigmoid },
   ];
 
   return (
@@ -54,39 +55,41 @@ const CalibrationPanel: React.FC = () => {
           <Gauge className="w-6 h-6" /> Calibration
         </h1>
         <p className="text-gray-500 dark:text-gray-400">
-          Are the confidence scores trustworthy? Expected calibration error (ECE) under
-          leave-one-subject-out, the optimism it hides, and a leak-free recalibration fix
-          ({cal.n_windows} windows, {cal.n_bins} bins).
+          Binary Random Forest confidence on unseen subjects: full-window LOSO and
+          training-subject recalibration ({cal.n_windows} windows, {cal.n_bins} bins).
+          The optimism comparison uses a separate matched non-overlapping subset.
         </p>
       </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <SummaryCard icon={<Target className="w-6 h-6 text-blue-600" />} label="LOSO ECE" value={fmt(loso.ece)} />
+        <SummaryCard icon={<Target className="w-6 h-6 text-blue-600" />} label="Full-window LOSO ECE" value={fmt(loso.ece)} />
         <SummaryCard
           icon={<AlertTriangle className="w-6 h-6 text-orange-500" />}
-          label="Calibration optimism (ECE)"
+          label="Matched optimism gap (ECE)"
           value={signed(cal.calibration_optimism_gap_ece)}
         />
         <SummaryCard
           icon={<TrendingDown className="w-6 h-6 text-green-600" />}
-          label="Recalibration cuts ECE by"
+          label="Full-window isotonic ECE reduction"
           value={signed(cal.recalibration_reduction_ece)}
         />
       </div>
 
       {/* Optimism note */}
       <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-4 text-sm text-orange-800 dark:text-orange-200">
-        Within-subject validation reports an ECE of <strong>{fmt(within_subject.ece)}</strong>, but on
-        unseen subjects the same model is off by <strong>{fmt(loso.ece)}</strong>, a calibration
-        optimism gap of <strong>{signed(cal.calibration_optimism_gap_ece)}</strong>. A leak-free
-        isotonic recalibration brings LOSO ECE down to <strong>{fmt(recalibrated_isotonic.ece)}</strong>.
+        On matched non-overlapping windows, subject-mixed ECE is{' '}
+        <strong>{fmt(within_subject.ece)}</strong> and LOSO ECE is{' '}
+        <strong>{fmt(loso_matched.ece)}</strong>: a gap of{' '}
+        <strong>{signed(cal.calibration_optimism_gap_ece)}</strong>.
+        Separately, full-window LOSO ECE falls from <strong>{fmt(loso.ece)}</strong> to{' '}
+        <strong>{fmt(recalibrated_isotonic.ece)}</strong> with training-subject isotonic recalibration.
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Reliability diagram */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Reliability diagram</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Reliability · all windows</h3>
           <Plot
             data={[
               {
@@ -107,8 +110,8 @@ const CalibrationPanel: React.FC = () => {
             layout={{
               height: 380,
               margin: { l: 50, r: 20, t: 10, b: 50 },
-              xaxis: { title: 'Confidence', range: [0, 1] },
-              yaxis: { title: 'Accuracy', range: [0, 1] },
+              xaxis: { title: { text: 'Confidence' }, range: [0, 1] },
+              yaxis: { title: { text: 'Accuracy' }, range: [0, 1] },
               legend: { x: 0.02, y: 0.98, bgcolor: TRANSPARENT, font: { size: 10 } },
               paper_bgcolor: TRANSPARENT,
               plot_bgcolor: TRANSPARENT,
@@ -122,7 +125,7 @@ const CalibrationPanel: React.FC = () => {
         {/* ECE bar chart */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Expected calibration error
+            Expected calibration error · all windows
           </h3>
           <Plot
             data={[
@@ -139,7 +142,7 @@ const CalibrationPanel: React.FC = () => {
             layout={{
               height: 380,
               margin: { l: 50, r: 20, t: 20, b: 50 },
-              yaxis: { title: 'ECE', rangemode: 'tozero' },
+              yaxis: { title: { text: 'ECE' }, rangemode: 'tozero' },
               paper_bgcolor: TRANSPARENT,
               plot_bgcolor: TRANSPARENT,
               font: { color: AXIS_FONT },
@@ -156,7 +159,8 @@ const CalibrationPanel: React.FC = () => {
           Decision-curve analysis
         </h3>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          Clinical net benefit across alert thresholds, versus alerting everyone or no one.
+          Exploratory net benefit on full-window LOSO predictions, versus alerting everyone
+          or no one. No clinical deployment has been validated.
         </p>
         <Plot
           data={[
@@ -182,8 +186,8 @@ const CalibrationPanel: React.FC = () => {
           layout={{
             height: 360,
             margin: { l: 60, r: 20, t: 10, b: 50 },
-            xaxis: { title: 'Alert threshold' },
-            yaxis: { title: 'Net benefit' },
+            xaxis: { title: { text: 'Alert threshold' } },
+            yaxis: { title: { text: 'Net benefit' } },
             legend: { orientation: 'h', y: -0.2, font: { size: 11 } },
             paper_bgcolor: TRANSPARENT,
             plot_bgcolor: TRANSPARENT,
@@ -199,6 +203,10 @@ const CalibrationPanel: React.FC = () => {
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Calibration metrics by evaluation
         </h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Brier is the mean squared error of the stress probability, averaged over windows.
+          Matched and full-window rows use different evaluation sets.
+        </p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

@@ -46,7 +46,7 @@ const About: React.FC = () => {
           Multimodal Stress Detection from Physiological Signals
         </p>
         <p className="mt-2 text-gray-500 dark:text-gray-500">
-          Version 0.1.0
+          Version 1.0.0
         </p>
       </div>
 
@@ -74,11 +74,13 @@ const About: React.FC = () => {
           Leave-One-Subject-Out comparison of classical models and a 1D-CNN.
         </p>
         <p className="mt-4 text-gray-600 dark:text-gray-400 leading-relaxed">
-          Every result uses <strong>Leave-One-Subject-Out</strong> cross-validation, so models are always tested
-          on people they never trained on. The best binary model ({r.binary.best_model}) reaches{' '}
-          <strong>{pct(r.binary.loso_accuracy)}</strong> for stress detection, and the best three-class model
-          ({r.multiclass.best_model}) reaches <strong>{pct(r.multiclass.loso_accuracy)}</strong>{' '}
-          (baseline/stress/amusement), with SHAP-based interpretation built on HRV standards.
+          Benchmark model comparisons use <strong>Leave-One-Subject-Out</strong> cross-validation:
+          each fold tests a person excluded from training. The highest observed binary accuracy
+          ({r.binary.best_model}) is{' '}
+          <strong>{pct(r.binary.loso_accuracy)}</strong>; the three-class result
+          ({r.multiclass.best_model}) is <strong>{pct(r.multiclass.loso_accuracy)}</strong>{' '}
+          (baseline/stress/amusement). Subject-mixed validation is a separate comparison;
+          SHAP describes a full-data binary XGBoost fit.
         </p>
       </div>
 
@@ -106,10 +108,10 @@ const About: React.FC = () => {
         </FeatureCard>
 
         <FeatureCard icon={<Shield className="w-6 h-6 text-orange-500" />} title="Explainability">
-          <li>• SHAP values for global/local importance</li>
-          <li>• Top-biomarker contributions per prediction</li>
-          <li>• Optimism-gap analysis (LOSO vs within-subject)</li>
-          <li>• Clinical interpretation (Task Force 1996)</li>
+          <li>• Binary XGBoost feature ranking (mean |SHAP|)</li>
+          <li>• Descriptive full-data fit, not held-out evidence</li>
+          <li>• Matched-window optimism-gap analysis</li>
+          <li>• Motion-confound and transfer limitations</li>
         </FeatureCard>
       </div>
 

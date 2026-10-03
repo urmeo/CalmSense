@@ -9,7 +9,7 @@ snapshot; see [results/README.md](../results/README.md) and results/provenance.j
 - **Model:** Random Forest (200 trees, depth 10, class-balanced) on 58 physiological features.
 - **Task:** Binary classification, baseline versus acute stress, from a 60 second window of wearable signals.
 - **Inputs:** 58 features from ECG-derived HRV (time, frequency, nonlinear), electrodermal activity, skin temperature, respiration, and accelerometer motion.
-- **Output:** A calibrated probability of stress, plus a class label.
+- **Output:** An uncalibrated Random Forest probability of stress and a class label. The shipped artifact contains no isotonic or sigmoid calibrator.
 - **Pipeline:** Median imputation, standardization, then the classifier, all fit inside each evaluation fold.
 - **Artifact:** Trained with scikit-learn 1.6.1 and shipped as `outputs/models/stress_classifier.joblib`.
 - **License:** MIT. **Version:** 1.0.0. **Contact:** github.com/urmeo/CalmSense.
@@ -33,21 +33,21 @@ snapshot; see [results/README.md](../results/README.md) and results/provenance.j
 - **Evaluation:** Leave-One-Subject-Out (train on 14 subjects, test on the held-out subject, rotate). Imputation, scaling, class balancing, and any recalibration are fit on training subjects only, so the held-out subject is never seen during fitting.
 - **Transfer check:** PhysioNet Non-EEG (20 subjects) is used only to measure cross-dataset transfer on a shared 18-feature space.
 
-## Metrics (binary, LOSO, mean over held-out subjects)
+## Metrics (binary, LOSO)
 
-| Metric | Value |
-| --- | :-: |
-| Accuracy | 0.913 |
-| F1 (macro) | 0.898 |
-| Balanced accuracy | 0.903 |
-| AUROC | 0.973 |
-| AUPRC | 0.960 |
+| Metric | Value | Aggregation |
+| --- | :-: | --- |
+| Accuracy | 0.913 | Mean over held-out subjects |
+| F1 (macro) | 0.898 | Mean over held-out subjects |
+| Balanced accuracy | 0.903 | Pooled default decisions |
+| AUROC | 0.973 | Pooled probabilities, separate threshold pass |
+| AUPRC (average precision) | 0.960 | Pooled probabilities, separate threshold pass |
 
-Operating point (Random Forest, Youden J threshold 0.45): sensitivity 0.90, specificity 0.91, PPV 0.85, NPV 0.94.
+Exploratory operating point (Random Forest, Youden J threshold 0.454): sensitivity 0.902, specificity 0.913, PPV 0.850, NPV 0.945. The threshold was selected on the evaluated predictions, not a separate validation set; these rates do not describe the artifact's default decisions.
 
-Calibration on unseen subjects: ECE 0.070, cut to 0.025 by leakage-free isotonic recalibration; a 20-window per-subject enrollment reaches ECE 0.069 without retraining.
+Separate calibration experiment: full-window LOSO ECE 0.070, reduced to 0.025 by training-subject isotonic recalibration. Personalization uses subject means on a reserved non-overlapping evaluation half: requested budget 20 reaches ECE 0.069 without classifier retraining; actual enrollment may be smaller. These recalibration maps are not shipped in the model.
 
-Three-class (baseline, stress, amusement) accuracy is far lower at 0.66, close to the majority class, and amusement is the hardest class. The four feature models are a statistical tie (Friedman p = 0.81), so the family is reported rather than a single winner. The 1D-CNN on raw signal is a weak baseline (0.718 binary, 0.626 three-class).
+Three-class accuracy is 0.637 for RF and 0.670 for Logistic Regression; amusement is the hardest class. No significant binary accuracy difference was detected among the four feature models (Friedman p = 0.806); this does not establish equivalence. The raw-signal 1D-CNN is a weak baseline (0.718 binary, 0.626 three-class).
 
 ## Ethical considerations
 
@@ -58,9 +58,9 @@ Three-class (baseline, stress, amusement) accuracy is far lower at 0.66, close t
 ## Limitations and caveats
 
 - 15 lab subjects give wide confidence intervals and low power; no clinical claim is made.
-- A leakage-free model does not transfer to another dataset, falling to near chance (0.50 balanced accuracy).
+- Cross-dataset transfer uses a separate wrist-feature RF, not the shipped chest model. Devices, stressors and labels differ; see [transfer results and history](../results/README.md).
 - Ablation, calibration, and personalization are exploratory and not multiplicity-corrected.
-- Metrics other than the threshold-free AUROC and AUPRC are reported at a fixed threshold.
+- Class metrics use default classifier decisions; the Youden J rates use a separate, exploratory threshold.
 - The synthetic demo data is near-separable by design; only the real WESAD run is meaningful.
 
 ## References

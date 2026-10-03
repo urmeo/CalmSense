@@ -20,7 +20,8 @@ CalmSense is research software, not a medical device or production service.
   uses pickle, so loading executes code: only load the model **this repo's own pipeline produced**. Its
   SHA-256 is pinned in
   [outputs/models/stress_classifier.joblib.sha256](outputs/models/stress_classifier.joblib.sha256);
-  verify with shasum -a 256 -c outputs/models/stress_classifier.joblib.sha256, and never load a
+  verify from the repository root with
+  `(cd outputs/models && shasum -a 256 -c stress_classifier.joblib.sha256)`, and never load a
   third-party .joblib. The public dashboard loads no model at all, it renders committed JSON.
 
 ## Static dashboard (no backend)

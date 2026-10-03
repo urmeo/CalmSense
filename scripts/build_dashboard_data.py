@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pandas as pd
 
+from src.calibration import BINARY_BRIER_DEFINITION, normalize_binary_calibration
 from src.config import PROJECT_ROOT
 
 RESULTS_DIR = PROJECT_ROOT / "results"
@@ -22,6 +23,7 @@ TASK_KEYS = [
     "best_model",
     "loso_accuracy",
     "loso_pooled_accuracy",
+    "loso_matched_accuracy",
     "within_subject_accuracy",
     "optimism_gap_pts",
 ]
@@ -63,6 +65,10 @@ def run():
     ]:
         data = _load_json(fname)
         if data is not None:
+            if key == "calibration":
+                data = normalize_binary_calibration(data)
+            elif key == "personalization":
+                data.setdefault("brier_definition", BINARY_BRIER_DEFINITION)
             out[key] = data
     ablation = _load_csv("ablation.csv")
     if ablation:

@@ -4,7 +4,7 @@
 
 ML: Logistic Regression, Random Forest, XGBoost, LightGBM
 
-DL: 1D-CNN, SHAP
+DL: 1D-CNN · Explainability: SHAP
 
 [Live demo](https://urmeo.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urmeo/CalmSense/blob/main/notebooks/CalmSense.ipynb) · [Structure](docs/ARCHITECTURE.md) · [Model card](docs/MODEL_CARD.md)
 
@@ -35,7 +35,7 @@ DL: 1D-CNN, SHAP
 
 Accuracy / macro-F1: subject means. *AUROC/AUPRC: separate pooled pass; see notes below.
 
-**RF 95% CI: [0.860, 0.960]** · four feature models statistically tied (**p = 0.806**).
+**RF 95% CI: [0.860, 0.960]** · no significant difference detected among four feature models (**p = 0.806**).
 
 <details>
 <summary>6 checks · numeric summary</summary>
@@ -45,7 +45,7 @@ Accuracy / macro-F1: subject means. *AUROC/AUPRC: separate pooled pass; see note
 | Subject leakage | Binary **0.907 → 0.964** (+5.7 pp) · three-class **0.658 → 0.792** (+13.3 pp) |
 | Motion ablation | **0.913 → 0.901** without motion |
 | Chest / wrist | **0.913 / 0.893** · same RF |
-| Transfer | **0.573 / 0.500** balanced accuracy |
+| Transfer | **0.557 / 0.494** balanced accuracy |
 | Isotonic calibration | ECE **0.070 → 0.025** |
 | Personalization | ECE **0.146 → 0.069** · requested 20 windows |
 
@@ -69,7 +69,7 @@ Click figures to enlarge.
 <td align="center" valign="top" width="50%"><strong>Chest vs wrist</strong><br><a href="docs/figures/chest_vs_wrist.png"><img src="docs/figures/chest_vs_wrist.png" width="390" alt="Same-model Random Forest binary LOSO accuracy for chest and wrist"></a><br><sub>RF: <b>0.913 vs 0.893</b></sub></td>
 </tr>
 <tr>
-<td align="center" valign="top" width="50%"><strong>Cross-dataset transfer</strong><br><a href="docs/figures/cross_dataset.png"><img src="docs/figures/cross_dataset.png" width="390" alt="Within-dataset and cross-dataset balanced accuracy on 18 shared features"></a><br><sub>Balanced accuracy: <b>0.573 / 0.500</b></sub></td>
+<td align="center" valign="top" width="50%"><strong>Cross-dataset transfer</strong><br><a href="docs/figures/cross_dataset.png"><img src="docs/figures/cross_dataset.png" width="390" alt="Within-dataset and cross-dataset balanced accuracy on 18 shared features"></a><br><sub>Balanced accuracy: <b>0.557 / 0.494</b></sub></td>
 <td align="center" valign="top" width="50%"><strong>SHAP explainability</strong><br><a href="docs/figures/shap_beeswarm.png"><img src="docs/figures/shap_beeswarm.png" width="390" alt="Global signed SHAP contributions and feature values for the full-data gradient-boosted model"></a><br><sub>Full-data fit: motion · heart rate · EDA · respiration</sub></td>
 </tr>
 <tr>
@@ -90,14 +90,15 @@ Click figures to enlarge.
 <!-- AUTOGEN:calibration START -->
 | Evaluation | ECE | MCE | Brier |
 | --- | :-: | :-: | :-: |
-| Subject-mixed 5-fold, non-overlapping | 0.085 | 0.290 | 0.077 |
-| LOSO, matched non-overlapping | 0.090 | 0.256 | 0.144 |
-| LOSO, all windows | 0.070 | 0.160 | 0.136 |
-| LOSO, all windows + isotonic | 0.025 | 0.271 | 0.129 |
+| Subject-mixed 5-fold, non-overlapping | 0.085 | 0.290 | 0.038 |
+| LOSO, matched non-overlapping | 0.090 | 0.256 | 0.072 |
+| LOSO, all windows | 0.070 | 0.160 | 0.068 |
+| LOSO, all windows + isotonic | 0.025 | 0.271 | 0.064 |
 <!-- AUTOGEN:calibration END -->
 
 15 bins; pooled binary RF predictions. Isotonic uses training-subject OOF probabilities.
-The plot shows full LOSO and subject-mixed curves; compare matched windows in the table.
+The plot compares full-window LOSO and its isotonic recalibration; matched windows are separate rows.
+Brier is positive-class probability MSE; historical two-class sums are halved for display, preserving the source JSON.
 
 ### Personalization through probability recalibration
 
@@ -112,7 +113,7 @@ The plot shows full LOSO and subject-mixed curves; compare matched windows in th
 <!-- AUTOGEN:personalization END -->
 
 Subject means on a reserved half; no classifier retraining. Budgets are requests:
-5 draws 4 balanced windows; class availability can reduce enrollment.
+5 draws 4 balanced windows; class availability can reduce enrollment. Brier uses the same positive-class MSE convention.
 
 </details>
 
@@ -140,7 +141,9 @@ Confusion matrices instead use default decisions, pooled and row-normalized.
 
 ### Cross-dataset transfer
 
-18 shared features; balanced accuracy. Within WESAD **0.864**; within Non-EEG **0.699**.
+18 shared features; version 2 slopes per second; balanced accuracy. Within WESAD **0.868**; within Non-EEG **0.699**.
+Raw-data rerun: 15 WESAD / 20 Non-EEG subjects. [Original transfer snapshot](results/historical/cross_dataset_v1.json) retained.
+Uses NeuroKit2 0.2.12; heart-rate extraction also differs from the historical 0.2.7 environment.
 Transfer is confounded by devices, stressors, and labels. SHAP explains a full-data fit;
 it is not causal or held-out evidence.
 
