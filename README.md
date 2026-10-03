@@ -6,7 +6,7 @@ ML: Logistic Regression, Random Forest, XGBoost, LightGBM
 
 DL: 1D-CNN · Explainability: SHAP
 
-[Live demo](https://urmeo.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urmeo/CalmSense/blob/main/notebooks/CalmSense.ipynb) · [Structure](docs/ARCHITECTURE.md) · [Shipped model](#shipped-model)
+[Live demo](https://urmeo.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urmeo/CalmSense/blob/main/notebooks/CalmSense.ipynb) · [Structure](#architecture) · [Shipped model](#shipped-model)
 
 [![CalmSense dashboard](docs/assets/demo.gif)](https://urmeo.github.io/CalmSense/)
 
@@ -216,7 +216,97 @@ python scripts/stamp_provenance.py
 ```
 
 Tables: `python scripts/update_readme_tables.py`. [Results snapshot](results/README.md) ·
-[Dashboard setup](frontend/README.md) · [Architecture](docs/ARCHITECTURE.md) · [Contributing](CONTRIBUTING.md).
+[Dashboard setup](frontend/README.md) · [Architecture](#architecture) · [Contributing](CONTRIBUTING.md).
+
+</details>
+
+## Architecture
+
+<details>
+<summary>Repository layout · 8 pipeline stages · data flow</summary>
+
+Wearable signals pass through preprocessing, windowing, and a LOSO benchmark.
+Feature models use extracted features; the CNN uses raw signal windows.
+The static dashboard displays exported experiment results.
+
+[Shipped model](#shipped-model) · [Data protocol](#data-and-evaluation-protocol) · [Results snapshot](results/README.md)
+
+### Repository layout
+
+| Location | Contents |
+| --- | --- |
+| `src/` · `scripts/` | Research modules and experiment commands |
+| `notebooks/` | Runnable synthetic demo |
+| `frontend/src/pages/` · `components/` · `data/` | Dashboard views, shared UI, data modules |
+| `frontend/config/` · `frontend/tooling.mjs` | Configuration sources and dashboard commands |
+| `docs/figures/` · `docs/assets/` | Committed research figures and `demo.gif` |
+| `results/` | Committed benchmark snapshot and provenance |
+| `outputs/figures/` | Ignored local experiment and synthetic plots |
+| `outputs/models/` | Shipped Random Forest and SHA-256 checksum |
+| `data/` · `logs/` | Local datasets, caches, and runtime logs |
+
+### Pipeline stages
+
+| Stage | Operation | Code |
+| --- | --- | --- |
+| 1. Ingest | WESAD chest/wrist pickles; Non-EEG records for transfer | `src/data/loader.py`, `src/datasets/non_eeg.py` |
+| 2. Preprocess | Butterworth filtering, ECG R-peaks and ectopic correction, EDA tonic/phasic decomposition | `src/preprocessing/{filters,ecg_processor,eda_processor}.py` |
+| 3. Window | 60 s; 50% overlap; ≥90% label purity | `src/dataset.py` (chest), `src/dataset_wrist.py` (wrist), shared `window_label()` |
+| 4. Features | 60-column extraction schema; 58 benchmark features after dropping two all-NaN respiration columns | `src/features/feature_pipeline.py` and modality extractors |
+| 5. Benchmark | LOSO; training-fold imputation/scaling/balancing; LR/RF/XGBoost/LightGBM and raw-window 1D-CNN | `scripts/run_experiment.py`, `src/models/ml/classifiers.py`, `src/models/dl/cnn_1d.py` |
+| 6. Calibration | ECE/MCE/Brier, decision-curve net benefit, training-subject recalibration, few-shot personalization | `src/calibration.py`, `scripts/{calibration,personalize}.py` |
+| 7. Analysis | Optimism gap, ablation, wrist/chest, transfer, SHAP, statistics, tuning | `scripts/{ablation,wrist,cross_dataset,stats,tuning}.py`, `src/portable.py` |
+| 8. Dashboard | Export results for the static React dashboard | `scripts/build_dashboard_data.py`, `scripts/export_signals.py`, `frontend/` |
+
+### Shared modules and reproducibility
+
+- **Configuration:** frozen dataclasses for sampling rates, filters, and subjects in `src/config.py`.
+- **Logging:** structured logs through `LoggerMixin` in `src/logging_config.py`.
+- **Synthetic data:** `src/synthetic.py`; `python scripts/calibration.py --synthetic` runs offline.
+  Near-separable synthetic signals produce no meaningful calibration or optimism evidence.
+- **Portable features:** version 2 EDA/TEMP slopes are per second; caches use versioned sidecars.
+  [Results history](results/README.md) identifies the earlier slope-unit mismatch.
+- **Reproduction:** default `SEED = 42`; [experiment commands](#reproduce-experiments) regenerate
+  `results/` and local `outputs/figures/`. Provenance is recorded in [results/README.md](results/README.md).
+  Committed `docs/figures/` remain a separate snapshot.
+
+### Data flow
+
+```mermaid
+flowchart TD
+    A["WESAD chest signals"] --> B["Preprocess: filters, R-peaks, EDA decomposition"]
+    B --> C["Windows: 60 s, 50% overlap, label purity ≥90%"]
+    C --> D["58 features: HRV, EDA, temperature, respiration, motion"]
+    C --> R["Signal tensors for 1D-CNN: 5 channels × 1,024 samples"]
+    D --> E["LOSO: LR, RF, XGBoost, LightGBM"]
+    R --> N["LOSO: 1D-CNN"]
+    E --> F["Benchmark metrics"]
+    N --> F
+    D --> G["Calibration and few-shot personalization"]
+    D --> H["SHAP (full-data fit), ablation, statistics, tuning"]
+    D --> I["Full-data RF refit and checksum"]
+    W["WESAD wrist signals"] --> V["Wrist-only LOSO and chest comparison"]
+    E --> V
+    W --> P["18 portable features: transfer analysis"]
+    O["Non-EEG records"] --> P
+    F --> J["Dashboard data export"]
+    G --> J
+    H --> J
+    V --> J
+    P --> J
+    J --> K["Static React dashboard; no backend"]
+```
+
+Plain-text fallback:
+
+```text
+WESAD -> preprocess -> windows -> 58 features -> feature-model LOSO -> metrics
+                              -> raw windows -> 1D-CNN LOSO -> metrics
+Chest features -> calibration / personalization / full-data SHAP / ablation / statistics / tuning
+WESAD wrist -> wrist-only LOSO -> chest comparison
+WESAD wrist + Non-EEG -> portable features -> transfer analysis
+Experiment results -> dashboard data export -> static React dashboard
+```
 
 </details>
 
