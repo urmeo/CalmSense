@@ -191,7 +191,8 @@ Binary uses 1/2; three-class uses 1/2/3.
 
 No official version tag/checksums; verification uses all 15 committed SHA-256 references.
 Trusted pickles only: [security](SECURITY.md). macOS OpenMP: `brew install libomp`.
-`requirements.lock` records the published environment; newer NeuroKit2 can change wrist/transfer
+Historical package versions: [result provenance](results/provenance.json) · [transfer environment](results/cross_dataset.json).
+Newer NeuroKit2 can change wrist/transfer
 results (commit `61d0d2c`). The synthetic demo provides no scientific evidence.
 
 ### Reproduce experiments
