@@ -1,0 +1,46 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "CalmSense: Subject-Independent Stress Detection and Calibration on WESAD"
+version: 1.0.0
+date-released: 2026-07-03
+url: "https://github.com/urmeo/CalmSense"
+repository-code: "https://github.com/urmeo/CalmSense"
+license: MIT
+authors:
+  - family-names: "Bose"
+    given-names: "Urme"
+    # orcid: "https://orcid.org/0000-0000-0000-0000"  # add the author's ORCID
+keywords:
+  - stress-detection
+  - wearables
+  - physiological-signals
+  - heart-rate-variability
+  - electrodermal-activity
+  - leave-one-subject-out
+  - model-calibration
+  - reproducible-research
+  - wesad
+abstract: >-
+  CalmSense measures how much of the accuracy reported on the WESAD wearable
+  stress benchmark survives honest, subject-independent (Leave-One-Subject-Out)
+  evaluation. It implements end-to-end signal processing, 58-feature extraction,
+  a leakage-free LOSO benchmark of classical models and a 1D-CNN, SHAP-based
+  interpretation, and a calibration, decision-curve, and few-shot personalization
+  analysis of how reliable the predicted probabilities are on unseen subjects.
+references:
+  - type: article
+    authors:
+      - family-names: "Schmidt"
+        given-names: "Philip"
+      - family-names: "Reiss"
+        given-names: "Attila"
+      - family-names: "Duerichen"
+        given-names: "Robert"
+      - family-names: "Marberger"
+        given-names: "Claus"
+      - family-names: "Van Laerhoven"
+        given-names: "Kristof"
+    title: "Introducing WESAD, a Multimodal Dataset for Wearable Stress and Affect Detection"
+    journal: "Proceedings of the 20th ACM International Conference on Multimodal Interaction"
+    year: 2018

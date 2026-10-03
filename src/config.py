@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()
 
@@ -40,6 +40,17 @@ VALID_SUBJECTS: List[str] = [
     "S17",
 ]
 
+LABEL_NAMES: Dict[int, str] = {
+    0: "not_defined",
+    1: "baseline",
+    2: "stress",
+    3: "amusement",
+    4: "meditation",
+    5: "ignore",
+    6: "ignore",
+    7: "ignore",
+}
+
 
 @dataclass(frozen=True)
 class SamplingRates:
@@ -60,11 +71,17 @@ FS = SamplingRates()
 class FilterParams:
     ECG_BANDPASS_LOW: float = 0.5
     ECG_BANDPASS_HIGH: float = 40.0
+    ECG_NOTCH_FREQ: float = 50.0  # EU powerline
     ECG_FILTER_ORDER: int = 4
 
     EDA_LOWPASS: float = 5.0
     EDA_MEDIAN_SIZE: int = 5
     EDA_FILTER_ORDER: int = 4
+
+    EMG_BANDPASS_LOW: float = 20.0
+    EMG_BANDPASS_HIGH: float = 300.0
+    EMG_NOTCH_FREQ: float = 50.0
+    EMG_FILTER_ORDER: int = 4
 
     RESP_BANDPASS_LOW: float = 0.1
     RESP_BANDPASS_HIGH: float = 0.5
@@ -72,6 +89,8 @@ class FilterParams:
 
     TEMP_LOWPASS: float = 0.1
     TEMP_FILTER_ORDER: int = 2
+
+    NOTCH_Q_FACTOR: float = 30.0
 
 
 FILTER_PARAMS = FilterParams()
@@ -85,6 +104,15 @@ class FeatureParams:
 
 
 FEATURE_PARAMS = FeatureParams()
+
+CONDITION_COLORS: Dict[str, str] = {
+    "baseline": "#2ecc71",
+    "stress": "#e74c3c",
+    "amusement": "#3498db",
+    "meditation": "#9b59b6",
+    "not_defined": "#95a5a6",
+    "ignore": "#bdc3c7",
+}
 
 LOG_LEVEL: str = "INFO"
 LOG_FILE: Path = LOGS_DIR / "calmsense.log"

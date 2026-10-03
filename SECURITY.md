@@ -14,7 +14,7 @@ CalmSense is research software, not a medical device or production service.
 - **Pickle deserialization (WESAD).** WESAD subjects are distributed as Python pickles, and
   src/data/loader.py unpickles them (encoding="latin1"). Unpickling executes arbitrary code,
   **only load .pkl files you downloaded from the official WESAD source or generated yourself.** See
-  [README.md](README.md).
+  [README dataset download and integrity](README.md#dataset-download-and-integrity).
 - **Model deserialization (trust boundary).** The pipeline writes and reloads one model,
   outputs/models/stress_classifier.joblib (scripts/run_experiment.py). joblib
   uses pickle, so loading executes code: only load the model **this repo's own pipeline produced**. Its

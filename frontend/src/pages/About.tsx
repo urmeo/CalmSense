@@ -52,7 +52,7 @@ const About: React.FC = () => {
 
       {/* Badges */}
       <div className="flex flex-wrap justify-center gap-2">
-        {['Python 3.9+', 'PyTorch', 'React', 'WESAD Dataset'].map((badge) => (
+        {['Python 3.11+', 'PyTorch', 'React', 'WESAD Dataset'].map((badge) => (
           <span
             key={badge}
             className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 rounded-full text-sm font-medium"

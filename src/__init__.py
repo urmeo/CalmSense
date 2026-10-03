@@ -2,11 +2,13 @@ __version__ = "0.1.0"
 __author__ = "Urme"
 
 from .config import (
+    CONDITION_COLORS,
     DATA_DIR,
     FEATURE_PARAMS,
     FIGURES_DIR,
     FILTER_PARAMS,
     FS,
+    LABEL_NAMES,
     MODELS_DIR,
     PROCESSED_DATA_DIR,
     PROJECT_ROOT,
@@ -34,9 +36,11 @@ __all__ = [
     "MODELS_DIR",
     "FIGURES_DIR",
     "VALID_SUBJECTS",
+    "LABEL_NAMES",
     "FS",
     "FILTER_PARAMS",
     "FEATURE_PARAMS",
+    "CONDITION_COLORS",
     "setup_logging",
     "get_logger",
     "LoggerMixin",

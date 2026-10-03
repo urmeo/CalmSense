@@ -5,6 +5,19 @@ and calibration. The static dashboard renders the exported experiment results.
 
 [Model card](MODEL_CARD.md) · [Data provenance](../README.md) · [Results snapshot](../results/README.md)
 
+## Repository layout
+
+| Location | Contents |
+| --- | --- |
+| `src/` · `scripts/` | Research modules and experiment commands |
+| `notebooks/` | Runnable synthetic demo |
+| `frontend/src/pages/` · `components/` · `data/` | Dashboard views, shared UI, exported JSON |
+| `docs/` · `docs/figures/` · `docs/assets/` | Technical docs, committed research figures, `demo.gif` |
+| `results/` | Committed benchmark snapshot and provenance |
+| `outputs/figures/` | Ignored plots from local experiments and synthetic runs |
+| `outputs/models/` | Shipped Random Forest and its SHA-256 checksum |
+| `data/` · `logs/` | Local datasets, caches, and runtime logs |
+
 ## Pipeline stages → modules
 
 | Stage | What happens | Code |
@@ -26,7 +39,8 @@ and calibration. The static dashboard renders the exported experiment results.
   make demo/CI. It is intentionally near-separable, so calibration/optimism numbers from it are not
   meaningful (see the module docstring).
 - **Reproducibility**, everything is seeded (SEED = 42). make reproduce regenerates results/ and
-  outputs/figures/ from WESAD; results/README.md records provenance.
+  outputs/figures/ from WESAD; results/README.md records provenance. Committed figures in docs/figures/
+  remain a separate snapshot.
 
 ## Data flow at a glance
 

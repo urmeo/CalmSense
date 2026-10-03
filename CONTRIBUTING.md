@@ -8,7 +8,7 @@ especially welcome.
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-make install-dev          # supported dependencies + editable package + dev tools
+make install-dev          # supported package dependencies and dev tools
 make demo                 # smoke-test the full pipeline on synthetic data (no download)
 ```
 
@@ -26,8 +26,8 @@ make test                 # pytest (must pass; CI enforces ≥60% coverage on sr
 - **Never weaken the leakage guarantees.** Imputation, scaling, balancing, and calibration are fit
   *inside* each LOSO fold; if you touch the evaluation path, prove the test subject stays unseen.
 - **Don't commit generated artifacts** (data/processed/, results/calibration.json,
-  results/personalization.json, figures from synthetic runs). The committed results/ are a fixed
-  WESAD snapshot, see [results/README.md](results/README.md).
+  results/personalization.json, figures from synthetic runs). The committed results/ and
+  docs/figures/ are fixed WESAD snapshots, see [results/README.md](results/README.md).
 - **Commit messages:** short and concrete (1 to 3 words describing what changed), e.g. honest readme,
   fix leak, dedup windowing.
 
@@ -44,10 +44,10 @@ def build(subjects: Optional[list] = None) -> pd.DataFrame:
 ```
 
 Then wire it into `scripts/cross_dataset.py` alongside WESAD and Non-EEG, and add its download to
-`scripts/download_data.py` (with a SHA-256, see `README.md`). Keep the feature space
+`scripts/download_data.py` (with a SHA-256, see [README dataset integrity](README.md#dataset-download-and-integrity)). Keep the feature space
 *device-agnostic* (HRV/EDA/TEMP/ACC summaries), harmonize labels to the binary stress vs. non-stress
 contrast, and remember: a robust leave-one-dataset-out claim needs **≥3 corpora with matched stress
-constructs** (see [README limitations](README.md#limitations)).
+constructs** (see [README: Cross-dataset transfer](README.md#cross-dataset-transfer)).
 
 ## Reporting bugs
 

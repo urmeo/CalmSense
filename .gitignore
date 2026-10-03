@@ -101,6 +101,7 @@ ipython_config.py
 
 # Raw data files (too large for git)
 data/raw/*
+!data/raw/.gitkeep
 
 # Processed data
 data/processed/*
@@ -123,7 +124,9 @@ data/external/*
 *.pth
 *.ckpt
 outputs/models/*
+!outputs/models/.gitkeep
 !outputs/models/stress_classifier.joblib
+!outputs/models/stress_classifier.joblib.sha256
 
 # =============================================================================
 # IDE / Editor
@@ -191,13 +194,17 @@ $RECYCLE.BIN/
 
 # Logs
 logs/*
+!logs/.gitkeep
+!logs/README.md
 *.log
 
-# Generated figures
+# Generated plots; committed research snapshots live in docs/figures/
 outputs/figures/*
+!outputs/figures/.gitkeep
 
 # Demo (synthetic) outputs, never overwrite the committed real-WESAD results
 results/demo/
+outputs/figures/demo/
 outputs/models/demo/
 
 # Reports

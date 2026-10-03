@@ -2,13 +2,19 @@ import pickle
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
-from ..config import FS, VALID_SUBJECTS, WESAD_DIR
+from ..config import FS, LABEL_NAMES, VALID_SUBJECTS, WESAD_DIR
 from ..logging_config import LoggerMixin
 
 
 class WESADLoader(LoggerMixin):
     VALID_SUBJECTS = VALID_SUBJECTS
+    LABELS = LABEL_NAMES
+
     CHEST_FS = FS.CHEST
+    WRIST_ACC_FS = FS.WRIST_ACC
+    WRIST_BVP_FS = FS.WRIST_BVP
+    WRIST_EDA_FS = FS.WRIST_EDA
+    WRIST_TEMP_FS = FS.WRIST_TEMP
 
     def __init__(self, data_path: Optional[Union[str, Path]] = None):
         self.data_path = Path(data_path) if data_path else WESAD_DIR
@@ -24,7 +30,7 @@ class WESADLoader(LoggerMixin):
                 f"WESAD data path not found: {self.data_path}\n"
                 "Please download the dataset from: "
                 "https://archive.ics.uci.edu/ml/datasets/WESAD\n"
-                "See README.md for instructions."
+                "See README.md (Dataset download and integrity) for instructions."
             )
 
     def _discover_subjects(self) -> List[str]:

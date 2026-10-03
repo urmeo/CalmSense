@@ -31,13 +31,14 @@ data:
 # on macOS, xgboost/lightgbm also need OpenMP (brew install libomp).
 reproduce:
 	@test -f data/raw/WESAD/S2/S2.pkl || test -f data/processed/features.parquet || \
-		{ echo "ERROR: WESAD not found. Run 'make wesad' (and 'make data' for cross_dataset) first; see README.md."; exit 1; }
+		{ echo "ERROR: WESAD not found. Run 'make wesad' (and 'make data' for cross_dataset) first; see README.md (Dataset download and integrity)."; exit 1; }
 	python scripts/run_experiment.py
 	python scripts/ablation.py
 	python scripts/wrist.py
 	python scripts/cross_dataset.py
 	python scripts/calibration.py
 	python scripts/personalize.py
+	python scripts/update_readme_tables.py
 	python scripts/tuning.py
 	python scripts/stats.py
 	python scripts/threshold_metrics.py
