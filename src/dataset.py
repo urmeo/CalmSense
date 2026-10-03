@@ -55,6 +55,11 @@ class WindowedDataset(LoggerMixin):
         self.fs, self.window_samples, self.step = _window_parameters(
             window_sec, overlap, purity, fs
         )
+        if self.fs != FS.CHEST:
+            raise ValueError(
+                f"WESAD chest signals and labels are sampled at {FS.CHEST} Hz; "
+                "WindowedDataset does not resample the source recordings"
+            )
         self.purity = float(purity)
         self.cnn_length = _positive_integer(cnn_length, "cnn_length")
 
@@ -142,14 +147,21 @@ class WindowedDataset(LoggerMixin):
         if not subjects or len(set(subjects)) != len(subjects):
             raise ValueError("subjects must be a nonempty list without duplicates")
 
-        all_windows, all_raw, all_y = [], [], []
+        frames, all_raw, all_y = [], [], []
         for subject_id in subjects:
             windows, raws, ys = self._process_subject(subject_id)
-            all_windows.extend(windows)
+            if windows:
+                frames.append(self.features.extract_all_features(windows, show_progress=True))
             all_raw.extend(raws)
             all_y.extend(ys)
+            # Window slices keep their full filtered recording alive until released.
+            del windows
 
-        features_df = self.features.extract_all_features(all_windows, show_progress=True)
+        features_df = (
+            pd.concat(frames, ignore_index=True)
+            if frames
+            else self.features.extract_all_features([], show_progress=False)
+        )
         features_df["label_name"] = features_df["label"].map(CONDITION_LABELS)
         features_df.attrs["feature_schema_version"] = FEATURE_SCHEMA_VERSION
         features_df.attrs["dataset_parameters"] = {

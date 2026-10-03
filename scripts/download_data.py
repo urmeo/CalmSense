@@ -5,6 +5,7 @@ import argparse
 import sys
 import zipfile
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from urllib.parse import urlsplit
 from urllib.request import urlopen
 
@@ -48,9 +49,9 @@ WESAD_SHA256 = {
 }
 
 
-def verify_wesad() -> None:
+def verify_wesad(target=None) -> None:
     """Check each downloaded WESAD S*.pkl against its known SHA-256; fail loudly on mismatch."""
-    root = RAW_DATA_DIR / "WESAD"
+    root = Path(target) if target is not None else RAW_DATA_DIR / "WESAD"
     problems = []
     for sid, expected in WESAD_SHA256.items():
         path = root / sid / f"{sid}.pkl"
@@ -115,6 +116,17 @@ def _safe_extract(zip_path, dest, max_bytes=MAX_UNCOMPRESSED):
         z.extractall(dest)
 
 
+def _install_archive(zip_path, target, verify):
+    """Publish a dataset directory only after extraction and integrity checks succeed."""
+    target = Path(target)
+    with TemporaryDirectory(dir=target.parent) as directory:
+        staging = Path(directory)
+        _safe_extract(zip_path, staging)
+        candidate = staging / target.name
+        verify(candidate)
+        candidate.replace(target)
+
+
 def download_noneeg() -> None:
     target = NONEEG_DIR / "non-eeg-dataset-for-assessment-of-neurological-status-1.0.0"
     if target.exists():
@@ -124,8 +136,7 @@ def download_noneeg() -> None:
     NONEEG_DIR.mkdir(parents=True, exist_ok=True)
     zip_path = NONEEG_DIR / "noneeg.zip"
     _download(NONEEG_URL, zip_path)
-    _safe_extract(zip_path, NONEEG_DIR)
-    verify_noneeg(target)
+    _install_archive(zip_path, target, verify_noneeg)
     zip_path.unlink()
     print(f"Non-EEG ready at {target}")
 
@@ -164,17 +175,16 @@ def verify_noneeg(target=None) -> None:
 
 def download_wesad() -> None:
     target = RAW_DATA_DIR / "WESAD"
-    if (target / "S2" / "S2.pkl").exists():
-        verify_wesad()
+    if target.exists():
+        verify_wesad(target)
         print(f"WESAD already present at {target}")
         return
     RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
     zip_path = RAW_DATA_DIR / "WESAD.zip"
     print("WESAD is ~2 GB and covered by a research-only agreement.")
     _download(WESAD_URL, zip_path)
-    _safe_extract(zip_path, RAW_DATA_DIR)
+    _install_archive(zip_path, target, verify_wesad)
     zip_path.unlink()
-    verify_wesad()
     print(f"WESAD ready at {target}")
 
 

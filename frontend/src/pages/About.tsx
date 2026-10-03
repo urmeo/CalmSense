@@ -1,6 +1,6 @@
 import { Heart, BookOpen, Database, Cpu, Shield, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import results from '../../../outputs/dashboard/results';
+import results from '../data';
 import Panel from '../components/Panel';
 
 const details = [

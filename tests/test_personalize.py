@@ -126,3 +126,17 @@ def test_personalization_output_paths_protect_benchmark(tmp_path, monkeypatch, s
         assert real_figure.read_bytes() == b"committed benchmark plot"
     else:
         assert not demo_dir.exists()
+
+
+def test_personalization_serialization_failure_preserves_previous_snapshot(tmp_path, monkeypatch):
+    path = tmp_path / "personalization.json"
+    path.write_bytes(b"previous usable snapshot")
+    monkeypatch.setattr(personalize, "RESULTS_DIR", tmp_path)
+    monkeypatch.setattr(personalize, "FIGURES_DIR", tmp_path / "figures")
+    monkeypatch.setattr(personalize, "load_cached", lambda: (None, None))
+    monkeypatch.setattr(personalize, "prepare_task", lambda *args: (None,) * 5)
+    monkeypatch.setattr(personalize, "compute", lambda *args, **kwargs: {"ece": float("nan")})
+    monkeypatch.setattr(personalize, "_plot", lambda *args: pytest.fail("Plotted invalid metrics"))
+    with pytest.raises(ValueError, match="JSON compliant"):
+        personalize.run()
+    assert path.read_bytes() == b"previous usable snapshot"

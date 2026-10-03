@@ -18,6 +18,7 @@ from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score
 from sklearn.model_selection import GridSearchCV, GroupKFold, LeaveOneGroupOut
 
 from scripts.run_experiment import (
+    BENCHMARK_PROTOCOL_VERSION,
     CLASSIFIERS,
     CLF_NAMES,
     build_pipeline,
@@ -25,7 +26,8 @@ from scripts.run_experiment import (
     prepare_task,
 )
 from src.config import DEMO_DIR, FIGURES_DIR, RESULTS_DIR, SEED
-from src.utils import provenance
+from src.features.feature_pipeline import FEATURE_SCHEMA_VERSION
+from src.utils import provenance, write_json
 
 GRIDS = {
     "lr": {"clf__C": [0.1, 1.0, 10.0]},
@@ -106,12 +108,30 @@ def compute(X, y, groups, inner_splits=3):
     return out
 
 
-def _defaults(results_dir=None):
+def _defaults(results_dir=None, *, groups=None):
     path = (RESULTS_DIR if results_dir is None else results_dir) / "metrics.json"
     if not path.exists():
         return {}
     with open(path) as f:
-        models = json.load(f).get("binary", {}).get("models", [])
+        summary = json.load(f)
+    binary = summary.get("binary", {})
+    if groups is not None:
+        rows = binary.get("per_subject")
+        subjects = (
+            [row.get("subject") if isinstance(row, dict) else None for row in rows]
+            if isinstance(rows, list)
+            else []
+        )
+        if (
+            summary.get("benchmark_protocol_version") != BENCHMARK_PROTOCOL_VERSION
+            or binary.get("feature_schema_version") != FEATURE_SCHEMA_VERSION
+            or not subjects
+            or any(not isinstance(subject, str) or not subject.strip() for subject in subjects)
+            or len(set(subjects)) != len(subjects)
+            or set(subjects) != set(groups)
+        ):
+            return {}
+    models = binary.get("models", [])
     return {m["model"]: m["accuracy_mean"] for m in models}
 
 
@@ -154,11 +174,12 @@ def run(synthetic=False, inner_splits=3):
 
     X, y, groups, _, _ = prepare_task(features_df, x_raw, [1, 2])
     tuned = compute(X, y, groups, inner_splits)
-    defaults = _defaults(results_dir)
+    defaults = _defaults(results_dir, groups=groups)
+    if not defaults and (results_dir / "metrics.json").exists():
+        print("No compatible default benchmark; the comparison is omitted.")
 
     tuned["provenance"] = provenance()
-    with open(results_dir / "tuning.json", "w") as f:
-        json.dump(tuned, f, indent=2)
+    write_json(results_dir / "tuning.json", tuned)
     if defaults:
         _plot(tuned, defaults, figures_dir / "tuning.png")
 

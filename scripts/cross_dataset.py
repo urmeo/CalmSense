@@ -37,7 +37,7 @@ from src.portable import (
     WINDOW_SEC,
     wesad_portable,
 )
-from src.utils import provenance, sha256_file
+from src.utils import provenance, sha256_file, write_json
 
 META = ["subject", "label"]
 
@@ -263,8 +263,7 @@ def run(*, rebuild=False):
         "noneeg_to_wesad": transfer(noneeg, wesad, feature_cols),
     }
     out["provenance"] = _generation_context()
-    with open(RESULTS_DIR / "cross_dataset.json", "w") as f:
-        json.dump(out, f, indent=2)
+    write_json(RESULTS_DIR / "cross_dataset.json", out)
 
     print("\n              within-LOSO   cross-dataset")
     print(

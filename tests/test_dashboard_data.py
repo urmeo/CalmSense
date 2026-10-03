@@ -191,6 +191,66 @@ def test_export_rejects_invalid_subject_counts(tmp_path, monkeypatch, count):
     assert output.read_text(encoding="utf-8") == "existing snapshot"
 
 
+@pytest.mark.parametrize(
+    ("field_path", "value", "message"),
+    [
+        (("n_windows",), True, "positive integer"),
+        (("n_features",), False, "positive integer"),
+        (("classes",), ["stress", "baseline"], "classes must be"),
+        (("models", 0, "model"), "", "nonempty strings"),
+        (("models", 1, "model"), "Logistic Regression", "must be unique"),
+        (("models", 0, "accuracy_mean"), "0.9", "numeric value"),
+        (("models", 0, "f1_macro_mean"), 1.2, "numeric value"),
+        (("models", 0, "balanced_accuracy"), -0.1, "numeric value"),
+        (("models", 0, "accuracy_std"), None, "numeric value"),
+        (("loso_accuracy",), 0.1, "disagrees with"),
+        (("optimism_gap_pts",), 4.0, "must match"),
+        (("loso_matched_accuracy",), None, "must match"),
+    ],
+)
+def test_export_rejects_malformed_or_inconsistent_scores_before_replacing_snapshot(
+    tmp_path, monkeypatch, field_path, value, message
+):
+    original_load = build_dashboard_data._load_json
+
+    def malformed_run(name):
+        data = original_load(name)
+        if name == "metrics.json":
+            target = data["binary"]
+            for field in field_path[:-1]:
+                target = target[field]
+            target[field_path[-1]] = value
+        return data
+
+    output = tmp_path / "results.ts"
+    output.write_text("existing snapshot")
+    monkeypatch.setattr(build_dashboard_data, "DASHBOARD_RESULTS", output)
+    monkeypatch.setattr(build_dashboard_data, "_load_json", malformed_run)
+    with pytest.raises(ValueError, match=message):
+        build_dashboard_data.run()
+    assert output.read_text() == "existing snapshot"
+
+
+def test_export_accepts_absent_matched_comparison_without_inventing_scores(tmp_path, monkeypatch):
+    original_load = build_dashboard_data._load_json
+
+    def unmatched_run(name):
+        data = original_load(name)
+        if name == "metrics.json":
+            for key in ("loso_matched_accuracy", "within_subject_accuracy", "optimism_gap_pts"):
+                data["binary"][key] = None
+        return data
+
+    output = tmp_path / "results.ts"
+    monkeypatch.setattr(build_dashboard_data, "DASHBOARD_RESULTS", output)
+    monkeypatch.setattr(build_dashboard_data, "_load_json", unmatched_run)
+    build_dashboard_data.run()
+    data = _read_module(output)["binary"]
+    assert data["loso_matched_accuracy"] is None
+    assert data["within_subject_accuracy"] is None
+    assert data["optimism_gap_pts"] is None
+
+
 def test_environment_snapshot_fingerprints_results_and_excludes_itself(tmp_path, monkeypatch):
     import hashlib
 

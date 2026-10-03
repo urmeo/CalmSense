@@ -5,7 +5,6 @@ Enrollment labels fit the subject calibrator, never the base classifier.
 """
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -27,7 +26,7 @@ from scripts.run_experiment import (
 )
 from src import calibration as cal
 from src.config import DEMO_DIR, FIGURES_DIR, RESULTS_DIR, SEED
-from src.utils import provenance
+from src.utils import provenance, write_json
 
 K_VALUES = [5, 10, 20]
 METHOD = "isotonic"
@@ -145,7 +144,7 @@ def _plot(out, path):
     )
     plt.xlabel("Requested enrollment budget (windows)")
     plt.ylabel("ECE (mean over subjects)")
-    plt.title("Few-shot personalization closes the calibration gap")
+    plt.title("Calibration by enrollment budget")
     plt.legend()
     plt.tight_layout()
     plt.savefig(path, dpi=150)
@@ -173,8 +172,7 @@ def run(synthetic=False, model="rf"):
     out = compute(X, y, groups, model=model)
 
     out["provenance"] = provenance()
-    with open(results_dir / "personalization.json", "w") as f:
-        json.dump(out, f, indent=2)
+    write_json(results_dir / "personalization.json", out)
     _plot(out, figures_dir / "personalization.png")
 
     print(f"\n{'condition':18s} {'ECE':>7s} {'Brier':>7s}")

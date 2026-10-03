@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -12,6 +12,7 @@ import {
   X,
   Heart,
 } from 'lucide-react';
+import { containNavigationFocus } from '../../lib/navigation';
 
 const Sidebar: React.FC<{
   hasCalibration: boolean;
@@ -20,6 +21,25 @@ const Sidebar: React.FC<{
   darkMode: boolean;
   toggleDarkMode: () => void;
 }> = ({ hasCalibration, isOpen, onClose, darkMode, toggleDarkMode }) => {
+  const sidebar = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!isOpen) return;
+    const desktop = window.matchMedia('(min-width: 1024px)');
+    if (desktop.matches) {
+      onClose();
+      return;
+    }
+    const background = document.getElementById('dashboard-content');
+    if (!sidebar.current || !background) return;
+    const releaseFocus = containNavigationFocus(sidebar.current, background, onClose);
+    const onResize = () => { if (desktop.matches) onClose(); };
+    desktop.addEventListener('change', onResize);
+    return () => {
+      desktop.removeEventListener('change', onResize);
+      releaseFocus();
+    };
+  }, [isOpen, onClose]);
+
   const navItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/signals', icon: Activity, label: 'Signal Explorer' },
@@ -42,7 +62,11 @@ const Sidebar: React.FC<{
       )}
 
       <aside
+        ref={sidebar}
         id="navigation-sidebar"
+        role={isOpen ? 'dialog' : undefined}
+        aria-modal={isOpen ? true : undefined}
+        aria-label="Navigation"
         className={`
           fixed top-0 left-0 z-30 h-full w-64
           bg-primary-700 dark:bg-gray-900

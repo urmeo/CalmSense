@@ -1,7 +1,6 @@
 """Reproduce the full CalmSense LOSO benchmark from raw WESAD data."""
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -30,7 +29,7 @@ from src.config import DEMO_DIR, FIGURES_DIR, MODELS_DIR, RESULTS_DIR, SEED
 from src.dataset import WindowedDataset, load_cached
 from src.features.feature_pipeline import FEATURE_SCHEMA_VERSION
 from src.models.ml.classifiers import get_classifier
-from src.utils import provenance, save_verified_joblib, set_seed
+from src.utils import atomic_write_text, provenance, save_verified_joblib, set_seed, write_json
 
 TASKS = {
     "binary": {"keep": [1, 2], "names": ["baseline", "stress"]},
@@ -215,15 +214,23 @@ def plot_embedding(X, y, names, path):
     """Fit a descriptive PCA on all windows; it is not used to score classifiers."""
     from sklearn.decomposition import PCA
 
+    classes = np.unique(y)
+    if len(classes) != len(names):
+        raise ValueError("PCA class names must match the observed task classes")
     Xi = SimpleImputer(strategy="median").fit_transform(X)
     Xs = StandardScaler().fit_transform(Xi)
-    coords = PCA(n_components=2, random_state=SEED).fit_transform(Xs)
+    n_components = min(2, *Xs.shape)
+    coords = PCA(n_components=n_components, random_state=SEED).fit_transform(Xs)
+    vertical = coords[:, 1] if n_components == 2 else np.zeros(len(coords))
     plt.figure(figsize=(6, 5))
-    for cls, name in enumerate(names):
-        m = y == np.unique(y)[cls]
-        plt.scatter(coords[m, 0], coords[m, 1], s=8, alpha=0.5, label=name)
+    for cls, name in zip(classes, names):
+        m = y == cls
+        plt.scatter(coords[m, 0], vertical[m], s=8, alpha=0.5, label=name)
     plt.xlabel("PC1")
-    plt.ylabel("PC2")
+    if n_components == 2:
+        plt.ylabel("PC2")
+    else:
+        plt.yticks([])
     plt.title("Feature space (PCA)")
     plt.legend()
     plt.tight_layout()
@@ -327,6 +334,13 @@ def run():
             features_df, x_raw = cached
 
     print(f"Windows: {len(features_df)} | subjects: {features_df['subject_id'].nunique()}")
+    observed_labels = set(features_df["label"])
+    for task, cfg in TASKS.items():
+        missing = [
+            name for label, name in zip(cfg["keep"], cfg["names"]) if label not in observed_labels
+        ]
+        if missing:
+            raise ValueError(f"{task} benchmark is missing required classes: {', '.join(missing)}")
     summary = {}
 
     for task, cfg in TASKS.items():
@@ -387,8 +401,12 @@ def run():
             loso_matched = None
             kf_acc = None
 
-        pd.DataFrame(rows).to_csv(results_dir / f"{task}_model_comparison.csv", index=False)
-        best[1]["per_subject"].to_csv(results_dir / f"{task}_per_subject.csv", index=False)
+        atomic_write_text(
+            results_dir / f"{task}_model_comparison.csv", pd.DataFrame(rows).to_csv(index=False)
+        )
+        atomic_write_text(
+            results_dir / f"{task}_per_subject.csv", best[1]["per_subject"].to_csv(index=False)
+        )
 
         summary[task] = {
             "n_windows": int(len(y)),
@@ -417,7 +435,7 @@ def run():
                 key=lambda kv: kv[1]["accuracy_mean"],
             )[0]
             importance = shap_analysis(X, y, feature_cols, figures_dir)
-            importance.to_csv(results_dir / "shap_top_features.csv", index=False)
+            atomic_write_text(results_dir / "shap_top_features.csv", importance.to_csv(index=False))
             final = build_pipeline(top_clf)
             final.fit(X, y, **_fit_params(final, y))
             save_verified_joblib(
@@ -439,8 +457,7 @@ def run():
         "cnn_normalization": None if args.no_cnn else "inner_training_windows_only",
         "f1_classes": "full_task_class_set",
     }
-    with open(results_dir / "metrics.json", "w") as f:
-        json.dump(summary, f, indent=2)
+    write_json(results_dir / "metrics.json", summary)
 
     print(f"\nResults written to {results_dir}")
     if not args.synthetic:

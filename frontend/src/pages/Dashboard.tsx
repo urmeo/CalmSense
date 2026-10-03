@@ -10,11 +10,11 @@ import {
   Cell,
 } from 'recharts';
 import { Activity, Brain, Layers, Award } from 'lucide-react';
-import results from '../../../outputs/dashboard/results';
+import results from '../data';
 import Panel from '../components/Panel';
-import { requiresFreshBenchmark } from '../lib/benchmarks';
+import { requiresFreshBenchmark, formatPercent as pct, matchedGap } from '../lib/benchmarks';
 
-const r = results as any;
+const r = results;
 
 // Static color classes (dynamic `bg-${color}-100` would be purged by Tailwind)
 const CARD_COLORS: Record<string, string> = {
@@ -41,11 +41,9 @@ const MetricCard: React.FC<{
   </Panel>
 );
 
-const pct = (x: number | null | undefined) => typeof x === 'number' && Number.isFinite(x) ? `${(x * 100).toFixed(1)}%` : 'Unavailable';
-
 const FeatureImportanceChart: React.FC = () => {
   const palette = ['#3182CE', '#38A169', '#D69E2E', '#E53E3E', '#805AD5', '#DD6B20', '#319795', '#D53F8C'];
-  const data = (r.shap || []).slice(0, 8).map((s: any, i: number) => ({
+  const data = (r.shap || []).slice(0, 8).map((s, i) => ({
     name: s.feature,
     value: s.mean_abs_shap,
     color: palette[i % palette.length],
@@ -53,7 +51,7 @@ const FeatureImportanceChart: React.FC = () => {
 
   return (
     <Panel title="Top features (binary XGBoost, full-data SHAP)">
-      <ResponsiveContainer width="100%" height={300}>
+      {data.length === 0 ? <p role="status" className="text-sm text-gray-500 dark:text-gray-400">SHAP values are unavailable for this benchmark.</p> : <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
           <XAxis type="number" />
@@ -67,16 +65,17 @@ const FeatureImportanceChart: React.FC = () => {
             ))}
           </Bar>
         </BarChart>
-      </ResponsiveContainer>
+      </ResponsiveContainer>}
     </Panel>
   );
 };
 
 const OptimismGapChart: React.FC = () => {
-  const b = r.binary || {};
+  const b = r.binary;
   const loso = b.loso_matched_accuracy;
   const within = b.within_subject_accuracy;
-  const hasMatched = typeof loso === 'number' && typeof within === 'number';
+  const gap = matchedGap(loso, within);
+  const hasMatched = gap !== undefined;
   const data = [
     { name: 'LOSO\n(subject-independent)', value: loso, color: '#3182CE' },
     { name: 'Subject-mixed\n(5-fold)', value: within, color: '#E67E22' },
@@ -84,7 +83,7 @@ const OptimismGapChart: React.FC = () => {
   return (
     <Panel title="Optimism gap">
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-        {hasMatched ? `Subject-mixed validation adds ${b.optimism_gap_pts} points on matched non-overlapping windows` : 'Matched-window comparison is unavailable for the selected benchmark model.'}
+        {hasMatched ? `Subject-mixed validation adds ${gap?.toFixed(1)} points on matched non-overlapping windows` : 'Matched-window comparison is unavailable for the selected benchmark model.'}
       </p>
       {hasMatched && <ResponsiveContainer width="100%" height={250}>
         <BarChart data={data}>
@@ -104,13 +103,13 @@ const OptimismGapChart: React.FC = () => {
 };
 
 const ModelComparisonList: React.FC = () => {
-  const models = [...((r.binary || {}).models || [])].sort(
-    (a: any, b: any) => b.accuracy_mean - a.accuracy_mean
+  const models = [...((r.binary).models || [])].sort(
+    (a, b) => b.accuracy_mean - a.accuracy_mean
   );
   return (
     <Panel title="Binary LOSO accuracy by model · subject means">
       <div className="space-y-3">
-        {models.map((m: any) => (
+        {models.map((m) => (
           <div key={m.model} className="flex items-center justify-between">
             <span className="text-sm text-gray-600 dark:text-gray-400 w-40">{m.model}</span>
             <div className="flex-1 mx-3 bg-gray-100 dark:bg-gray-700 rounded-full h-2">
@@ -130,9 +129,9 @@ const ModelComparisonList: React.FC = () => {
 };
 
 const DatasetSummary: React.FC = () => {
-  const b = r.binary || {};
-  const m = r.multiclass || {};
-  const rows = [
+  const b = r.binary;
+  const m = r.multiclass;
+  const rows: [string, string | number][] = [
     ['Dataset', `WESAD (chest, ${b.n_subjects ?? 15} subjects)`],
     ['Windows (binary)', b.n_windows],
     ['Features', b.n_features],
@@ -144,7 +143,7 @@ const DatasetSummary: React.FC = () => {
     <Panel title="Dataset & setup">
       <div className="space-y-3">
         {rows.map(([k, v]) => (
-          <div key={k as string} className="flex items-center justify-between">
+          <div key={k} className="flex items-center justify-between">
             <span className="text-sm text-gray-600 dark:text-gray-400">{k}</span>
             <span className="text-sm font-medium text-gray-900 dark:text-white">{v}</span>
           </div>
@@ -155,8 +154,8 @@ const DatasetSummary: React.FC = () => {
 };
 
 const Dashboard: React.FC = () => {
-  const b = r.binary || {};
-  const m = r.multiclass || {};
+  const b = r.binary;
+  const m = r.multiclass;
 
   return (
     <div className="space-y-6 animate-fade-in">

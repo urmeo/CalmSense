@@ -10,6 +10,7 @@ import pandas as pd
 
 from src.calibration import BINARY_BRIER_DEFINITION, normalize_binary_calibration
 from src.config import OUTPUT_DIR, RESULTS_DIR
+from src.utils import atomic_write_text
 
 DASHBOARD_RESULTS = OUTPUT_DIR / "dashboard" / "results.ts"
 
@@ -45,18 +46,60 @@ def _validate_tasks(out):
     """Reject partial benchmarks before replacing a usable dashboard snapshot."""
     for task in ("binary", "multiclass"):
         data = out.get(task)
-        if not data or not data.get("models"):
+        if (
+            not isinstance(data, dict)
+            or not isinstance(data.get("models"), list)
+            or not data["models"]
+        ):
             raise ValueError(f"{task}: dashboard requires a non-empty model comparison")
         for key in ("n_windows", "n_features"):
-            if not isinstance(data.get(key), int) or data[key] <= 0:
+            if type(data.get(key)) is not int or data[key] <= 0:
                 raise ValueError(f"{task}: {key} must be a positive integer")
         if "n_subjects" in data and (
-            not isinstance(data["n_subjects"], int) or data["n_subjects"] < 2
+            type(data["n_subjects"]) is not int or not 2 <= data["n_subjects"] <= data["n_windows"]
         ):
-            raise ValueError(f"{task}: n_subjects must be an integer >= 2")
-        names = [model["model"] for model in data["models"]]
+            raise ValueError(f"{task}: n_subjects must be an integer >= 2 and <= n_windows")
+        expected_classes = ["baseline", "stress"] + (["amusement"] if task == "multiclass" else [])
+        if data.get("classes") != expected_classes:
+            raise ValueError(f"{task}: classes must be {expected_classes}")
+        names = []
+        for model in data["models"]:
+            if (
+                not isinstance(model, dict)
+                or not isinstance(model.get("model"), str)
+                or not model["model"].strip()
+            ):
+                raise ValueError(f"{task}: model names must be nonempty strings")
+            names.append(model["model"])
+            for key in ("accuracy_mean", "accuracy_std", "f1_macro_mean", "balanced_accuracy"):
+                _unit_metric(model.get(key), f"{task}: {model['model']} {key}")
+        if len(names) != len(set(names)):
+            raise ValueError(f"{task}: model names must be unique")
         if data.get("best_model") not in names:
             raise ValueError(f"{task}: best_model is absent from model comparisons")
+        for key in ("loso_accuracy", "loso_pooled_accuracy"):
+            _unit_metric(data.get(key), f"{task}: {key}")
+        selected = data["models"][names.index(data["best_model"])]
+        if abs(selected["accuracy_mean"] - data["loso_accuracy"]) > 1e-9:
+            raise ValueError(f"{task}: LOSO accuracy disagrees with the selected model")
+        for key in ("loso_matched_accuracy", "within_subject_accuracy"):
+            if data.get(key) is not None:
+                _unit_metric(data[key], f"{task}: {key}")
+        gap = data.get("optimism_gap_pts")
+        if gap is not None:
+            matched, within = data.get("loso_matched_accuracy"), data.get("within_subject_accuracy")
+            if (
+                type(gap) not in (int, float)
+                or matched is None
+                or within is None
+                or abs(gap - round((within - matched) * 100, 1)) > 1e-9
+            ):
+                raise ValueError(f"{task}: optimism gap must match the recorded comparison")
+
+
+def _unit_metric(value, name):
+    if type(value) not in (int, float) or not 0 <= value <= 1:
+        raise ValueError(f"{name} must be a numeric value in [0, 1]")
 
 
 def run():
@@ -65,13 +108,22 @@ def run():
         raise SystemExit(
             f"{RESULTS_DIR / 'metrics.json'} missing. Run scripts/run_experiment.py first."
         )
+    if not isinstance(metrics, dict):
+        raise ValueError("Benchmark results must be an object")
 
     out = {}
     # Copy run metadata; exporting historical results does not constitute a new benchmark.
     if "benchmark_protocol_version" in metrics:
+        if (
+            type(metrics["benchmark_protocol_version"]) is not int
+            or metrics["benchmark_protocol_version"] < 1
+        ):
+            raise ValueError("Benchmark protocol version must be a positive integer")
         out["benchmark_protocol_version"] = metrics["benchmark_protocol_version"]
     for task in ("binary", "multiclass"):
         if task in metrics:
+            if not isinstance(metrics[task], dict):
+                raise ValueError(f"{task}: benchmark task must be an object")
             out[task] = {k: metrics[task].get(k) for k in TASK_KEYS}
             if "n_subjects" in metrics[task]:
                 out[task]["n_subjects"] = metrics[task]["n_subjects"]
@@ -102,10 +154,7 @@ def run():
 
     payload = json.dumps(out, indent=2, allow_nan=False)
     _validate_tasks(out)
-    DASHBOARD_RESULTS.parent.mkdir(parents=True, exist_ok=True)
-    DASHBOARD_RESULTS.write_text(
-        f"const data = {payload};\n\nexport default data;\n", encoding="utf-8"
-    )
+    atomic_write_text(DASHBOARD_RESULTS, f"const data = {payload};\n\nexport default data;\n")
     print(f"Wrote {DASHBOARD_RESULTS} with sections: {sorted(out)}")
 
 

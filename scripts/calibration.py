@@ -4,7 +4,6 @@ Fit calibrators on out-of-fold training probabilities and report decision curves
 """
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -31,7 +30,7 @@ from scripts.run_experiment import (
 from scripts.stats import bootstrap_ci
 from src import calibration as cal
 from src.config import DEMO_DIR, FIGURES_DIR, RESULTS_DIR, SEED
-from src.utils import paired_effect_size, provenance, set_seed
+from src.utils import paired_effect_size, provenance, set_seed, write_json
 
 POSITIVE = "stress"
 N_BINS = 15
@@ -117,12 +116,26 @@ def _apply_calibrator(model, raw, method):
 
 def _pos_proba(estimator, X):
     """P(class==1), robust to single-class folds where proba has one column."""
-    proba = estimator.predict_proba(X)
-    classes = list(estimator.classes_)
-    if not classes or not set(classes) <= {0, 1}:
+    proba = np.asarray(estimator.predict_proba(X))
+    classes = np.asarray(estimator.classes_)
+    if (
+        classes.ndim != 1
+        or not 1 <= len(classes) <= 2
+        or len(np.unique(classes)) != len(classes)
+        or not np.isin(classes, [0, 1]).all()
+    ):
         raise ValueError("Binary calibration requires estimator classes drawn from {0, 1}")
+    if (
+        proba.shape != (len(X), len(classes))
+        or not np.isfinite(proba).all()
+        or np.any((proba < 0) | (proba > 1))
+        or not np.allclose(proba.sum(axis=1), 1.0)
+    ):
+        raise ValueError(
+            "Estimator probabilities must be finite, normalized, and match its classes"
+        )
     if 1 in classes:
-        return proba[:, classes.index(1)]
+        return proba[:, np.flatnonzero(classes == 1)[0]]
     return np.zeros(len(X))
 
 
@@ -290,8 +303,7 @@ def run(synthetic=False, model="rf", n_bins=N_BINS):
     _plot_gap(out, figures_dir / "calibration_gap.png")
     _plot_decision(out, figures_dir / "calibration_decision_curve.png")
 
-    with open(results_dir / "calibration.json", "w") as f:
-        json.dump(out, f, indent=2)
+    write_json(results_dir / "calibration.json", out)
 
     print(
         f"LOSO ECE {out['loso']['ece']:.3f} | within-subject ECE "

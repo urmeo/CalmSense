@@ -18,6 +18,7 @@ from scripts.run_experiment import (
     prepare_task,
 )
 from src.config import FIGURES_DIR, RESULTS_DIR
+from src.utils import atomic_write_text
 
 # Canonical feature-group prefixes; every feature column is named "<GROUP>_...".
 # Subsets below are defined against these, so a prefix rename is caught by the
@@ -73,7 +74,7 @@ def run():
         print(f"  {name:32s} ({len(cols):2d} feat)  acc={res['accuracy_mean']:.3f}")
 
     df = pd.DataFrame(rows)
-    df.to_csv(RESULTS_DIR / "ablation.csv", index=False)
+    atomic_write_text(RESULTS_DIR / "ablation.csv", df.to_csv(index=False))
 
     order = df.iloc[::-1]
     plt.figure(figsize=(7, 4))

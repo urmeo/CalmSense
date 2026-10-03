@@ -40,14 +40,14 @@ def test_download_refuses_non_https(tmp_path):
         _download("http://example.com/x.zip", tmp_path / "x.zip")
 
 
-@pytest.mark.parametrize("missing_subject", [False, True])
+@pytest.mark.parametrize("missing_subject", [None, "S2", "S3"])
 def test_existing_wesad_must_be_complete_and_verified(tmp_path, monkeypatch, missing_subject):
     monkeypatch.setattr(download_data, "RAW_DATA_DIR", tmp_path)
     reference = {}
     for sid in ("S2", "S3"):
         payload = sid.encode()
         reference[sid] = hashlib.sha256(payload).hexdigest()
-        if sid == "S3" and missing_subject:
+        if sid == missing_subject:
             continue
         subject = tmp_path / "WESAD" / sid
         subject.mkdir(parents=True)
@@ -57,7 +57,7 @@ def test_existing_wesad_must_be_complete_and_verified(tmp_path, monkeypatch, mis
         download_data, "_download", lambda *args: pytest.fail("Unexpected download")
     )
     if missing_subject:
-        with pytest.raises(SystemExit, match="S3: missing"):
+        with pytest.raises(SystemExit, match=f"{missing_subject}: missing"):
             download_data.download_wesad()
     else:
         download_data.download_wesad()
@@ -133,3 +133,40 @@ def test_existing_noneeg_requires_complete_publisher_manifest(tmp_path, monkeypa
             download_data.download_noneeg()
     else:
         download_data.download_noneeg()
+
+
+@pytest.mark.parametrize("dataset", ["wesad", "noneeg"])
+def test_dataset_is_installed_only_after_integrity_verification_and_retry_succeeds(
+    tmp_path, monkeypatch, dataset
+):
+    payload = b"verified recording"
+    digest = hashlib.sha256(payload).hexdigest()
+    valid = False
+    if dataset == "wesad":
+        monkeypatch.setattr(download_data, "RAW_DATA_DIR", tmp_path)
+        monkeypatch.setattr(download_data, "WESAD_SHA256", {"S2": digest})
+        target = tmp_path / "WESAD"
+        file_name = "S2/S2.pkl"
+        download = download_data.download_wesad
+    else:
+        monkeypatch.setattr(download_data, "NONEEG_DIR", tmp_path)
+        monkeypatch.setattr(download_data, "NONEEG_FILES", ("record.dat",))
+        target = tmp_path / "non-eeg-dataset-for-assessment-of-neurological-status-1.0.0"
+        file_name = "record.dat"
+        download = download_data.download_noneeg
+
+    def download_archive(url, destination):
+        with zipfile.ZipFile(destination, "w") as archive:
+            archive.writestr(f"{target.name}/{file_name}", payload if valid else b"corrupt")
+            if dataset == "noneeg":
+                archive.writestr(f"{target.name}/SHA256SUMS.txt", f"{digest}  {file_name}\n")
+
+    monkeypatch.setattr(download_data, "_download", download_archive)
+    with pytest.raises(SystemExit, match="checksum mismatch"):
+        download()
+    assert not target.exists()
+    assert [p.suffix for p in tmp_path.iterdir()] == [".zip"]
+    valid = True
+    download()
+    assert (target / file_name).read_bytes() == payload
+    assert list(tmp_path.iterdir()) == [target]

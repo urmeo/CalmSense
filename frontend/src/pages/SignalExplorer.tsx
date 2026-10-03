@@ -2,10 +2,12 @@ import React, { useState, useMemo, useEffect } from 'react';
 import Plot from '../components/Plot';
 import { ZoomIn, ZoomOut, RefreshCw } from 'lucide-react';
 import realSignals from '../../../outputs/dashboard/signals';
-import { zoomRange } from '../lib/viewport';
+import { zoomRange, relayoutRange } from '../lib/viewport';
+import { readSignalRecording, recordingDuration, conditionSegments, type SignalRecording } from '../lib/signals';
 
 // Real WESAD chest signals (baseline -> stress -> amusement), downsampled for display
-const subjects = Object.keys(realSignals);
+const recordings = Object.fromEntries(Object.entries(realSignals).map(([subject, recording]) => [subject, readSignalRecording(recording)]));
+const subjects = Object.keys(recordings);
 
 const PANELS = [
   { key: 'ecg', title: 'ECG (mV)', series: [{ y: 'ecg', name: 'ECG', color: '#E53E3E' }] },
@@ -28,61 +30,36 @@ const CONDITIONS: Record<string, { background: string; color: string; swatch: st
   Amusement: { background: 'rgba(214, 158, 46, 0.10)', color: '#D69E2E', swatch: 'bg-yellow-200', label: 'Amusement (Fun Videos)' },
 };
 
-const SignalExplorer: React.FC = () => {
-  const [selectedSubject, setSelectedSubject] = useState(subjects[0]);
+const SignalPlots: React.FC<{ signalData: SignalRecording; subject: string }> = ({ signalData, subject }) => {
   const [visibleSignals, setVisibleSignals] = useState({ ecg: true, eda: true, temp: true, acc: false });
-  const signalData = useMemo(() => (realSignals as any)[selectedSubject], [selectedSubject]);
-  const time: number[] = signalData.time;
-  const duration = time[time.length - 1] + (time[1] - time[0]);
+  const duration = recordingDuration(signalData);
+  const sampleStep = signalData.time[1] - signalData.time[0];
   const [xRange, setXRange] = useState<[number, number]>([0, duration]);
-  useEffect(() => setXRange([0, duration]), [selectedSubject, duration]);
-
-  // Contiguous condition segments straight from the labelled samples
-  const segments = useMemo(() => {
-    const conds: string[] = signalData.conditions;
-    const time: number[] = signalData.time;
-    const segs: { name: string; x0: number; x1: number }[] = [];
-    let start = 0;
-    for (let i = 1; i <= conds.length; i++) {
-      if (i === conds.length || conds[i] !== conds[start]) {
-        segs.push({ name: conds[start], x0: time[start], x1: i < time.length ? time[i] : duration });
-        start = i;
-      }
-    }
-    return segs;
-  }, [signalData, duration]);
+  useEffect(() => setXRange([0, duration]), [signalData, duration]);
+  const segments = useMemo(() => conditionSegments(signalData), [signalData]);
 
   const toggleSignal = (signal: keyof typeof visibleSignals) =>
     setVisibleSignals((prev) => ({ ...prev, [signal]: !prev[signal] }));
 
-  const handleZoomIn = () => setXRange((range) => zoomRange(range, duration, 0.5));
-  const handleZoomOut = () => setXRange((range) => zoomRange(range, duration, 2));
+  const handleZoomIn = () => setXRange((range) => zoomRange(range, duration, 0.5, sampleStep));
+  const handleZoomOut = () => setXRange((range) => zoomRange(range, duration, 2, sampleStep));
   const handleReset = () => setXRange([0, duration]);
 
-  const visiblePanels = PANELS.filter((p) => (visibleSignals as any)[p.key]);
+  const visiblePanels = PANELS.filter((p) => visibleSignals[p.key]);
 
-  const buildTraces = () => {
-    const traces: any[] = [];
-    visiblePanels.forEach((panel, i) => {
-      const axis = i === 0 ? '' : String(i + 1);
-      panel.series.forEach((s) =>
-        traces.push({
-          x: signalData.time,
-          y: signalData[s.y],
-          type: 'scatter',
-          mode: 'lines',
-          name: s.name,
-          line: { color: s.color, width: 1 },
-          xaxis: 'x',
-          yaxis: `y${axis}`,
-        })
-      );
-    });
-    return traces;
-  };
+  const traces = visiblePanels.flatMap((panel, i) => panel.series.map((series) => ({
+    x: signalData.time,
+    y: signalData[series.y],
+    type: 'scatter',
+    mode: 'lines',
+    name: series.name,
+    line: { color: series.color, width: 1 },
+    xaxis: 'x',
+    yaxis: i === 0 ? 'y' : `y${i + 1}`,
+  })));
 
-  const layout: any = {
-    title: { text: `Signal Explorer: Subject ${selectedSubject}`, font: { size: 18 } },
+  const layout: Record<string, unknown> = {
+    title: { text: `Signal Explorer: Subject ${subject}`, font: { size: 18 } },
     showlegend: true,
     legend: { orientation: 'h', y: -0.12 },
     xaxis: { title: { text: 'Displayed time (s)' }, range: xRange, showgrid: true, gridcolor: 'rgba(0,0,0,0.1)' },
@@ -127,39 +104,17 @@ const SignalExplorer: React.FC = () => {
   });
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Signal Explorer</h1>
-          <p className="text-gray-500 dark:text-gray-400">
-            Real WESAD chest signal clips, downsampled and concatenated for display.
-            The time axis does not represent a continuous recording.
-          </p>
-        </div>
-        <select
-          aria-label="WESAD subject"
-          value={selectedSubject}
-          onChange={(e) => setSelectedSubject(e.target.value)}
-          className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-        >
-          {subjects.map((subject) => (
-            <option key={subject} value={subject}>
-              Subject {subject}
-            </option>
-          ))}
-        </select>
-      </div>
-
+    <div className="space-y-6">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center space-x-4">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Signals:</span>
-            {Object.entries(visibleSignals).map(([signal, visible]) => (
+            {PANELS.map(({ key: signal }) => (
               <label key={signal} className="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={visible}
-                  onChange={() => toggleSignal(signal as keyof typeof visibleSignals)}
+                  checked={visibleSignals[signal]}
+                  onChange={() => toggleSignal(signal)}
                   className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                 />
                 <span className="text-sm text-gray-600 dark:text-gray-400 uppercase">{signal}</span>
@@ -184,18 +139,12 @@ const SignalExplorer: React.FC = () => {
         {visiblePanels.length === 0 ? (
           <p role="status" className="text-gray-600 dark:text-gray-300">Select a signal to display.</p>
         ) : <Plot
-          data={buildTraces()}
+          data={traces}
           layout={layout}
           config={{ displayModeBar: true, modeBarButtonsToRemove: ['lasso2d', 'select2d'] }}
-          onRelayout={(e: any) => {
-            if (e['xaxis.autorange']) {
-              handleReset();
-              return;
-            }
-            const range = e['xaxis.range'] ?? [e['xaxis.range[0]'], e['xaxis.range[1]']];
-            if (range.every((value: unknown) => typeof value === 'number' && Number.isFinite(value)) && range[1] > range[0]) {
-              setXRange([range[0], range[1]]);
-            }
+          onRelayout={(event: unknown) => {
+            const range = relayoutRange(event, duration);
+            if (range) setXRange(range);
           }}
         />}
       </div>
@@ -211,6 +160,42 @@ const SignalExplorer: React.FC = () => {
           ))}
         </div>
       </div>
+    </div>
+  );
+};
+
+const SignalExplorer: React.FC = () => {
+  const [selectedSubject, setSelectedSubject] = useState(subjects[0] ?? '');
+  const recording = recordings[selectedSubject];
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Signal Explorer</h1>
+          <p className="text-gray-500 dark:text-gray-400">
+            Real WESAD chest signal clips, downsampled and concatenated for display.
+            The time axis does not represent a continuous recording.
+          </p>
+        </div>
+        <select
+          aria-label="WESAD subject"
+          disabled={subjects.length === 0}
+          value={selectedSubject}
+          onChange={(e) => setSelectedSubject(e.target.value)}
+          className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+        >
+          {subjects.length === 0 && <option value="">No recordings available</option>}
+          {subjects.map((subject) => (
+            <option key={subject} value={subject}>
+              Subject {subject}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {recording ? <SignalPlots signalData={recording} subject={selectedSubject} /> : (
+        <p role="status" className="text-gray-600 dark:text-gray-300">Signal samples are unavailable for this subject.</p>
+      )}
     </div>
   );
 };

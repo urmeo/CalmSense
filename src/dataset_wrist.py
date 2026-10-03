@@ -101,11 +101,17 @@ class WristDataset(LoggerMixin):
         subjects = self.loader.subjects if subjects is None else subjects
         if not subjects or len(set(subjects)) != len(subjects):
             raise ValueError("subjects must be a nonempty list without duplicates")
-        all_windows = []
+        frames = []
         for s in subjects:
             windows, _ = self._process_subject(s)
-            all_windows.extend(windows)
-        df = self.features.extract_all_features(all_windows, show_progress=False)
+            if windows:
+                frames.append(self.features.extract_all_features(windows, show_progress=False))
+            del windows
+        df = (
+            pd.concat(frames, ignore_index=True)
+            if frames
+            else self.features.extract_all_features([], show_progress=False)
+        )
         df["label_name"] = df["label"].map(CONDITION_LABELS)
         df.attrs["feature_schema_version"] = FEATURE_SCHEMA_VERSION
         df.attrs["dataset_parameters"] = {

@@ -94,7 +94,17 @@ class CNN1DClassifier(LoggerMixin):
         self._std: Any = None
 
     def _standardize(self, x: np.ndarray) -> np.ndarray:
-        return (x - self._mean) / self._std
+        if (
+            not np.isfinite(self._mean).all()
+            or not np.isfinite(self._std).all()
+            or np.any(self._std <= 0)
+        ):
+            raise ValueError("CNN normalization requires finite means and positive finite scales")
+        with np.errstate(over="ignore", invalid="ignore"):
+            standardized = (x - self._mean) / self._std
+        if not np.isfinite(standardized).all():
+            raise ValueError("CNN normalization produced nonfinite windows")
+        return standardized
 
     def _validate_windows(self, X: np.ndarray, *, allow_empty: bool = False) -> np.ndarray:
         X = np.asarray(X, dtype=np.float32)
@@ -123,7 +133,7 @@ class CNN1DClassifier(LoggerMixin):
         for train, validation in splitter.split(indices, y, groups):
             if np.array_equal(np.unique(y[train]), classes):
                 return train, validation
-        raise ValueError("No subject validation split retains every class in CNN training")
+        raise ValueError("Could not find a subject validation split retaining every training class")
 
     def fit(self, X: np.ndarray, y: np.ndarray, groups=None) -> "CNN1DClassifier":
         """Fit on windows; subject groups make the early-stopping split disjoint."""
@@ -226,7 +236,10 @@ class CNN1DClassifier(LoggerMixin):
             for i in range(0, len(X), self.batch_size):
                 xb = torch.from_numpy(X[i : i + self.batch_size]).to(self.device)
                 probs.append(torch.softmax(self.model(xb), dim=1).cpu().numpy())
-        return np.concatenate(probs, axis=0)
+        proba = np.concatenate(probs, axis=0)
+        if not np.isfinite(proba).all():
+            raise ValueError("CNN inference produced nonfinite probabilities")
+        return proba
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         return self.classes_[self.predict_proba(X).argmax(axis=1)]

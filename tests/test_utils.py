@@ -2,16 +2,19 @@
 
 import hashlib
 import math
+from pathlib import Path
 
 import joblib
 import pytest
 
 from src.utils import (
+    atomic_write_text,
     load_verified_joblib,
     paired_effect_size,
     provenance,
     save_verified_joblib,
     sha256_file,
+    write_json,
 )
 
 
@@ -147,3 +150,50 @@ def test_invalid_model_sidecar_fails_before_loading(tmp_path, contents):
     path.with_name(path.name + ".sha256").write_text(contents)
     with pytest.raises(ValueError, match="Invalid SHA-256 sidecar"):
         load_verified_joblib(path)
+
+
+def test_atomic_text_creates_utf8_output_and_preserves_permissions(tmp_path):
+    path = tmp_path / "nested" / "report.txt"
+    atomic_write_text(path, "Temperature: 30°C\n")
+    assert path.read_text(encoding="utf-8") == "Temperature: 30°C\n"
+    path.chmod(0o640)
+    atomic_write_text(path, "updated\n")
+    assert path.read_text() == "updated\n"
+    assert path.stat().st_mode & 0o777 == 0o640
+    assert list(path.parent.iterdir()) == [path]
+
+
+@pytest.mark.parametrize("failure", ["write", "replace"])
+def test_output_io_failure_keeps_previous_snapshot_and_cleans_temporary_files(
+    tmp_path, monkeypatch, failure
+):
+    path = tmp_path / "results.json"
+    path.write_text("previous snapshot")
+    original_write = Path.write_text
+
+    def partial_write(destination, text, **kwargs):
+        original_write(destination, "partial", **kwargs)
+        raise OSError("disk failure")
+
+    def failed_replace(*args):
+        raise OSError("disk failure")
+
+    monkeypatch.setattr(
+        Path,
+        "write_text" if failure == "write" else "replace",
+        partial_write if failure == "write" else failed_replace,
+    )
+    with pytest.raises(OSError, match="disk failure"):
+        write_json(path, {"score": 0.9})
+    assert path.read_text() == "previous snapshot"
+    assert list(tmp_path.iterdir()) == [path]
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), object()])
+def test_invalid_json_cannot_replace_previous_results(tmp_path, value):
+    path = tmp_path / "results.json"
+    path.write_text("previous snapshot")
+    with pytest.raises((TypeError, ValueError)):
+        write_json(path, {"score": value})
+    assert path.read_text() == "previous snapshot"
+    assert list(tmp_path.iterdir()) == [path]

@@ -11,27 +11,27 @@ import {
   YAxis,
 } from 'recharts';
 import { Trophy, AlertTriangle, Activity } from 'lucide-react';
-import results from '../../../outputs/dashboard/results';
+import results from '../data';
 import Panel from '../components/Panel';
 import SummaryCard from '../components/SummaryCard';
+import { formatPercent as pct, matchedGap } from '../lib/benchmarks';
 
 type Task = 'binary' | 'multiclass';
 
-const pct = (v: number | null | undefined) => typeof v === 'number' && Number.isFinite(v) ? `${(v * 100).toFixed(1)}%` : 'Unavailable';
-
 const ModelComparison: React.FC = () => {
   const [task, setTask] = useState<Task>('binary');
-  const data = (results as any)[task];
+  const data = results[task];
   const models = [...data.models].sort(
-    (a: any, b: any) => b.accuracy_mean - a.accuracy_mean
+    (a, b) => b.accuracy_mean - a.accuracy_mean
   );
   const best = models[0];
   const losoMatched = data.loso_matched_accuracy;
-  const gap = typeof data.within_subject_accuracy === 'number' && typeof losoMatched === 'number'
-    ? (data.within_subject_accuracy - losoMatched) * 100 : undefined;
-  const shap = (results as any).shap || [];
+  const gap = matchedGap(losoMatched, data.within_subject_accuracy);
+  const wrist = results.wrist?.same_model_rf;
+  const transfer = results.cross_dataset;
+  const shap = results.shap || [];
 
-  const barData = models.map((m: any) => ({
+  const barData = models.map((m) => ({
     name: m.model,
     accuracy: +(m.accuracy_mean * 100).toFixed(1),
   }));
@@ -49,7 +49,10 @@ const ModelComparison: React.FC = () => {
         <select
           aria-label="Classification task"
           value={task}
-          onChange={(e) => setTask(e.target.value as Task)}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (value === 'binary' || value === 'multiclass') setTask(value);
+          }}
           className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg text-sm"
         >
           <option value="binary">Binary (baseline vs. stress)</option>
@@ -58,11 +61,11 @@ const ModelComparison: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <SummaryCard icon={<Trophy className="w-6 h-6 text-green-600" />} label="Highest observed accuracy" value={best.model} />
+        <SummaryCard icon={<Trophy className="w-6 h-6 text-green-600" />} label="Highest observed accuracy" value={best?.model ?? 'Unavailable'} />
         <SummaryCard
           icon={<Activity className="w-6 h-6 text-blue-600" />}
           label="LOSO accuracy"
-          value={pct(best.accuracy_mean)}
+          value={pct(best?.accuracy_mean)}
         />
         <SummaryCard
           icon={<AlertTriangle className="w-6 h-6 text-orange-500" />}
@@ -78,32 +81,33 @@ const ModelComparison: React.FC = () => {
         <strong>{gap.toFixed(1)} percentage points</strong>.
       </div>}
 
-      {task === 'binary' && (results as any).cross_dataset && (results as any).wrist && (
+      {task === 'binary' && (wrist || transfer) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-sm">
+          {wrist && <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-sm">
             <p className="font-semibold text-gray-900 dark:text-white mb-1">Binary RF: wrist vs. chest</p>
             <p className="text-gray-600 dark:text-gray-400">
               With the same model, Empatica E4 wrist signals reach{' '}
-              <strong>{pct((results as any).wrist.same_model_rf.wrist)}</strong> vs{' '}
-              {pct((results as any).wrist.same_model_rf.chest)} for the chest, a{' '}
-              {(results as any).wrist.same_model_rf.drop_pts.toFixed(1)}-pt drop.
+              <strong>{pct(wrist.wrist)}</strong> vs{' '}
+              {pct(wrist.chest)} for the chest. Chest-to-wrist drop:{' '}
+              {typeof wrist.drop_pts === 'number' && Number.isFinite(wrist.drop_pts) ? `${wrist.drop_pts.toFixed(1)} pts.` : 'unavailable.'}{' '}
               This laboratory comparison does not establish sensor equivalence or field performance.
             </p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-sm">
+          </div>}
+          {transfer && <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 text-sm">
             <p className="font-semibold text-gray-900 dark:text-white mb-1">Binary cross-dataset transfer</p>
             <p className="text-gray-600 dark:text-gray-400">
               Balanced accuracy: WESAD → PhysioNet Non-EEG{' '}
-              <strong>{pct((results as any).cross_dataset.wesad_to_noneeg.balanced_accuracy)}</strong>;
+              <strong>{pct(transfer.wesad_to_noneeg?.balanced_accuracy)}</strong>;
               reverse transfer{' '}
-              <strong>{pct((results as any).cross_dataset.noneeg_to_wesad.balanced_accuracy)}</strong>.
+              <strong>{pct(transfer.noneeg_to_wesad?.balanced_accuracy)}</strong>.
               Devices, stressors, and labels differ; this pair does not isolate dataset shift.
             </p>
-          </div>
+          </div>}
         </div>
       )}
 
       <Panel title={`Subject-independent performance (${data.n_windows} windows)`}>
+        {models.length === 0 && <p role="status" className="text-gray-500 dark:text-gray-400 mb-3">No model results are available for this task.</p>}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -115,7 +119,7 @@ const ModelComparison: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {models.map((m: any, i: number) => (
+              {models.map((m, i) => (
                 <tr
                   key={m.model}
                   className={`border-b border-gray-100 dark:border-gray-700 ${
@@ -146,7 +150,7 @@ const ModelComparison: React.FC = () => {
               <Tooltip formatter={(v) => `${v}%`} />
               <Legend />
               <Bar dataKey="accuracy" name="Accuracy" radius={[4, 4, 0, 0]}>
-                {barData.map((_: any, i: number) => (
+                {barData.map((_, i) => (
                   <Cell key={i} fill={i === 0 ? '#38A169' : '#3182CE'} />
                 ))}
               </Bar>

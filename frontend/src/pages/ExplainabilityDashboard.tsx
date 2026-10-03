@@ -1,13 +1,13 @@
 import React from 'react';
 import Plot from '../components/Plot';
 import { FileSearch, Info, AlertTriangle } from 'lucide-react';
-import results from '../../../outputs/dashboard/results';
+import results from '../data';
 import Panel from '../components/Panel';
 
 const prettify = (f: string) => f.replace(/_/g, ' ');
 
 // Descriptive mean |SHAP| from a binary XGBoost fit on the full dataset.
-const shap: { feature: string; mean_abs_shap: number }[] = (results as any).shap || [];
+const shap = results.shap ?? [];
 const importance = shap
   .slice()
   .sort((a, b) => b.mean_abs_shap - a.mean_abs_shap)
@@ -30,6 +30,7 @@ const ExplainabilityDashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Panel title="Top features (mean |SHAP|)">
+          {importance.length === 0 && <p role="status" className="text-sm text-gray-500 dark:text-gray-400">SHAP values are unavailable for this benchmark.</p>}
           <div className="space-y-2">
             {importance.map((item) => (
               <div key={item.feature}>
@@ -49,7 +50,7 @@ const ExplainabilityDashboard: React.FC = () => {
         </Panel>
 
         <Panel title="Importance ranking">
-          <Plot
+          {importance.length > 0 && <Plot
             data={[
               {
                 x: importance.map((d) => d.value),
@@ -66,7 +67,7 @@ const ExplainabilityDashboard: React.FC = () => {
               xaxis: { title: { text: 'mean |SHAP|' } },
               yaxis: { autorange: 'reversed' },
             }}
-          />
+          />}
         </Panel>
       </div>
 

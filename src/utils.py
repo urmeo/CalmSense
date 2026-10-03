@@ -53,6 +53,28 @@ def ensure_directory(path: Union[str, Path]) -> Path:
     return path
 
 
+def atomic_write_text(path: Union[str, Path], text: str) -> None:
+    """Replace UTF-8 text only after a complete write; preserve existing permissions."""
+    from stat import S_IMODE
+    from tempfile import TemporaryDirectory
+
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with TemporaryDirectory(dir=path.parent) as directory:
+        temporary = Path(directory) / path.name
+        temporary.write_text(text, encoding="utf-8")
+        if path.exists():
+            temporary.chmod(S_IMODE(path.stat().st_mode))
+        temporary.replace(path)
+
+
+def write_json(path: Union[str, Path], value) -> None:
+    """Serialize finite JSON before replacing an existing result."""
+    import json
+
+    atomic_write_text(path, json.dumps(value, indent=2, allow_nan=False))
+
+
 def provenance() -> dict:
     """Record Git HEAD, dirty state, feature schema, and UTC time."""
     import subprocess

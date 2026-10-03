@@ -22,7 +22,8 @@ from scripts.run_experiment import (
     loso_evaluate,
 )
 from src.dataset_wrist import WristDataset, load_wrist
-from src.utils import provenance
+from src.features.feature_pipeline import FEATURE_SCHEMA_VERSION
+from src.utils import provenance, write_json
 
 META = ["subject_id", "window_id", "label", "label_name"]
 
@@ -30,6 +31,28 @@ META = ["subject_id", "window_id", "label", "label_name"]
 def prepare_binary(df):
     X, y, groups, _, _ = _prepare_features(df, [1, 2], META)
     return X, y, groups
+
+
+def _validate_chest_comparison(chest, groups):
+    rows = chest.get("per_subject")
+    subjects = (
+        [row.get("subject") if isinstance(row, dict) else None for row in rows]
+        if isinstance(rows, list)
+        else []
+    )
+    if (
+        chest.get("feature_schema_version") != FEATURE_SCHEMA_VERSION
+        or not subjects
+        or any(not isinstance(subject, str) or not subject.strip() for subject in subjects)
+        or len(set(subjects)) != len(subjects)
+        or set(subjects) != set(groups)
+    ):
+        raise ValueError(
+            "Chest and wrist comparison requires the current feature schema and identical "
+            "subject cohorts. Rebuild chest metrics for these subjects with "
+            "python scripts/run_experiment.py --rebuild --subjects "
+            + " ".join(sorted(map(str, set(groups))))
+        )
 
 
 def run():
@@ -44,6 +67,7 @@ def run():
         print("Building wrist features...")
         df = WristDataset().build()
     X, y, groups = prepare_binary(df)
+    _validate_chest_comparison(chest, groups)
     print(f"Wrist: {len(y)} windows, {X.shape[1]} features, {len(np.unique(groups))} subjects")
 
     rows = []
@@ -78,8 +102,7 @@ def run():
         "best_per_arm_drop_pts": (chest_best["accuracy_mean"] - best["accuracy_mean"]) * 100,
     }
     out["provenance"] = provenance()
-    with open(RESULTS_DIR / "wrist.json", "w") as f:
-        json.dump(out, f, indent=2)
+    write_json(RESULTS_DIR / "wrist.json", out)
 
     plt.figure(figsize=(4.5, 4))
     bars = plt.bar(

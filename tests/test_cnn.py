@@ -85,3 +85,27 @@ def test_cnn_retains_singleton_minimum_length_training_batch():
     model.fit(X, y)
     proba = model.predict_proba(X)
     assert proba.shape == (8, 2) and np.isfinite(proba).all()
+
+
+@pytest.mark.parametrize("failure", ["overflow", "invalid_scale", "invalid_network"])
+def test_cnn_rejects_nonfinite_normalization_or_inference(failure):
+    torch = pytest.importorskip("torch")
+    from src.models.dl.cnn_1d import CNN1DClassifier
+
+    class FixedNetwork(torch.nn.Module):
+        def forward(self, X):
+            fill = float("nan") if failure == "invalid_network" else 0.0
+            return torch.full((len(X), 2), fill)
+
+    model = CNN1DClassifier(in_channels=1, device="cpu")
+    model.classes_ = np.array([0, 1])
+    model.model = FixedNetwork()
+    model._mean = np.zeros((1, 1, 1), dtype="float32")
+    model._std = np.full((1, 1, 1), 1e-8, dtype="float32")
+    X = np.zeros((2, 1, 61), dtype="float32")
+    if failure == "overflow":
+        X.fill(1e38)  # Finite before scaling; float32 cannot represent the normalized values.
+    elif failure == "invalid_scale":
+        model._std.fill(np.inf)
+    with pytest.raises(ValueError, match="CNN (normalization|inference)"):
+        model.predict_proba(X)

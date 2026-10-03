@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Link, Routes, Route } from 'react-router-dom';
 
 import Dashboard from './pages/Dashboard';
@@ -7,7 +7,7 @@ import About from './pages/About';
 import ErrorBoundary from './components/ErrorBoundary';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
-import results from '../../outputs/dashboard/results';
+import results from './data';
 import { readDarkMode, saveDarkMode } from './lib/preferences';
 
 const SignalExplorer = lazy(() => import('./pages/SignalExplorer'));
@@ -15,7 +15,7 @@ const ExplainabilityDashboard = lazy(() => import('./pages/ExplainabilityDashboa
 const CalibrationPanel = lazy(() => import('./pages/CalibrationPanel'));
 
 // The calibration section is optional; only show it once the experiment has produced it.
-const hasCalibration = Boolean((results as any).calibration);
+const hasCalibration = Boolean(results.calibration);
 
 const App: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -31,15 +31,7 @@ const App: React.FC = () => {
   }, [darkMode]);
 
   const toggleDarkMode = () => setDarkMode((current) => !current);
-
-  useEffect(() => {
-    if (!sidebarOpen) return;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setSidebarOpen(false);
-    };
-    document.addEventListener('keydown', closeOnEscape);
-    return () => document.removeEventListener('keydown', closeOnEscape);
-  }, [sidebarOpen]);
+  const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
   return (
     <Router basename={import.meta.env.BASE_URL}>
@@ -48,12 +40,12 @@ const App: React.FC = () => {
           <Sidebar
             hasCalibration={hasCalibration}
             isOpen={sidebarOpen}
-            onClose={() => setSidebarOpen(false)}
+            onClose={closeSidebar}
             darkMode={darkMode}
             toggleDarkMode={toggleDarkMode}
           />
 
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div id="dashboard-content" className="flex-1 flex flex-col overflow-hidden">
             <Header sidebarOpen={sidebarOpen} onMenuClick={() => setSidebarOpen(true)} />
 
             <main className="flex-1 overflow-y-auto p-4 lg:p-6">

@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.calibration import BINARY_BRIER_DEFINITION, normalize_binary_calibration
 from src.config import RESULTS_DIR
+from src.utils import atomic_write_text
 
 ROOT = Path(__file__).resolve().parent.parent
 README = ROOT / "README.md"
@@ -74,7 +75,7 @@ def main() -> None:
     text = README.read_text()
     text = _replace(text, "calibration", _calibration_table())
     text = _replace(text, "personalization", _personalization_table())
-    README.write_text(text)
+    atomic_write_text(README, text)
     print(f"README calibration and personalization tables updated from {RESULTS}.")
 
 

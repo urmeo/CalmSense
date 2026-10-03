@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from scripts.download_data import WESAD_SHA256
 from src.config import RESULTS_DIR, SEED
-from src.utils import provenance, sha256_file
+from src.utils import provenance, sha256_file, write_json
 
 # Versions that move the numbers if they change; the model pickle is coupled to scikit-learn.
 KEY_PACKAGES = [
@@ -69,9 +69,7 @@ def run():
         },
     }
     path = RESULTS_DIR / "provenance.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w") as f:
-        json.dump(prov, f, indent=2)
+    write_json(path, prov)
     print(f"Wrote {path}")
     print(f"  git {prov['git_sha'][:10]}  seed {prov['seed']}  python {prov['python']}")
     print(

@@ -1,6 +1,5 @@
 """Omnibus and corrected pairwise significance tests across per-subject LOSO scores."""
 
-import json
 import sys
 from itertools import combinations
 from pathlib import Path
@@ -19,7 +18,7 @@ from scripts.run_experiment import (
     prepare_task,
 )
 from src.config import RESULTS_DIR, SEED
-from src.utils import paired_effect_size, provenance
+from src.utils import paired_effect_size, provenance, write_json
 
 
 def per_subject_acc(res) -> dict:
@@ -132,8 +131,7 @@ def run():
         )
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    with open(RESULTS_DIR / "stats.json", "w") as f:
-        json.dump(out, f, indent=2)
+    write_json(RESULTS_DIR / "stats.json", out)
     print(f"\nWrote {RESULTS_DIR / 'stats.json'}")
 
 

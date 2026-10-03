@@ -11,6 +11,7 @@ from scipy.signal import resample
 
 from src.config import FS, OUTPUT_DIR
 from src.data.loader import WESADLoader
+from src.utils import atomic_write_text
 
 SUBJECTS = ["S2", "S3", "S4"]
 CONDITIONS = {1: "Baseline", 2: "Stress", 3: "Amusement"}
@@ -81,8 +82,7 @@ def run():
 
     payload = json.dumps(data, allow_nan=False)
     out = DASHBOARD_SIGNALS
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(f"const data = {payload};\n\nexport default data;\n", encoding="utf-8")
+    atomic_write_text(out, f"const data = {payload};\n\nexport default data;\n")
     print(f"Wrote {out} ({out.stat().st_size // 1024} KB)")
 
 

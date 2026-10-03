@@ -192,3 +192,39 @@ def test_gap_significance_rejects_missing_or_unpaired_subject_scores():
         gap_significance({}, {})
     with pytest.raises(ValueError, match="three subjects"):
         gap_significance({"S0": 0.1, "S1": 0.2, "S2": 0.3}, {"S0": 0.1, "S1": 0.2, "S3": 0.3})
+
+
+@pytest.mark.parametrize(
+    "classes, probabilities",
+    [
+        ([0], [[np.nan]]),
+        ([0], [[0.5]]),
+        ([0, 1], [[0.2, 0.9]]),
+        ([0, 1], [[-0.1, 1.1]]),
+        ([0, 1], [[0.2]]),
+        ([0, 0], [[0.5, 0.5]]),
+    ],
+)
+def test_estimator_probability_contract_rejects_invalid_folds(classes, probabilities):
+    from scripts.calibration import _pos_proba
+
+    class Estimator:
+        classes_ = classes
+
+        def predict_proba(self, X):
+            return probabilities
+
+    with pytest.raises(ValueError, match="(probabilities|classes)"):
+        _pos_proba(Estimator(), np.zeros((1, 1)))
+
+
+def test_estimator_positive_probabilities_follow_reversed_class_order():
+    from scripts.calibration import _pos_proba
+
+    class Estimator:
+        classes_ = np.array([1, 0])
+
+        def predict_proba(self, X):
+            return [[0.8, 0.2], [0.3, 0.7]]
+
+    np.testing.assert_array_equal(_pos_proba(Estimator(), np.zeros((2, 1))), [0.8, 0.3])

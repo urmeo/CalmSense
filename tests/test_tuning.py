@@ -111,3 +111,28 @@ def test_tuning_plot_does_not_show_missing_default_as_zero(tmp_path, monkeypatch
         tmp_path / "plot.png",
     )
     assert bars == [[0.9], [0.8]]
+
+
+@pytest.mark.parametrize("mismatch", [None, "schema", "protocol", "cohort", "duplicates"])
+def test_tuning_default_comparison_requires_matching_protocol_schema_and_cohort(tmp_path, mismatch):
+    from src.features.feature_pipeline import FEATURE_SCHEMA_VERSION
+
+    summary = {
+        "benchmark_protocol_version": tuning.BENCHMARK_PROTOCOL_VERSION,
+        "binary": {
+            "feature_schema_version": FEATURE_SCHEMA_VERSION,
+            "models": [{"model": "Random Forest", "accuracy_mean": 0.91}],
+            "per_subject": [{"subject": "S0"}, {"subject": "S1"}],
+        },
+    }
+    if mismatch == "schema":
+        summary["binary"]["feature_schema_version"] -= 1
+    elif mismatch == "protocol":
+        summary["benchmark_protocol_version"] -= 1
+    elif mismatch == "cohort":
+        summary["binary"]["per_subject"][1]["subject"] = "S2"
+    elif mismatch == "duplicates":
+        summary["binary"]["per_subject"][1]["subject"] = "S0"
+    (tmp_path / "metrics.json").write_text(json.dumps(summary))
+    defaults = tuning._defaults(tmp_path, groups=np.array(["S1", "S0", "S0"]))
+    assert defaults == ({"Random Forest": 0.91} if mismatch is None else {})

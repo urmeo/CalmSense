@@ -224,6 +224,86 @@ def test_constant_predictions_select_a_finite_operating_point():
     json.dumps(point, allow_nan=False)
 
 
+@pytest.mark.parametrize("invalid_case", ["one_class", "nonfinite_auc"])
+def test_threshold_results_mark_undefined_scores_unavailable(tmp_path, monkeypatch, invalid_case):
+    import json
+
+    from scripts import threshold_metrics
+
+    monkeypatch.setattr(threshold_metrics, "RESULTS_DIR", tmp_path)
+    monkeypatch.setattr(threshold_metrics, "FEATURE_MODELS", ["lr"])
+    monkeypatch.setattr(threshold_metrics, "load_cached", lambda: (None, None))
+    y = np.array([0, 0] if invalid_case == "one_class" else [0, 1])
+    monkeypatch.setattr(
+        threshold_metrics, "prepare_task", lambda *args: (None, y, None, None, None)
+    )
+    monkeypatch.setattr(
+        threshold_metrics, "loso_pos_proba", lambda *args: (y, np.array([0.2, 0.8]))
+    )
+    if invalid_case == "nonfinite_auc":
+        monkeypatch.setattr(threshold_metrics, "roc_auc_score", lambda *args: float("nan"))
+    threshold_metrics.run()
+    result = json.loads((tmp_path / "threshold_metrics.json").read_text())
+    assert result["models"][0]["available"] is False
+    assert "require" in result["models"][0]["reason"]
+
+
+@pytest.mark.parametrize(
+    "schema, subjects",
+    [
+        (1, ["S0", "S1"]),
+        (2, ["S0", "S2"]),
+        (2, ["S0", "S0"]),
+        (2, ["S0", ""]),
+        (2, ["S0", 1]),
+        (2, []),
+    ],
+)
+def test_wrist_rejects_incompatible_chest_results_before_fitting(
+    tmp_path, monkeypatch, schema, subjects
+):
+    import json
+
+    from scripts import wrist
+
+    (tmp_path / "metrics.json").write_text(
+        json.dumps(
+            {
+                "binary": {
+                    "feature_schema_version": schema,
+                    "per_subject": [{"subject": s} for s in subjects],
+                }
+            }
+        )
+    )
+    monkeypatch.setattr(wrist, "RESULTS_DIR", tmp_path)
+    monkeypatch.setattr(wrist, "FIGURES_DIR", tmp_path / "figures")
+    monkeypatch.setattr(wrist, "load_wrist", lambda: object())
+    monkeypatch.setattr(
+        wrist,
+        "prepare_binary",
+        lambda *args: (np.zeros((2, 1)), np.array([0, 1]), np.array(["S0", "S1"])),
+    )
+    monkeypatch.setattr(
+        wrist, "loso_evaluate", lambda *args: pytest.fail("Fitted an incompatible comparison")
+    )
+    with pytest.raises(ValueError, match="run_experiment.py --rebuild --subjects S0 S1"):
+        wrist.run()
+
+
+def test_wrist_accepts_matching_chest_schema_and_subjects_in_any_order():
+    from scripts.wrist import _validate_chest_comparison
+    from src.features.feature_pipeline import FEATURE_SCHEMA_VERSION
+
+    _validate_chest_comparison(
+        {
+            "feature_schema_version": FEATURE_SCHEMA_VERSION,
+            "per_subject": [{"subject": "S1"}, {"subject": "S0"}],
+        },
+        np.array(["S0", "S0", "S1", "S1"]),
+    )
+
+
 def test_all_tied_model_statistics_remain_finite():
     from scripts.stats import _friedman, bootstrap_ci, holm_bonferroni
 
@@ -309,3 +389,56 @@ def test_experiment_exports_zero_gap_and_feature_schema(tmp_path, monkeypatch):
     assert saved_models[0]["feature_schema_version"] == result["binary"]["feature_schema_version"]
     assert result["methodology"]["cnn_validation"] is None
     assert result["benchmark_protocol_version"] == 2
+
+
+def test_benchmark_rejects_missing_amusement_before_any_model_fits(tmp_path, monkeypatch):
+    import pandas as pd
+
+    from scripts import run_experiment
+
+    frame = pd.DataFrame({"subject_id": ["S0", "S0", "S1", "S1"], "label": [1, 2, 1, 2]})
+    monkeypatch.setattr(run_experiment, "load_cached", lambda: (frame, np.zeros((4, 1, 64))))
+    monkeypatch.setattr(run_experiment.sys, "argv", ["run_experiment.py", "--no-cnn"])
+    for name in ("RESULTS_DIR", "FIGURES_DIR", "MODELS_DIR"):
+        monkeypatch.setattr(run_experiment, name, tmp_path / name.lower())
+    monkeypatch.setattr(
+        run_experiment, "loso_evaluate", lambda *args: pytest.fail("Fitted before task validation")
+    )
+    with pytest.raises(
+        ValueError, match="multiclass benchmark is missing required classes: amusement"
+    ):
+        run_experiment.run()
+
+
+@pytest.mark.parametrize("n_features", [1, 3])
+def test_descriptive_pca_handles_available_feature_dimensions(tmp_path, monkeypatch, n_features):
+    from scripts import run_experiment
+
+    X = np.random.RandomState(4).randn(8, n_features)
+    y = np.tile([0, 1], 4)
+    plotted_vertical = []
+    original_scatter = run_experiment.plt.scatter
+
+    def scatter(x, vertical, **kwargs):
+        plotted_vertical.extend(vertical)
+        return original_scatter(x, vertical, **kwargs)
+
+    monkeypatch.setattr(run_experiment.plt, "scatter", scatter)
+    path = tmp_path / "pca.png"
+    run_experiment.plot_embedding(X, y, ["baseline", "stress"], path)
+    assert path.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+    assert len(plotted_vertical) == len(y)
+    assert np.isfinite(plotted_vertical).all()
+    assert bool(np.any(np.array(plotted_vertical) != 0)) == (n_features > 1)
+
+
+def test_descriptive_pca_rejects_class_name_mismatch(tmp_path):
+    from scripts.run_experiment import plot_embedding
+
+    with pytest.raises(ValueError, match="class names"):
+        plot_embedding(
+            np.ones((4, 2)),
+            np.array([0, 1, 0, 1]),
+            ["baseline", "stress", "amusement"],
+            tmp_path / "pca.png",
+        )

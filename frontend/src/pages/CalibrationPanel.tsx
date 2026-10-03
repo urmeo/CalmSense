@@ -1,10 +1,9 @@
 import React from 'react';
 import Plot from '../components/Plot';
 import { Gauge, Target, AlertTriangle, TrendingDown, Info } from 'lucide-react';
-import results from '../../../outputs/dashboard/results';
+import results from '../data';
 import Panel from '../components/Panel';
 import SummaryCard from '../components/SummaryCard';
-import { Calibration } from '../types';
 
 const fmt = (v: number) => v.toFixed(3);
 const signed = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(3)}`;
@@ -28,8 +27,8 @@ const markerTrace = (x: number[], y: number[], name: string, color: string) => (
 });
 
 const CalibrationPanel: React.FC = () => {
-  const cal = (results as any).calibration as Calibration | undefined;
-  if (!cal) return null;
+  const cal = results.calibration;
+  if (!cal) return <p role="status" className="text-gray-600 dark:text-gray-300">Calibration results are unavailable for this benchmark.</p>;
 
   const { loso, loso_matched, within_subject, recalibrated_isotonic, recalibrated_sigmoid, decision_curve } = cal;
   const dc = decision_curve;

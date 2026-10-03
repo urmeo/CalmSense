@@ -5,7 +5,6 @@ selected and scored on the same pooled labels, so its rates are exploratory.
 Failed model runs are recorded as unavailable.
 """
 
-import json
 import sys
 from pathlib import Path
 
@@ -19,7 +18,7 @@ from scripts.calibration import _pooled_proba
 from scripts.run_experiment import CLF_NAMES, build_pipeline, load_cached, prepare_task
 from src.calibration import brier_score
 from src.config import RESULTS_DIR
-from src.utils import provenance
+from src.utils import provenance, write_json
 
 FEATURE_MODELS = ["lr", "rf", "xgb", "lgbm"]
 POINT_MODEL = "rf"  # the shipped model
@@ -73,12 +72,17 @@ def run():
         name = CLF_NAMES[key]
         try:
             y_true, p1 = loso_pos_proba(key, X, y, groups)
+            brier_score(y_true, p1)
+            if len(np.unique(y_true)) != 2:
+                raise ValueError("AUROC and AUPRC require both baseline and stress labels")
             row = {
                 "model": name,
                 "available": True,
                 "auroc": float(roc_auc_score(y_true, p1)),
                 "auprc": float(average_precision_score(y_true, p1)),
             }
+            if not np.isfinite([row["auroc"], row["auprc"]]).all():
+                raise ValueError("AUROC and AUPRC require finite scores and both binary classes")
             if key == POINT_MODEL:
                 row["operating_point"] = operating_point(y_true, p1)
         except Exception as e:  # missing OpenMP for xgb/lgbm, etc.
@@ -92,8 +96,7 @@ def run():
     out["methodology"] = {"xgboost_balancing": "training_fold_sample_weights"}
     path = RESULTS_DIR / "threshold_metrics.json"
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w") as f:
-        json.dump(out, f, indent=2, allow_nan=False)
+    write_json(path, out)
     print(f"\nWrote {path}")
 
 

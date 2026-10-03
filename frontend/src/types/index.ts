@@ -29,3 +29,38 @@ export interface Calibration {
   recalibration_reduction_ece: number;
   decision_curve: DecisionCurve;
 }
+
+export interface ModelResult {
+  model: string;
+  accuracy_mean: number;
+  f1_macro_mean: number;
+  balanced_accuracy: number | null;
+}
+
+export interface TaskResult {
+  n_windows: number;
+  n_features: number;
+  n_subjects?: number;
+  classes: string[];
+  models: ModelResult[];
+  best_model: string;
+  loso_accuracy: number;
+  loso_matched_accuracy?: number | null;
+  within_subject_accuracy?: number | null;
+  optimism_gap_pts?: number | null;
+}
+
+export interface BenchmarkResults {
+  benchmark_protocol_version?: number;
+  binary: TaskResult;
+  multiclass: TaskResult;
+  shap?: { feature: string; mean_abs_shap: number }[];
+  calibration?: Calibration | null;
+  wrist?: {
+    same_model_rf?: { chest: number | null; wrist: number | null; drop_pts: number | null };
+  } | null;
+  cross_dataset?: {
+    wesad_to_noneeg?: { balanced_accuracy: number | null };
+    noneeg_to_wesad?: { balanced_accuracy: number | null };
+  } | null;
+}
