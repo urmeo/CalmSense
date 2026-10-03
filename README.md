@@ -286,7 +286,16 @@ Sensitive signals: informed consent, minimal collection, research use only. Data
 
 ## License
 
-[MIT](LICENSE) · [Software citation](CITATION.cff)
+[MIT License](LICENSE) · Copyright (c) 2025 Urme Bose
+
+- **Permissions:** use, modify, distribute, sublicense, or sell the software.
+- **Condition:** retain the copyright and license notice in copies or substantial portions.
+- **Warranty:** provided "AS IS", without warranty; see [LICENSE](LICENSE) for the liability terms.
+
+Datasets and third-party dependencies retain their own terms:
+[WESAD](https://archive.ics.uci.edu/dataset/465/wesad+wearable+stress+and+affect+detection) ·
+[Non-EEG](https://physionet.org/content/noneeg/1.0.0/).
+[Software citation](CITATION.cff).
 
 <details>
 <summary>Scientific references · dataset and method attribution</summary>
