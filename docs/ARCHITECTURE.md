@@ -11,7 +11,7 @@ and calibration. The static dashboard renders the exported experiment results.
 | --- | --- |
 | `src/` · `scripts/` | Research modules and experiment commands |
 | `notebooks/` | Runnable synthetic demo |
-| `frontend/src/pages/` · `components/` · `data/` | Dashboard views, shared UI, exported JSON |
+| `frontend/src/pages/` · `components/` · `data/` | Dashboard views, shared UI, data modules |
 | `docs/` · `docs/figures/` · `docs/assets/` | Technical docs, committed research figures, `demo.gif` |
 | `results/` | Committed benchmark snapshot and provenance |
 | `outputs/figures/` | Ignored plots from local experiments and synthetic runs |

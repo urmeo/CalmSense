@@ -15,7 +15,9 @@ src/
 ├── types/               Research result types
 ├── index.tsx            React entry point
 └── index.css            Theme and shared styles
-public/                  Icons and web manifest
+public/                  Icons
+config/                  Package, lock, compiler, and manifest source modules
+tooling.mjs              Install, audit, build, and development commands
 ```
 
 ## Pages
@@ -34,18 +36,24 @@ public/                  Icons and web manifest
 From `frontend/`:
 
 ```bash
-npm ci
-npm run dev      # http://localhost:5173
-npm run build    # TypeScript check and production build
-npm run preview  # Preview the production build
+node tooling.mjs install
+node tooling.mjs dev      # Development server
+node tooling.mjs build    # TypeScript check and production build
+node tooling.mjs preview  # Preview the production build
 ```
 
-CI builds the dashboard. The Pages workflow publishes `dist/` under `/CalmSense/` with a
-fallback for direct page links.
+Node **24** and npm are required. Configuration lives in `config/*.mjs`; commands generate
+the local JSON files required by npm and TypeScript. These generated files are ignored by Git.
+Edit the source modules rather than the generated files.
+After editing dependencies, run `node tooling.mjs update` and review the source lock changes.
+
+CI installs the exact locked dependencies, audits moderate or higher vulnerabilities, and builds
+the dashboard. GitHub's automatic dependency discovery does not read the custom manifest.
+The Pages workflow publishes `dist/` under `/CalmSense/` with a fallback for direct page links.
 
 ## Dashboard data
 
-The dashboard reads `src/data/results.json` and `src/data/signals.json`. To update these
+The dashboard imports `src/data/results.ts` and `src/data/signals.ts`. To update these
 snapshots after rerunning experiments, run from the repository root:
 
 ```bash

@@ -1,4 +1,5 @@
-{
+// Native module source; generated tool files are ignored.
+export default {
   "name": "calmsense-dashboard",
   "version": "1.0.0",
   "private": true,
@@ -25,4 +26,4 @@
     "typescript": "^6.0.0",
     "vite": "^7.0.0"
   }
-}
+};

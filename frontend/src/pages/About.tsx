@@ -7,7 +7,7 @@ import {
   Shield,
   ExternalLink,
 } from 'lucide-react';
-import results from '../data/results.json';
+import results from '../data/results';
 
 const r = results as any;
 const pct = (x: number) => `${(x * 100).toFixed(1)}%`;

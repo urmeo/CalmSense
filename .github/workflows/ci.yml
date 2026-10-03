@@ -91,16 +91,16 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: frontend/config/package-lock.mjs
       - name: Install dependencies
         working-directory: frontend
-        run: npm ci
+        run: node tooling.mjs install
       - name: Audit frontend dependencies
         working-directory: frontend
-        run: npm audit --audit-level=moderate
+        run: node tooling.mjs audit
       - name: Build
         working-directory: frontend
-        run: npm run build
+        run: node tooling.mjs build
 
   clean-clone:
     name: Clean-clone smoke (pip install -e . -> demo)

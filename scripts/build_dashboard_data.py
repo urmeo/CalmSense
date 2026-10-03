@@ -1,4 +1,4 @@
-"""Assemble every result file into the single JSON the dashboard reads."""
+"""Assemble experiment results into the TypeScript module the dashboard reads."""
 
 import json
 import sys
@@ -12,7 +12,7 @@ from src.calibration import BINARY_BRIER_DEFINITION, normalize_binary_calibratio
 from src.config import PROJECT_ROOT
 
 RESULTS_DIR = PROJECT_ROOT / "results"
-FRONTEND = PROJECT_ROOT / "frontend" / "src" / "data" / "results.json"
+FRONTEND = PROJECT_ROOT / "frontend" / "src" / "data" / "results.ts"
 
 # Keys the dashboard consumes per task (per-subject lists stay out of the bundle)
 TASK_KEYS = [
@@ -76,8 +76,8 @@ def run():
 
     if not FRONTEND.parent.exists():
         raise SystemExit(f"{FRONTEND.parent} missing")
-    with open(FRONTEND, "w") as f:
-        json.dump(out, f, indent=2)
+    payload = json.dumps(out, indent=2, allow_nan=False)
+    FRONTEND.write_text(f"const data = {payload};\n\nexport default data;\n", encoding="utf-8")
     print(f"Wrote {FRONTEND} with sections: {sorted(out)}")
 
 

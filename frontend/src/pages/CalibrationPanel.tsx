@@ -1,7 +1,7 @@
 import React from 'react';
 import Plot from '../components/Plot';
 import { Gauge, Target, AlertTriangle, TrendingDown, Info } from 'lucide-react';
-import results from '../data/results.json';
+import results from '../data/results';
 import SummaryCard from '../components/SummaryCard';
 import { Calibration } from '../types';
 

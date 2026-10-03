@@ -1,7 +1,12 @@
-{
+// Native module source; generated tool files are ignored.
+export default {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
@@ -14,5 +19,7 @@
     "types": [],
     "noEmit": true
   },
-  "include": ["src"]
-}
+  "include": [
+    "src"
+  ]
+};

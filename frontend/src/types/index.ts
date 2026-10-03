@@ -1,4 +1,4 @@
-// Results types (the dashboard renders precomputed JSON; there is no backend)
+// Results types (the dashboard renders precomputed data modules; there is no backend)
 
 // Calibration analysis (results.calibration, written by scripts/calibration.py)
 

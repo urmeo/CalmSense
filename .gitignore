@@ -230,6 +230,10 @@ configs/local/
 *.local.yaml
 
 # Node.js (for frontend)
+# Generated from frontend/config/*.mjs by tooling.mjs
+frontend/package.json
+frontend/package-lock.json
+frontend/tsconfig.json
 frontend/node_modules/
 frontend/build/
 frontend/dist/

@@ -8,7 +8,7 @@ import About from './pages/About';
 import ErrorBoundary from './components/ErrorBoundary';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
-import results from './data/results.json';
+import results from './data/results';
 
 const SignalExplorer = lazy(() => import('./pages/SignalExplorer'));
 const ExplainabilityDashboard = lazy(() => import('./pages/ExplainabilityDashboard'));

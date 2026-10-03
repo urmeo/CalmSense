@@ -1,4 +1,4 @@
-"""Export short real WESAD signal slices for the dashboard signal explorer."""
+"""Export real WESAD signal slices as a TypeScript module for the dashboard."""
 
 import json
 import sys
@@ -67,9 +67,9 @@ def run():
         }
         print(f"{sid}: {n} points ({n / OUT_FS:.0f}s real signal)")
 
-    out = PROJECT_ROOT / "frontend" / "src" / "data" / "signals.json"
-    with open(out, "w") as f:
-        json.dump(data, f)
+    out = PROJECT_ROOT / "frontend" / "src" / "data" / "signals.ts"
+    payload = json.dumps(data, allow_nan=False)
+    out.write_text(f"const data = {payload};\n\nexport default data;\n", encoding="utf-8")
     print(f"Wrote {out} ({out.stat().st_size // 1024} KB)")
 
 

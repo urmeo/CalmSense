@@ -1,4 +1,4 @@
-{
+const data = {
   "binary": {
     "n_windows": 869,
     "n_features": 58,
@@ -942,4 +942,6 @@
       "f1_macro_mean": 0.870252363040202
     }
   ]
-}
+};
+
+export default data;
