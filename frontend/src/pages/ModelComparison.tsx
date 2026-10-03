@@ -41,7 +41,7 @@ const ModelComparison: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Model Comparison</h1>
           <p className="text-gray-500 dark:text-gray-400">
-            WESAD: 15 held-out subjects. Accuracy and macro-F1 are subject means;
+            WESAD: {data.n_subjects ?? 15} held-out subjects. Accuracy and macro-F1 are subject means;
             balanced accuracy pools held-out predictions.
           </p>
         </div>

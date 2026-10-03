@@ -413,6 +413,7 @@ def run():
 
         summary[task] = {
             "n_windows": int(len(y)),
+            "n_subjects": int(len(np.unique(groups))),
             "n_features": int(X.shape[1]),
             "feature_schema_version": FEATURE_SCHEMA_VERSION,
             "classes": cfg["names"],

@@ -139,7 +139,7 @@ const DatasetSummary: React.FC = () => {
   const b = r.binary || {};
   const m = r.multiclass || {};
   const rows = [
-    ['Dataset', 'WESAD (chest, 15 subjects)'],
+    ['Dataset', `WESAD (chest, ${b.n_subjects ?? 15} subjects)`],
     ['Windows (binary)', b.n_windows],
     ['Features', b.n_features],
     ['Binary classes', (b.classes || []).join(', ')],

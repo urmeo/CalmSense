@@ -318,6 +318,7 @@ def test_experiment_exports_zero_gap_and_feature_schema(tmp_path, monkeypatch):
     assert result["binary"]["loso_matched_accuracy"] == 0
     assert result["binary"]["within_subject_accuracy"] == 0
     assert result["binary"]["optimism_gap_pts"] == 0
+    assert result["binary"]["n_subjects"] == 3
     assert saved_models[0]["feature_schema_version"] == result["binary"]["feature_schema_version"]
     assert result["methodology"]["cnn_validation"] is None
     assert result["benchmark_protocol_version"] == 2

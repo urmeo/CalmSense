@@ -153,6 +153,44 @@ def test_export_copies_protocol_metadata_from_the_benchmark_run(tmp_path, monkey
     assert _read_module(output)["benchmark_protocol_version"] == 2
 
 
+def test_export_copies_recorded_subject_counts(tmp_path, monkeypatch):
+    load_json = build_dashboard_data._load_json
+
+    def subset_run(name):
+        value = load_json(name)
+        if name == "metrics.json":
+            value["binary"]["n_subjects"] = 3
+            value["multiclass"]["n_subjects"] = 4
+        return value
+
+    output = tmp_path / "results.ts"
+    monkeypatch.setattr(build_dashboard_data, "DASHBOARD_RESULTS", output)
+    monkeypatch.setattr(build_dashboard_data, "_load_json", subset_run)
+    build_dashboard_data.run()
+    exported = _read_module(output)
+    assert exported["binary"]["n_subjects"] == 3
+    assert exported["multiclass"]["n_subjects"] == 4
+
+
+@pytest.mark.parametrize("count", [None, 0, 1, 2.5, "15"])
+def test_export_rejects_invalid_subject_counts(tmp_path, monkeypatch, count):
+    load_json = build_dashboard_data._load_json
+
+    def invalid_run(name):
+        value = load_json(name)
+        if name == "metrics.json":
+            value["binary"]["n_subjects"] = count
+        return value
+
+    output = tmp_path / "results.ts"
+    output.write_text("existing snapshot", encoding="utf-8")
+    monkeypatch.setattr(build_dashboard_data, "DASHBOARD_RESULTS", output)
+    monkeypatch.setattr(build_dashboard_data, "_load_json", invalid_run)
+    with pytest.raises(ValueError, match="n_subjects must be an integer >= 2"):
+        build_dashboard_data.run()
+    assert output.read_text(encoding="utf-8") == "existing snapshot"
+
+
 def test_environment_snapshot_fingerprints_results_and_excludes_itself(tmp_path, monkeypatch):
     import hashlib
 

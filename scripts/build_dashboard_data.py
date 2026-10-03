@@ -50,6 +50,10 @@ def _validate_tasks(out):
         for key in ("n_windows", "n_features"):
             if not isinstance(data.get(key), int) or data[key] <= 0:
                 raise ValueError(f"{task}: {key} must be a positive integer")
+        if "n_subjects" in data and (
+            not isinstance(data["n_subjects"], int) or data["n_subjects"] < 2
+        ):
+            raise ValueError(f"{task}: n_subjects must be an integer >= 2")
         names = [model["model"] for model in data["models"]]
         if data.get("best_model") not in names:
             raise ValueError(f"{task}: best_model is absent from model comparisons")
@@ -69,6 +73,8 @@ def run():
     for task in ("binary", "multiclass"):
         if task in metrics:
             out[task] = {k: metrics[task].get(k) for k in TASK_KEYS}
+            if "n_subjects" in metrics[task]:
+                out[task]["n_subjects"] = metrics[task]["n_subjects"]
 
     shap = _load_csv("shap_top_features.csv")
     if shap:
