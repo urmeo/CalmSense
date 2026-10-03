@@ -16,9 +16,9 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.model_selection import GroupKFold, LeaveOneGroupOut
+from sklearn.model_selection import LeaveOneGroupOut
 
-from scripts.calibration import _apply_calibrator, _fit_calibrator, _pos_proba
+from scripts.calibration import _apply_calibrator, _fit_calibrator, _global_calibrator, _pos_proba
 from scripts.run_experiment import (
     _fit_params,
     build_pipeline,
@@ -68,18 +68,6 @@ def _sample_k(y_pool, k, rng):
     return np.array(picks, dtype=int)
 
 
-def _global_calibrator(factory, Xtr, ytr, gtr, method):
-    if len(np.unique(gtr)) < 2:
-        return None
-    oof = np.zeros(len(ytr))
-    # Each calibration probability comes from a model that excluded its subject.
-    for itr, ical in GroupKFold(n_splits=min(5, len(np.unique(gtr)))).split(Xtr, ytr, gtr):
-        p = factory()
-        p.fit(Xtr[itr], ytr[itr], **_fit_params(p, ytr[itr]))
-        oof[ical] = _pos_proba(p, Xtr[ical])
-    return _fit_calibrator(oof, ytr, method)
-
-
 def _metrics(y, p_pos):
     proba = np.column_stack([1.0 - p_pos, p_pos])
     return cal.expected_calibration_error(y, proba), cal.brier_score(y, p_pos)
@@ -103,9 +91,7 @@ def compute(X, y, groups, model="rf", k_values=K_VALUES):
         raw = _pos_proba(base, X[test_idx])
         y_s = y[test_idx]
         # Alternating chronological windows remove direct overlap at the default 50% stride.
-        nov = np.zeros(len(y_s), dtype=bool)
-        nov[::2] = True
-        raw, y_s = raw[nov], y_s[nov]
+        raw, y_s = raw[::2], y_s[::2]
         if len(np.unique(y_s)) < 2:
             continue
 

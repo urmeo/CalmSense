@@ -17,6 +17,7 @@ from scripts.run_experiment import (
     CLF_NAMES,
     FIGURES_DIR,
     RESULTS_DIR,
+    _prepare_features,
     build_pipeline,
     loso_evaluate,
 )
@@ -27,20 +28,7 @@ META = ["subject_id", "window_id", "label", "label_name"]
 
 
 def prepare_binary(df):
-    sub = df[df["label"].isin([1, 2])].reset_index(drop=True)
-    if sub.empty or sub["subject_id"].isna().any():
-        raise ValueError(
-            "Wrist evaluation requires baseline/stress windows with subject identifiers"
-        )
-    feature_cols = [c for c in sub.columns if c not in META]
-    X = sub[feature_cols].to_numpy(dtype=float)
-    X[~np.isfinite(X)] = np.nan
-    keep = ~np.isnan(X).all(axis=0)
-    X = X[:, keep]
-    if not X.shape[1]:
-        raise ValueError("Wrist evaluation contains no finite feature values")
-    y = sub["label"].map({1: 0, 2: 1}).to_numpy()
-    groups = sub["subject_id"].to_numpy()
+    X, y, groups, _, _ = _prepare_features(df, [1, 2], META)
     return X, y, groups
 
 

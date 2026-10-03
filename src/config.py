@@ -6,7 +6,6 @@ from typing import Dict, List
 
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()
 
-# Global random seed for reproducible runs; imported by scripts and set_seed().
 SEED: int = 42
 
 DATA_DIR = PROJECT_ROOT / "data"
@@ -23,24 +22,7 @@ PROCESSED_DATA_DIR = GENERATED_DIR / "cache"
 DEMO_DIR = GENERATED_DIR / "demo"
 LOGS_DIR = GENERATED_DIR / "logs"
 
-# S1, S12 excluded
-VALID_SUBJECTS: List[str] = [
-    "S2",
-    "S3",
-    "S4",
-    "S5",
-    "S6",
-    "S7",
-    "S8",
-    "S9",
-    "S10",
-    "S11",
-    "S13",
-    "S14",
-    "S15",
-    "S16",
-    "S17",
-]
+VALID_SUBJECTS: List[str] = [f"S{i}" for i in range(2, 18) if i != 12]
 
 LABEL_NAMES: Dict[int, str] = {
     0: "not_defined",
@@ -73,17 +55,11 @@ FS = SamplingRates()
 class FilterParams:
     ECG_BANDPASS_LOW: float = 0.5
     ECG_BANDPASS_HIGH: float = 40.0
-    ECG_NOTCH_FREQ: float = 50.0  # EU powerline
     ECG_FILTER_ORDER: int = 4
 
     EDA_LOWPASS: float = 5.0
     EDA_MEDIAN_SIZE: int = 5
     EDA_FILTER_ORDER: int = 4
-
-    EMG_BANDPASS_LOW: float = 20.0
-    EMG_BANDPASS_HIGH: float = 300.0
-    EMG_NOTCH_FREQ: float = 50.0
-    EMG_FILTER_ORDER: int = 4
 
     RESP_BANDPASS_LOW: float = 0.1
     RESP_BANDPASS_HIGH: float = 0.5
@@ -91,8 +67,6 @@ class FilterParams:
 
     TEMP_LOWPASS: float = 0.1
     TEMP_FILTER_ORDER: int = 2
-
-    NOTCH_Q_FACTOR: float = 30.0
 
 
 FILTER_PARAMS = FilterParams()

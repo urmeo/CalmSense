@@ -2,6 +2,7 @@ import React from 'react';
 import Plot from '../components/Plot';
 import { FileSearch, Info, AlertTriangle } from 'lucide-react';
 import results from '../../../outputs/dashboard/results';
+import Panel from '../components/Panel';
 
 const prettify = (f: string) => f.replace(/_/g, ' ');
 
@@ -28,10 +29,7 @@ const ExplainabilityDashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Top features (mean |SHAP|)
-          </h3>
+        <Panel title="Top features (mean |SHAP|)">
           <div className="space-y-2">
             {importance.map((item) => (
               <div key={item.feature}>
@@ -48,12 +46,9 @@ const ExplainabilityDashboard: React.FC = () => {
               </div>
             ))}
           </div>
-        </div>
+        </Panel>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Importance ranking
-          </h3>
+        <Panel title="Importance ranking">
           <Plot
             data={[
               {
@@ -70,19 +65,12 @@ const ExplainabilityDashboard: React.FC = () => {
               margin: { l: 150, r: 20, t: 10, b: 40 },
               xaxis: { title: { text: 'mean |SHAP|' } },
               yaxis: { autorange: 'reversed' },
-              paper_bgcolor: 'rgba(0,0,0,0)',
-              plot_bgcolor: 'rgba(0,0,0,0)',
             }}
-            config={{ responsive: true, showSendToCloud: false, displayModeBar: false }}
-            style={{ width: '100%' }}
           />
-        </div>
+        </Panel>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-          What the model relies on
-        </h3>
+      <Panel title="What the model relies on">
         <div className="space-y-4 text-sm text-gray-700 dark:text-gray-300">
           {importance.length > 0 ? (
             <p>
@@ -109,7 +97,7 @@ const ExplainabilityDashboard: React.FC = () => {
             </p>
           </div>
         </div>
-      </div>
+      </Panel>
     </div>
   );
 };

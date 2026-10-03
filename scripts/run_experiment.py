@@ -66,34 +66,23 @@ def _fit_params(pipe, y_train):
     return {}
 
 
-def loso_evaluate(pipeline_factory, X, y, groups):
-    """Fit preprocessing on training subjects and predict the held-out subject."""
-    logo = LeaveOneGroupOut()
+def _loso_result(y, groups, folds):
+    """Summarize the same held-out predictions by subject and by window."""
     classes = np.unique(y)
-    pooled_true, pooled_pred = [], []
-    per_subject = []
-
-    for train_idx, test_idx in logo.split(X, y, groups):
-        pipe = pipeline_factory()
-        pipe.fit(X[train_idx], y[train_idx], **_fit_params(pipe, y[train_idx]))
-        pred = pipe.predict(X[test_idx])
-
-        pooled_true.extend(y[test_idx])
-        pooled_pred.extend(pred)
-        per_subject.append(
-            {
-                "subject": groups[test_idx][0],
-                "n": len(test_idx),
-                "accuracy": accuracy_score(y[test_idx], pred),
-                "f1_macro": f1_score(
-                    y[test_idx], pred, labels=classes, average="macro", zero_division=0
-                ),
-            }
-        )
-
-    pooled_true = np.array(pooled_true)
-    pooled_pred = np.array(pooled_pred)
-    subj_df = pd.DataFrame(per_subject)
+    indices, predictions = zip(*folds)
+    pooled_true = y[np.concatenate(indices)]
+    pooled_pred = np.concatenate(predictions)
+    subj_df = pd.DataFrame(
+        {
+            "subject": groups[test_idx][0],
+            "n": len(test_idx),
+            "accuracy": accuracy_score(y[test_idx], pred),
+            "f1_macro": f1_score(
+                y[test_idx], pred, labels=classes, average="macro", zero_division=0
+            ),
+        }
+        for test_idx, pred in folds
+    )
     # Subject means weight people equally; pooled metrics weight their window counts.
     return {
         "accuracy_mean": float(subj_df["accuracy"].mean()),
@@ -109,44 +98,28 @@ def loso_evaluate(pipeline_factory, X, y, groups):
     }
 
 
+def loso_evaluate(pipeline_factory, X, y, groups):
+    """Fit preprocessing on training subjects and predict the held-out subject."""
+    folds = []
+    for train_idx, test_idx in LeaveOneGroupOut().split(X, y, groups):
+        pipe = pipeline_factory()
+        pipe.fit(X[train_idx], y[train_idx], **_fit_params(pipe, y[train_idx]))
+        folds.append((test_idx, np.array(pipe.predict(X[test_idx]), copy=True)))
+    return _loso_result(y, groups, folds)
+
+
 def cnn_loso(x_raw, y, groups):
     from src.models.dl.cnn_1d import CNN1DClassifier
 
-    logo = LeaveOneGroupOut()
-    pooled_true, pooled_pred, per_subject = [], [], []
+    folds = []
     n_folds = len(np.unique(groups))
 
-    for fold, (train_idx, test_idx) in enumerate(logo.split(x_raw, y, groups), 1):
+    for fold, (train_idx, test_idx) in enumerate(LeaveOneGroupOut().split(x_raw, y, groups), 1):
         print(f"    1D-CNN fold {fold}/{n_folds}", flush=True)
         model = CNN1DClassifier(in_channels=x_raw.shape[1], random_state=SEED)
         model.fit(x_raw[train_idx], y[train_idx], groups=groups[train_idx])
-        pred = model.predict(x_raw[test_idx])
-        pooled_true.extend(y[test_idx])
-        pooled_pred.extend(pred)
-        per_subject.append(
-            {
-                "subject": groups[test_idx][0],
-                "n": len(test_idx),
-                "accuracy": accuracy_score(y[test_idx], pred),
-                "f1_macro": f1_score(
-                    y[test_idx], pred, labels=np.unique(y), average="macro", zero_division=0
-                ),
-            }
-        )
-
-    subj_df = pd.DataFrame(per_subject)
-    return {
-        "accuracy_mean": float(subj_df["accuracy"].mean()),
-        "accuracy_std": float(subj_df["accuracy"].std()),
-        "f1_macro_mean": float(subj_df["f1_macro"].mean()),
-        "f1_macro_std": float(subj_df["f1_macro"].std()),
-        "balanced_accuracy": float(balanced_accuracy_score(pooled_true, pooled_pred)),
-        "pooled_accuracy": float(accuracy_score(pooled_true, pooled_pred)),
-        "per_subject": subj_df,
-        "y_true": np.array(pooled_true),
-        "y_pred": np.array(pooled_pred),
-        "classes": np.unique(y),
-    }
+        folds.append((test_idx, model.predict(x_raw[test_idx])))
+    return _loso_result(y, groups, folds)
 
 
 def nonoverlap_mask(groups):
@@ -287,16 +260,11 @@ def shap_analysis(X, y, feature_names, fig_dir):
     return importance
 
 
-def prepare_task(features_df, x_raw, keep):
-    if len(x_raw) != len(features_df) or len(set(keep)) != len(keep) or not keep:
-        raise ValueError(
-            "Task labels must be distinct and raw windows must align with feature rows"
-        )
+def _prepare_features(features_df, keep, meta):
     mask = features_df["label"].isin(keep).to_numpy()
     sub = features_df[mask].reset_index(drop=True)
     if sub.empty:
         raise ValueError("No feature windows match the task labels")
-    meta = ["subject_id", "window_id", "label", "label_name"]
     feature_cols = [c for c in sub.columns if c not in meta]
     if not feature_cols or sub["subject_id"].isna().any():
         raise ValueError("Task windows require features and nonmissing subject identifiers")
@@ -312,6 +280,17 @@ def prepare_task(features_df, x_raw, keep):
     remap = {label: i for i, label in enumerate(keep)}
     y = sub["label"].map(remap).to_numpy()
     groups = sub["subject_id"].to_numpy()
+    return X, y, groups, feature_cols, mask
+
+
+def prepare_task(features_df, x_raw, keep):
+    if len(x_raw) != len(features_df) or len(set(keep)) != len(keep) or not keep:
+        raise ValueError(
+            "Task labels must be distinct and raw windows must align with feature rows"
+        )
+    X, y, groups, feature_cols, mask = _prepare_features(
+        features_df, keep, ["subject_id", "window_id", "label", "label_name"]
+    )
     return X, y, groups, feature_cols, x_raw[mask]
 
 

@@ -10,7 +10,6 @@ from ..preprocessing.filters import _positive_number
 class EDAFeatureExtractor(LoggerMixin):
     def __init__(self, sampling_rate: float = 4.0):
         self.sampling_rate = _positive_number(sampling_rate, "sampling_rate")
-        self.logger.debug(f"EDAFeatureExtractor initialized, fs={sampling_rate} Hz")
 
     def _validate_signal(self, signal: Optional[np.ndarray]) -> Optional[np.ndarray]:
         if signal is None:
@@ -142,15 +141,6 @@ class EDAFeatureExtractor(LoggerMixin):
                 raw_eda = np.asarray(tonic, dtype=float) + np.asarray(phasic, dtype=float)
 
         features.update(self.extract_statistical_features(raw_eda))
-
-        if np.isfinite(features.get("SCL_mean", np.nan)):
-            self.logger.debug(
-                f"Extracted 15 EDA features, "
-                f"SCL_mean={features['SCL_mean']:.2f}µS, "
-                f"SCR_count={features.get('SCR_count', 0)}"
-            )
-        else:
-            self.logger.debug("Extracted 15 EDA features")
 
         return features
 

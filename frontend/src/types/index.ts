@@ -1,21 +1,16 @@
-// Results types (the dashboard renders precomputed data modules; there is no backend)
-
-// Calibration analysis (results.calibration, written by scripts/calibration.py)
-
-export interface ReliabilityBin {
+interface ReliabilityBin {
   confidence: number;
   accuracy: number;
-  count: number;
 }
 
-export interface CalibrationSummary {
+interface CalibrationSummary {
   ece: number;
   mce: number;
   brier: number;
   reliability: ReliabilityBin[];
 }
 
-export interface DecisionCurve {
+interface DecisionCurve {
   thresholds: number[];
   net_benefit_uncalibrated: number[];
   net_benefit_recalibrated: number[];
@@ -23,11 +18,8 @@ export interface DecisionCurve {
 }
 
 export interface Calibration {
-  model: string;
-  positive_class: string;
   n_windows: number;
   n_bins: number;
-  brier_definition: string;
   loso: CalibrationSummary;
   loso_matched: CalibrationSummary;
   within_subject: CalibrationSummary;

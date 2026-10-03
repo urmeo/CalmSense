@@ -10,16 +10,10 @@ from .filters import _positive_integer, _positive_number
 
 
 class EDAProcessor(LoggerMixin):
-    """Electrodermal-activity processing: low-pass filtering, artifact removal, and
-    tonic/phasic decomposition with skin-conductance-response (SCR) peak detection.
-
-    All methods take 1-D arrays sampled at ``sampling_rate`` Hz. The tonic component
-    tracks slow skin-conductance level; the phasic component carries the fast SCRs.
-    """
+    """Filter EDA, separate tonic/phasic components, and detect skin conductance responses."""
 
     def __init__(self, sampling_rate: float = FS.WRIST_EDA):
         self.sampling_rate = _positive_number(sampling_rate, "sampling_rate")
-        self.logger.info(f"EDAProcessor initialized with fs={sampling_rate} Hz")
 
     def lowpass_filter(
         self,
@@ -45,33 +39,19 @@ class EDAProcessor(LoggerMixin):
             return eda
 
         sos = signal.butter(order, cutoff_norm, btype="low", output="sos")
-        filtered = signal.sosfiltfilt(sos, eda)
-
-        self.logger.debug(f"Applied low-pass filter: {cutoff} Hz, order={order}")
-        return filtered
+        return signal.sosfiltfilt(sos, eda)
 
     def remove_artifacts(
         self, eda: np.ndarray, median_kernel: int = FILTER_PARAMS.EDA_MEDIAN_SIZE
     ) -> np.ndarray:
         eda = np.asarray(eda, dtype=float).flatten()
         median_kernel = _positive_integer(median_kernel, "median_kernel")
-        filtered = median_filter(eda, size=median_kernel)
-        self.logger.debug(f"Applied median filter: kernel={median_kernel}")
-        return filtered
+        return median_filter(eda, size=median_kernel)
 
     def decompose_eda(
         self, eda: np.ndarray, method: str = "highpass"
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """Split EDA into tonic (slow level) and phasic (fast SCR) components.
-
-        Args:
-            eda: Filtered EDA signal.
-            method: ``"highpass"`` (default), ``"median"``, or ``"cvxeda"``
-                (NeuroKit2; falls back to median if unavailable).
-
-        Returns:
-            ``(tonic, phasic)`` arrays with the same length as ``eda``.
-        """
+        """Return tonic/phasic arrays; cvxEDA falls back to median decomposition."""
         if method not in {"highpass", "median", "cvxeda"}:
             raise ValueError("EDA decomposition method must be 'highpass', 'median', or 'cvxeda'")
         eda = np.asarray(eda, dtype=float).flatten()
@@ -99,10 +79,7 @@ class EDAProcessor(LoggerMixin):
 
         sos = signal.butter(2, cutoff_norm, btype="low", output="sos")
         tonic = signal.sosfiltfilt(sos, eda)
-        phasic = eda - tonic
-
-        self.logger.debug("Decomposed EDA using high-pass method")
-        return tonic, phasic
+        return tonic, eda - tonic
 
     def _decompose_median(
         self, eda: np.ndarray, window_sec: float = 4.0
@@ -113,10 +90,7 @@ class EDAProcessor(LoggerMixin):
         window_samples = max(3, window_samples)
 
         tonic = median_filter(eda, size=window_samples)
-        phasic = eda - tonic
-
-        self.logger.debug(f"Decomposed EDA using median filter ({window_samples} samples)")
-        return tonic, phasic
+        return tonic, eda - tonic
 
     def _decompose_cvxeda(self, eda: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         try:
@@ -125,7 +99,6 @@ class EDAProcessor(LoggerMixin):
             decomposed = nk.eda_phasic(eda, sampling_rate=int(self.sampling_rate), method="cvxeda")
             tonic = decomposed["EDA_Tonic"].values
             phasic = decomposed["EDA_Phasic"].values
-            self.logger.debug("Decomposed EDA using cvxEDA (neurokit2)")
             return tonic, phasic
         except ImportError:
             self.logger.debug("neurokit2 not available, using median decomposition")
@@ -190,15 +163,8 @@ class EDAProcessor(LoggerMixin):
             search_end = min(len(phasic), peak_idx + max_rise_samples * 2)
             recovery_region = phasic[peak_idx:search_end]
 
-            recovery_idx = None
-            for j, val in enumerate(recovery_region):
-                if val <= recovery_target:
-                    recovery_idx = peak_idx + j
-                    break
-
-            recovery_time = None
-            if recovery_idx is not None:
-                recovery_time = (recovery_idx - peak_idx) / self.sampling_rate
+            recovered = np.flatnonzero(recovery_region <= recovery_target)
+            recovery_time = float(recovered[0] / self.sampling_rate) if len(recovered) else None
 
             valid_peaks.append(peak_idx)
             scr_features.append(
@@ -212,5 +178,4 @@ class EDAProcessor(LoggerMixin):
                 }
             )
 
-        self.logger.debug(f"Detected {len(valid_peaks)} SCR peaks")
         return np.array(valid_peaks, dtype=int), scr_features

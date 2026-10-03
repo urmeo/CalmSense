@@ -51,15 +51,10 @@ def _window_parameters(window_sec, overlap, purity, fs):
 
 
 class SignalProcessor(LoggerMixin):
-    """Butterworth filtering for the slow chest modalities (temperature, respiration).
-
-    ECG and EDA have dedicated processors (``ECGProcessor``, ``EDAProcessor``);
-    this class only owns the filters the windowing pipeline still calls.
-    """
+    """Butterworth filters for chest temperature and respiration."""
 
     def __init__(self, fs: float = FS.CHEST):
         self.fs = _positive_number(fs, "fs")
-        self.logger.debug(f"SignalProcessor initialized with fs={fs} Hz")
 
     def butterworth_filter(
         self,
@@ -99,8 +94,6 @@ class SignalProcessor(LoggerMixin):
         return signal.sosfiltfilt(sos, data)
 
     def process_respiration(self, resp: np.ndarray) -> np.ndarray:
-        resp = np.asarray(resp).flatten()
-
         return self.butterworth_filter(
             resp,
             cutoff=(FILTER_PARAMS.RESP_BANDPASS_LOW, FILTER_PARAMS.RESP_BANDPASS_HIGH),
@@ -109,8 +102,6 @@ class SignalProcessor(LoggerMixin):
         )
 
     def process_temperature(self, temp: np.ndarray) -> np.ndarray:
-        temp = np.asarray(temp).flatten()
-
         return self.butterworth_filter(
             temp,
             cutoff=FILTER_PARAMS.TEMP_LOWPASS,

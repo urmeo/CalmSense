@@ -67,27 +67,21 @@ def reliability_curve(y: Array, proba: Array, n_bins: int = 15) -> List[Dict[str
     return rows
 
 
-def expected_calibration_error(y: Array, proba: Array, n_bins: int = 15) -> float:
-    conf, correct = _confidence_correct(y, proba)
-    idx = _bin_index(conf, n_bins)
-    n = len(conf)
+def _calibration_errors(rows) -> tuple[float, float]:
+    n = sum(row["count"] for row in rows)
+    gaps = [abs(row["accuracy"] - row["confidence"]) for row in rows]
     ece = 0.0
-    for b in range(n_bins):
-        mask = idx == b
-        if mask.any():
-            ece += mask.sum() / n * abs(correct[mask].mean() - conf[mask].mean())
-    return float(ece)
+    for row, gap in zip(rows, gaps):
+        ece += row["count"] / n * gap
+    return float(ece), float(max(gaps))
+
+
+def expected_calibration_error(y: Array, proba: Array, n_bins: int = 15) -> float:
+    return _calibration_errors(reliability_curve(y, proba, n_bins))[0]
 
 
 def maximum_calibration_error(y: Array, proba: Array, n_bins: int = 15) -> float:
-    conf, correct = _confidence_correct(y, proba)
-    idx = _bin_index(conf, n_bins)
-    gaps = [
-        abs(correct[idx == b].mean() - conf[idx == b].mean())
-        for b in range(n_bins)
-        if (idx == b).any()
-    ]
-    return float(max(gaps)) if gaps else 0.0
+    return _calibration_errors(reliability_curve(y, proba, n_bins))[1]
 
 
 def brier_score(y: Array, proba: Array) -> float:
@@ -140,11 +134,13 @@ def normalize_binary_calibration(result: dict) -> dict:
 
 
 def summary(y: Array, proba: Array, n_bins: int = 15) -> Dict[str, object]:
+    rows = reliability_curve(y, proba, n_bins)
+    ece, mce = _calibration_errors(rows)
     return {
-        "ece": expected_calibration_error(y, proba, n_bins),
-        "mce": maximum_calibration_error(y, proba, n_bins),
+        "ece": ece,
+        "mce": mce,
         "brier": brier_score(y, proba),
-        "reliability": reliability_curve(y, proba, n_bins),
+        "reliability": rows,
     }
 
 

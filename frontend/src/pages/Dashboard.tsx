@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { Activity, Brain, Layers, Award } from 'lucide-react';
 import results from '../../../outputs/dashboard/results';
+import Panel from '../components/Panel';
 import { requiresFreshBenchmark } from '../lib/benchmarks';
 
 const r = results as any;
@@ -29,7 +30,7 @@ const MetricCard: React.FC<{
   icon: React.ReactNode;
   color?: string;
 }> = ({ title, value, icon, color = 'blue' }) => (
-  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+  <Panel>
     <div className="flex items-center justify-between">
       <div>
         <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>
@@ -37,7 +38,7 @@ const MetricCard: React.FC<{
       </div>
       <div className={`p-3 rounded-lg ${CARD_COLORS[color]}`}>{icon}</div>
     </div>
-  </div>
+  </Panel>
 );
 
 const pct = (x: number | null | undefined) => typeof x === 'number' && Number.isFinite(x) ? `${(x * 100).toFixed(1)}%` : 'Unavailable';
@@ -51,10 +52,7 @@ const FeatureImportanceChart: React.FC = () => {
   }));
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-        Top features (binary XGBoost, full-data SHAP)
-      </h3>
+    <Panel title="Top features (binary XGBoost, full-data SHAP)">
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
@@ -70,7 +68,7 @@ const FeatureImportanceChart: React.FC = () => {
           </Bar>
         </BarChart>
       </ResponsiveContainer>
-    </div>
+    </Panel>
   );
 };
 
@@ -84,8 +82,7 @@ const OptimismGapChart: React.FC = () => {
     { name: 'Subject-mixed\n(5-fold)', value: within, color: '#E67E22' },
   ];
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Optimism gap</h3>
+    <Panel title="Optimism gap">
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
         {hasMatched ? `Subject-mixed validation adds ${b.optimism_gap_pts} points on matched non-overlapping windows` : 'Matched-window comparison is unavailable for the selected benchmark model.'}
       </p>
@@ -102,7 +99,7 @@ const OptimismGapChart: React.FC = () => {
           </Bar>
         </BarChart>
       </ResponsiveContainer>}
-    </div>
+    </Panel>
   );
 };
 
@@ -111,10 +108,7 @@ const ModelComparisonList: React.FC = () => {
     (a: any, b: any) => b.accuracy_mean - a.accuracy_mean
   );
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-        Binary LOSO accuracy by model · subject means
-      </h3>
+    <Panel title="Binary LOSO accuracy by model · subject means">
       <div className="space-y-3">
         {models.map((m: any) => (
           <div key={m.model} className="flex items-center justify-between">
@@ -131,7 +125,7 @@ const ModelComparisonList: React.FC = () => {
           </div>
         ))}
       </div>
-    </div>
+    </Panel>
   );
 };
 
@@ -147,8 +141,7 @@ const DatasetSummary: React.FC = () => {
     ['Validation', 'Leave-One-Subject-Out'],
   ];
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Dataset & setup</h3>
+    <Panel title="Dataset & setup">
       <div className="space-y-3">
         {rows.map(([k, v]) => (
           <div key={k as string} className="flex items-center justify-between">
@@ -157,7 +150,7 @@ const DatasetSummary: React.FC = () => {
           </div>
         ))}
       </div>
-    </div>
+    </Panel>
   );
 };
 

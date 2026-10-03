@@ -28,6 +28,7 @@ from scripts.run_experiment import (
     nonoverlap_mask,
     prepare_task,
 )
+from scripts.stats import bootstrap_ci
 from src import calibration as cal
 from src.config import DEMO_DIR, FIGURES_DIR, RESULTS_DIR, SEED
 from src.utils import paired_effect_size, provenance, set_seed
@@ -36,17 +37,22 @@ POSITIVE = "stress"
 N_BINS = 15
 
 
-def loso_proba(factory, X, y, groups):
-    logo = LeaveOneGroupOut()
-    yt, pp, gg = [], [], []
-    for train_idx, test_idx in logo.split(X, y, groups):
+def _probability_folds(factory, X, y, splits):
+    """Fit each training split and return P(stress) for its held-out rows."""
+    for train_idx, test_idx in splits:
         pipe = factory()
         pipe.fit(X[train_idx], y[train_idx], **_fit_params(pipe, y[train_idx]))
-        p_pos = _pos_proba(pipe, X[test_idx])
-        pp.append(np.column_stack([1.0 - p_pos, p_pos]))
-        yt.append(y[test_idx])
-        gg.append(groups[test_idx])
-    return np.concatenate(yt), np.concatenate(pp), np.concatenate(gg)
+        yield test_idx, _pos_proba(pipe, X[test_idx]).copy()
+
+
+def _pooled_proba(factory, X, y, groups, splits):
+    indices, predictions = zip(*_probability_folds(factory, X, y, splits))
+    order, positive = np.concatenate(indices), np.concatenate(predictions)
+    return y[order], np.column_stack([1.0 - positive, positive]), groups[order]
+
+
+def loso_proba(factory, X, y, groups):
+    return _pooled_proba(factory, X, y, groups, LeaveOneGroupOut().split(X, y, groups))
 
 
 def within_subject_proba(factory, X, y, groups):
@@ -55,15 +61,7 @@ def within_subject_proba(factory, X, y, groups):
     Xk, yk, gk = X[keep], y[keep], groups[keep]
 
     skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=SEED)
-    yt, pp, gg = [], [], []
-    for train_idx, test_idx in skf.split(Xk, yk):
-        pipe = factory()
-        pipe.fit(Xk[train_idx], yk[train_idx], **_fit_params(pipe, yk[train_idx]))
-        p_pos = _pos_proba(pipe, Xk[test_idx])
-        pp.append(np.column_stack([1.0 - p_pos, p_pos]))
-        yt.append(yk[test_idx])
-        gg.append(gk[test_idx])
-    return np.concatenate(yt), np.concatenate(pp), np.concatenate(gg)
+    return _pooled_proba(factory, Xk, yk, gk, skf.split(Xk, yk))
 
 
 def _subject_brier(y, proba, g):
@@ -83,13 +81,11 @@ def gap_significance(loso, within):
     if not np.isfinite(gap).all():
         raise ValueError("Paired calibration scores must be finite")
     pval = 1.0 if np.all(gap == 0) else float(wilcoxon(a, b).pvalue)
-    rng = np.random.RandomState(SEED)
-    # Resample subject-level differences, preserving each LOSO/within-subject pair.
-    means = [rng.choice(gap, len(gap), replace=True).mean() for _ in range(10000)]
+    lo, hi = bootstrap_ci(gap, seed=SEED)
     return {
         "n_subjects": len(subjects),
         "mean_brier_gap": float(gap.mean()),
-        "ci95": [float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))],
+        "ci95": [lo, hi],
         "wilcoxon_p": pval,
         "effect_size": paired_effect_size(a, b),
         "per_subject": {s: {"loso": loso[s], "within": within[s]} for s in subjects},
@@ -130,6 +126,17 @@ def _pos_proba(estimator, X):
     return np.zeros(len(X))
 
 
+def _global_calibrator(factory, Xtr, ytr, gtr, method):
+    n_groups = len(np.unique(gtr))
+    if n_groups < 2:
+        return None
+    oof = np.zeros(len(ytr))
+    inner = GroupKFold(n_splits=min(5, n_groups))
+    for held, positive in _probability_folds(factory, Xtr, ytr, inner.split(Xtr, ytr, gtr)):
+        oof[held] = positive
+    return _fit_calibrator(oof, ytr, method)
+
+
 def loso_recalibrated_proba(factory, X, y, groups, method="isotonic"):
     """LOSO with a calibrator fit on out-of-fold training probabilities only."""
     logo = LeaveOneGroupOut()
@@ -140,19 +147,8 @@ def loso_recalibrated_proba(factory, X, y, groups, method="isotonic"):
         base.fit(Xtr, ytr, **_fit_params(base, ytr))
         raw_te = _pos_proba(base, X[test_idx])
 
-        n_groups = len(np.unique(gtr))
-        if n_groups < 2:
-            cal_pos = raw_te  # too few subjects to fit a calibrator
-        else:
-            oof = np.zeros(len(ytr))
-            # Inner held-out subjects supply calibration targets; the outer test subject is excluded.
-            inner = GroupKFold(n_splits=min(5, n_groups))
-            for itr, ical in inner.split(Xtr, ytr, gtr):
-                p = factory()
-                p.fit(Xtr[itr], ytr[itr], **_fit_params(p, ytr[itr]))
-                oof[ical] = _pos_proba(p, Xtr[ical])
-            calibrator = _fit_calibrator(oof, ytr, method)
-            cal_pos = _apply_calibrator(calibrator, raw_te, method)
+        calibrator = _global_calibrator(factory, Xtr, ytr, gtr, method)
+        cal_pos = raw_te if calibrator is None else _apply_calibrator(calibrator, raw_te, method)
 
         pp.append(np.column_stack([1.0 - cal_pos, cal_pos]))
         yt.append(y[test_idx])

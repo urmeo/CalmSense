@@ -12,7 +12,6 @@ from .hrv_base import BaseHRVExtractor
 class HRVNonlinearExtractor(BaseHRVExtractor):
     def __init__(self, min_rr_count: int = 50):
         self.min_rr_count = _positive_integer(min_rr_count, "min_rr_count")
-        self.logger.debug(f"HRVNonlinearExtractor initialized, min_rr={min_rr_count}")
 
     def compute_sample_entropy(self, rr: np.ndarray, m: int = 2, r: float = 0.2) -> float:
         rr = np.asarray(rr, dtype=float).flatten()
@@ -51,17 +50,11 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
             patterns = np.lib.stride_tricks.sliding_window_view(rr, template_len)
             n_patterns = len(patterns)
 
-            if n_patterns == 0:
-                return 0.0
-
             # ApEn includes self-matches, so every probability is positive.
             counts = np.count_nonzero(cdist(patterns, patterns, "chebyshev") <= r_val, axis=1)
             return float(np.mean(np.log(counts / n_patterns)))
 
-        phi_m = _phi(m)
-        phi_m1 = _phi(m + 1)
-
-        return float(phi_m - phi_m1)
+        return float(_phi(m) - _phi(m + 1))
 
     def compute_dfa(
         self, rr: np.ndarray, scale_min: int = 4, scale_max: int = 64
@@ -103,8 +96,7 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
 
                 f_squared.append(np.mean((segment - trend) ** 2))
 
-            if len(f_squared) > 0:
-                fluctuations.append((scale, np.sqrt(np.mean(f_squared))))
+            fluctuations.append((scale, np.sqrt(np.mean(f_squared))))
 
         if len(fluctuations) < 4:
             return np.nan, np.nan
@@ -115,34 +107,21 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
         log_scales = np.log10(scales_used)
         log_fluct = np.log10(fluct_values + FEATURE_PARAMS.EPSILON)
 
-        # Alpha1: short-term (4-16 beats)
-        mask_alpha1 = (scales_used >= 4) & (scales_used <= 16)
-        if np.sum(mask_alpha1) >= 2:
-            slope1, _, _, _, _ = stats.linregress(log_scales[mask_alpha1], log_fluct[mask_alpha1])
-            alpha1 = float(slope1)
-        else:
-            alpha1 = np.nan
-
-        # Alpha2: long-term (16-64 beats)
-        mask_alpha2 = (scales_used >= 16) & (scales_used <= 64)
-        if np.sum(mask_alpha2) >= 2:
-            slope2, _, _, _, _ = stats.linregress(log_scales[mask_alpha2], log_fluct[mask_alpha2])
-            alpha2 = float(slope2)
-        else:
-            alpha2 = np.nan
-
-        return alpha1, alpha2
+        alphas = []
+        for low, high in ((4, 16), (16, 64)):
+            mask = (scales_used >= low) & (scales_used <= high)
+            alpha = (
+                float(stats.linregress(log_scales[mask], log_fluct[mask]).slope)
+                if np.sum(mask) >= 2
+                else np.nan
+            )
+            alphas.append(alpha)
+        return alphas[0], alphas[1]
 
     def compute_poincare(self, rr: np.ndarray) -> Dict[str, float]:
         rr = np.asarray(rr, dtype=float).flatten()
         if len(rr) < 3:
-            return {
-                "SD1": np.nan,
-                "SD2": np.nan,
-                "SD1_SD2_ratio": np.nan,
-                "CSI": np.nan,
-                "CVI": np.nan,
-            }
+            return dict.fromkeys(("SD1", "SD2", "SD1_SD2_ratio", "CSI", "CVI"), np.nan)
 
         rr_n = rr[:-1]
         rr_n1 = rr[1:]
@@ -159,7 +138,6 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
         else:
             sd1_sd2_ratio = np.nan
 
-        # CSI = SD2/SD1 (sympathetic index)
         if sd1 > FEATURE_PARAMS.EPSILON:
             csi = float(sd2 / sd1)
         else:
@@ -219,14 +197,11 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
             run_ends = np.where(runs == -1)[0]
             run_lengths = run_ends - run_starts
 
-            for length in run_lengths:
-                if length >= min_line_length:
-                    diagonal_points += length
+            diagonal_points += np.sum(run_lengths[run_lengths >= min_line_length])
 
         diagonal_points *= 2  # both sides of diagonal
 
-        det = diagonal_points / total_recurrence
-        return float(det)
+        return float(diagonal_points / total_recurrence)
 
     def extract_all(self, rr_intervals: np.ndarray) -> Dict[str, float]:
         features = dict.fromkeys(self.get_feature_descriptions(), np.nan)
@@ -240,22 +215,12 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
             features["SampEn"] = self.compute_sample_entropy(rr, m=2, r=0.2)
             features["ApEn"] = self.compute_approximate_entropy(rr, m=2, r=0.2)
 
-            alpha1, alpha2 = self.compute_dfa(rr)
-            features["DFA_alpha1"] = alpha1
-            features["DFA_alpha2"] = alpha2
-
-            poincare = self.compute_poincare(rr)
-            features.update(poincare)
+            features["DFA_alpha1"], features["DFA_alpha2"] = self.compute_dfa(rr)
+            features.update(self.compute_poincare(rr))
 
             rr_sample = rr[: min(200, len(rr))]  # limit for speed
             features["RQA_DET"] = self.compute_rqa_determinism(rr_sample)
 
-            self.logger.debug(
-                f"Extracted 10 nonlinear features, "
-                f"SampEn={features['SampEn']:.3f}, DFA_alpha1={features['DFA_alpha1']:.3f}"
-                if np.isfinite(features["SampEn"])
-                else "Extracted 10 nonlinear features"
-            )
         except Exception as e:
             self.logger.error(f"Feature extraction failed: {e}")
 

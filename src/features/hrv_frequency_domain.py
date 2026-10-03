@@ -36,17 +36,10 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
                     "HRV frequency bands must be ordered below the interpolation Nyquist"
                 )
 
-        self.logger.debug(
-            f"HRVFrequencyDomainExtractor initialized: "
-            f"LF={lf_band}, HF={hf_band}, fs={interpolation_rate} Hz"
-        )
-
     def _interpolate_rr(
         self, rr: np.ndarray, method: str = "cubic"
     ) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:
-        t_rr = np.cumsum(rr) / 1000.0
-        t_rr = np.insert(t_rr, 0, 0)
-        t_rr = t_rr[:-1]
+        t_rr = np.r_[0.0, np.cumsum(rr[:-1]) / 1000.0]
 
         duration = t_rr[-1] - t_rr[0]
         if duration * self.interpolation_rate < 10:
@@ -77,8 +70,7 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
 
         if method == "lomb":
             return self._compute_psd_lomb(rr)
-        else:
-            return self._compute_psd_welch(rr)
+        return self._compute_psd_welch(rr)
 
     def _compute_psd_welch(self, rr: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         t_uniform, rr_interp = self._interpolate_rr(rr)
@@ -100,9 +92,7 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
             scaling="density",
         )
 
-        psd = np.maximum(psd, 0)
-
-        return freqs, psd
+        return freqs, np.maximum(psd, 0)
 
     def _compute_psd_lomb(self, rr: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         from scipy.signal import lombscargle
@@ -233,12 +223,6 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
             features["HFn"] = self.compute_hfn(features["LF_power"], features["HF_power"])
             features["LF_peak_freq"] = self.compute_lf_peak_freq(freqs, psd)
 
-            if np.isfinite(features["LF_HF_ratio"]):
-                self.logger.debug(
-                    f"Extracted 8 frequency-domain features, LF/HF={features['LF_HF_ratio']:.2f}"
-                )
-            else:
-                self.logger.debug("Extracted 8 frequency-domain features")
         except Exception as e:
             self.logger.error(f"Feature extraction failed: {e}")
 

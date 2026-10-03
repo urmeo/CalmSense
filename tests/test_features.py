@@ -1,15 +1,28 @@
 """Feature extractors produce correct values on known signals."""
 
+import pickle
+
 import numpy as np
+import pandas as pd
 import pytest
 
+from src import dataset, features, synthetic
+from src.config import VALID_SUBJECTS
+from src.data.loader import WESADLoader
+from src.dataset import WindowedDataset
+from src.dataset_wrist import WristDataset
+from src.features.accelerometer_features import AccelerometerFeatureExtractor
+from src.features.eda_features import EDAFeatureExtractor
+from src.features.feature_pipeline import FEATURE_SCHEMA_VERSION, FeatureExtractionPipeline
+from src.features.hrv_frequency_domain import HRVFrequencyDomainExtractor
+from src.features.hrv_nonlinear import HRVNonlinearExtractor
 from src.features.hrv_time_domain import HRVTimeDomainExtractor
+from src.features.respiration_features import RespirationFeatureExtractor
+from src.features.temperature_features import TemperatureFeatureExtractor
 from src.preprocessing.ecg_processor import ECGProcessor
 
 
 def test_missing_eda_preserves_feature_order_and_zero_event_counts():
-    from src.features.eda_features import EDAFeatureExtractor
-
     extractor = EDAFeatureExtractor()
     features = extractor.extract_all({})
     assert list(features) == [
@@ -64,15 +77,11 @@ def test_triangular_index_uses_fixed_rr_bins_and_handles_constant_intervals():
 
 
 def test_frequency_features_nan_below_min_rr():
-    from src.features.hrv_frequency_domain import HRVFrequencyDomainExtractor
-
     feats = HRVFrequencyDomainExtractor().extract_all(np.full(5, 800.0))  # < 30 required
     assert all(np.isnan(v) for v in feats.values())
 
 
 def test_nonlinear_features_finite_with_enough_rr():
-    from src.features.hrv_nonlinear import HRVNonlinearExtractor
-
     rng = np.random.RandomState(0)
     rr = 800 + 30 * rng.randn(120)  # > 50 required, physiological variation
     feats = HRVNonlinearExtractor().extract_all(rr)
@@ -81,8 +90,6 @@ def test_nonlinear_features_finite_with_enough_rr():
 
 
 def test_poincare_geometry_and_cvi_use_the_paired_ellipse_axes():
-    from src.features.hrv_nonlinear import HRVNonlinearExtractor
-
     extractor = HRVNonlinearExtractor()
     trending = extractor.compute_poincare(np.array([800.0, 820.0, 840.0]))
     assert trending["SD1"] == 0.0
@@ -118,9 +125,6 @@ def test_rpeaks_recover_known_rate():
 
 
 def test_tonic_and_temperature_slopes_preserve_missing_sample_times():
-    from src.features.eda_features import EDAFeatureExtractor
-    from src.features.temperature_features import TemperatureFeatureExtractor
-
     time = np.arange(40) / 4.0
     tonic, temperature = 3 + 0.25 * time, 35 - 0.01 * time
     tonic[[1, 4, 7, 15]] = np.nan
@@ -132,8 +136,6 @@ def test_tonic_and_temperature_slopes_preserve_missing_sample_times():
 
 
 def test_rr_interpolation_uses_its_declared_sampling_rate():
-    from src.features.hrv_frequency_domain import HRVFrequencyDomainExtractor
-
     time, interpolated = HRVFrequencyDomainExtractor(interpolation_rate=4)._interpolate_rr(
         np.full(40, 810.0)
     )
@@ -142,8 +144,6 @@ def test_rr_interpolation_uses_its_declared_sampling_rate():
 
 
 def test_band_power_includes_unsampled_endpoints():
-    from src.features.hrv_frequency_domain import HRVFrequencyDomainExtractor
-
     extractor = HRVFrequencyDomainExtractor()
     freqs = np.arange(0, 2.01, 0.05)
     density = np.full(len(freqs), 2.0)
@@ -153,8 +153,6 @@ def test_band_power_includes_unsampled_endpoints():
 
 
 def test_lomb_density_integrates_to_rr_variance_and_handles_constant_rr():
-    from src.features.hrv_frequency_domain import HRVFrequencyDomainExtractor
-
     extractor = HRVFrequencyDomainExtractor()
     rr = 800 + 30 * np.sin(np.arange(100) * 0.6)
     freqs, density = extractor.compute_psd(rr, method="lomb")
@@ -168,22 +166,16 @@ def test_lomb_density_integrates_to_rr_variance_and_handles_constant_rr():
 
 @pytest.mark.parametrize("rr", [np.full(20, 800.0), np.tile([800.0, 820.0], 10)])
 def test_sample_entropy_is_zero_when_every_matching_pattern_extends(rr):
-    from src.features.hrv_nonlinear import HRVNonlinearExtractor
-
     assert HRVNonlinearExtractor().compute_sample_entropy(rr) == 0.0
 
 
 def test_sample_entropy_reports_zero_continuation_probability():
-    from src.features.hrv_nonlinear import HRVNonlinearExtractor
-
     # [800, 800] appears twice, followed by different nonmatching next intervals.
     rr = np.array([800, 800, 900, 800, 800, 1000])
     assert np.isinf(HRVNonlinearExtractor().compute_sample_entropy(rr, m=2, r=0.01))
 
 
 def test_recurrence_determinism_uses_the_requested_embedding():
-    from src.features.hrv_nonlinear import HRVNonlinearExtractor
-
     extractor = HRVNonlinearExtractor()
     rr = np.tile([800.0, 820.0], 3)
     # Five two-sample vectors: eight recurrent off-diagonal points, six in lines >=2.
@@ -196,9 +188,6 @@ def test_recurrence_determinism_uses_the_requested_embedding():
 
 
 def test_flat_signals_have_no_detected_respiration_or_motion_frequency():
-    from src.features.accelerometer_features import AccelerometerFeatureExtractor
-    from src.features.respiration_features import RespirationFeatureExtractor
-
     respiration = RespirationFeatureExtractor(10).extract_all(np.ones(200))
     assert np.isnan(respiration["RESP_rate"])
     assert respiration["RESP_amplitude"] == 0.0
@@ -209,8 +198,6 @@ def test_flat_signals_have_no_detected_respiration_or_motion_frequency():
 
 
 def test_missing_accelerometer_samples_do_not_compress_event_time():
-    from src.features.accelerometer_features import AccelerometerFeatureExtractor
-
     magnitude = np.tile([0.0, 2.0], 50)
     magnitude[20:30] = np.nan
     features = AccelerometerFeatureExtractor(10).extract_from_magnitude(magnitude)
@@ -252,8 +239,6 @@ def test_ecg_empty_or_constant_input_has_no_peaks():
 )
 @pytest.mark.parametrize("rate", [0, -1, np.inf, np.nan, True])
 def test_feature_extractors_reject_invalid_sampling_rates(name, rate):
-    from src import features
-
     with pytest.raises(ValueError, match="finite and positive"):
         getattr(features, name)(sampling_rate=rate)
 
@@ -270,17 +255,12 @@ def test_feature_extractors_reject_invalid_sampling_rates(name, rate):
     ],
 )
 def test_window_configuration_is_rejected_before_loading_data(parameters):
-    from src.dataset import WindowedDataset
-    from src.dataset_wrist import WristDataset
-
     for builder in (WindowedDataset, WristDataset):
         with pytest.raises(ValueError):
             builder(**parameters)
 
 
 def test_feature_schema_does_not_compute_dummy_signals(monkeypatch):
-    from src.features.feature_pipeline import FeatureExtractionPipeline
-
     pipeline = FeatureExtractionPipeline()
     monkeypatch.setattr(
         pipeline,
@@ -300,10 +280,6 @@ def test_feature_schema_does_not_compute_dummy_signals(monkeypatch):
 
 
 def test_synthetic_subjects_skip_unavailable_wesad_ids(tmp_path, monkeypatch):
-    from src import synthetic
-    from src.config import VALID_SUBJECTS
-    from src.data.loader import WESADLoader
-
     monkeypatch.setattr(synthetic, "_subject", lambda seed, block_sec: {"seed": seed})
     data_path = synthetic.write_dataset(tmp_path, n_subjects=15, block_sec=1)
     assert WESADLoader(data_path).subjects == VALID_SUBJECTS
@@ -313,10 +289,6 @@ def test_synthetic_subjects_skip_unavailable_wesad_ids(tmp_path, monkeypatch):
 
 
 def test_wesad_loader_rejects_misaligned_and_malformed_channels(tmp_path):
-    import pickle
-
-    from src.data.loader import WESADLoader
-
     subject = tmp_path / "S2"
     subject.mkdir()
     record = {
@@ -338,12 +310,6 @@ def test_wesad_loader_rejects_misaligned_and_malformed_channels(tmp_path):
 
 
 def test_cached_chest_features_require_current_protocol_and_aligned_rows(tmp_path, monkeypatch):
-    import pandas as pd
-
-    from src import dataset
-    from src.config import VALID_SUBJECTS
-    from src.features.feature_pipeline import FEATURE_SCHEMA_VERSION
-
     monkeypatch.setattr(dataset, "PROCESSED_DATA_DIR", tmp_path)
     columns = dataset.FeatureExtractionPipeline().get_feature_names()
     frame = pd.DataFrame(

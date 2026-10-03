@@ -10,7 +10,6 @@ from .hrv_base import BaseHRVExtractor
 class HRVTimeDomainExtractor(BaseHRVExtractor):
     def __init__(self, min_rr_count: int = 10):
         self.min_rr_count = _positive_integer(min_rr_count, "min_rr_count")
-        self.logger.debug(f"HRVTimeDomainExtractor initialized, min_rr={min_rr_count}")
 
     def compute_mean_nn(self, rr: np.ndarray) -> float:
         return float(np.mean(rr))
@@ -101,10 +100,6 @@ class HRVTimeDomainExtractor(BaseHRVExtractor):
             features["IQRNN"] = self.compute_iqrnn(rr)
             features["HRVTI"] = self.compute_hrvti(rr)
 
-            self.logger.debug(
-                f"Extracted 12 time-domain features, "
-                f"MeanNN={features['MeanNN']:.1f}ms, SDNN={features['SDNN']:.1f}ms"
-            )
         except Exception as e:
             self.logger.error(f"Feature extraction failed: {e}")
 

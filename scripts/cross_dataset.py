@@ -3,7 +3,6 @@
 import argparse
 import hashlib
 import json
-import subprocess
 import sys
 from importlib.metadata import version
 from pathlib import Path
@@ -66,6 +65,7 @@ def _cache_schema(dataset):
             for path in (
                 "src/portable.py",
                 "src/config.py",
+                "src/preprocessing/filters.py",
                 "src/data/loader.py" if dataset == "wesad" else "src/datasets/non_eeg.py",
             )
         },
@@ -166,17 +166,8 @@ def _generation_context():
         "src/models/ml/classifiers.py",
         "src/config.py",
     )
-    try:
-        dirty = bool(
-            subprocess.check_output(
-                ["git", "status", "--porcelain"], cwd=PROJECT_ROOT, text=True
-            ).strip()
-        )
-    except (OSError, subprocess.CalledProcessError):
-        dirty = None
     return {
         **provenance(),
-        "working_tree_dirty": dirty,
         "source_file_sha256": {path: sha256_file(PROJECT_ROOT / path) for path in files},
     }
 

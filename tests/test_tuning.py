@@ -1,4 +1,4 @@
-"""Synthetic tuning cannot replace real results or compare against real defaults."""
+"""Nested tuning validates subject splits and isolates synthetic outputs."""
 
 import json
 

@@ -10,7 +10,6 @@ from ..preprocessing.filters import _positive_number
 class RespirationFeatureExtractor(LoggerMixin):
     def __init__(self, sampling_rate: float = 700.0):
         self.sampling_rate = _positive_number(sampling_rate, "sampling_rate")
-        self.logger.debug(f"RespirationFeatureExtractor initialized, fs={sampling_rate} Hz")
 
     def _validate_signal(self, signal: np.ndarray) -> Optional[np.ndarray]:
         if signal is None:
@@ -77,15 +76,11 @@ class RespirationFeatureExtractor(LoggerMixin):
                 amplitudes = []
                 for peak_idx in breath_peaks:
                     pi = int(peak_idx)
-                    if 0 <= pi < len(resp):
-                        troughs_before = breath_troughs[breath_troughs < peak_idx]
-                        troughs_after = breath_troughs[breath_troughs > peak_idx]
-
-                        if len(troughs_before) > 0 and len(troughs_after) > 0:
-                            tb, ta = int(troughs_before[-1]), int(troughs_after[0])
-                            if 0 <= tb < len(resp) and 0 <= ta < len(resp):
-                                amp = resp[pi] - 0.5 * (resp[tb] + resp[ta])
-                                amplitudes.append(amp)
+                    troughs_before = breath_troughs[breath_troughs < peak_idx]
+                    troughs_after = breath_troughs[breath_troughs > peak_idx]
+                    if len(troughs_before) > 0 and len(troughs_after) > 0:
+                        tb, ta = int(troughs_before[-1]), int(troughs_after[0])
+                        amplitudes.append(resp[pi] - 0.5 * (resp[tb] + resp[ta]))
 
                 if len(amplitudes) > 0:
                     features["RESP_amplitude"] = float(np.mean(amplitudes))
@@ -94,16 +89,11 @@ class RespirationFeatureExtractor(LoggerMixin):
                 features["RESP_amplitude"] = float(np.std(resp))
 
             if breath_peaks is not None and breath_troughs is not None:
-                ie_ratio = self._compute_ie_ratio(breath_peaks, breath_troughs)
-                features["RESP_inhale_exhale_ratio"] = ie_ratio
+                features["RESP_inhale_exhale_ratio"] = self._compute_ie_ratio(
+                    breath_peaks, breath_troughs
+                )
 
             features["RESP_apnea_index"] = self._compute_apnea_index(resp, breath_intervals)
-
-            self.logger.debug(
-                f"Extracted 5 respiration features, rate={features['RESP_rate']:.1f} BPM"
-                if np.isfinite(features["RESP_rate"])
-                else "Extracted 5 respiration features"
-            )
 
         except Exception as e:
             self.logger.error(f"Respiration feature extraction failed: {e}")
@@ -129,10 +119,7 @@ class RespirationFeatureExtractor(LoggerMixin):
         resp_freqs = freqs[mask]
         resp_psd = psd[mask]
 
-        peak_idx = np.argmax(resp_psd)
-        peak_freq = resp_freqs[peak_idx]
-
-        return float(peak_freq * 60.0)
+        return float(resp_freqs[np.argmax(resp_psd)] * 60.0)
 
     def _compute_ie_ratio(self, peaks: np.ndarray, troughs: np.ndarray) -> float:
         inspiration_times = []
@@ -171,16 +158,17 @@ class RespirationFeatureExtractor(LoggerMixin):
 
             n_windows = len(resp) // window_samples
             low_variance_count = 0
+            threshold = max(FEATURE_PARAMS.EPSILON, 0.1 * np.var(resp))
 
             for i in range(n_windows):
                 start = i * window_samples
                 end = start + window_samples
                 window_var = np.var(resp[start:end])
 
-                if window_var <= max(FEATURE_PARAMS.EPSILON, 0.1 * np.var(resp)):
+                if window_var <= threshold:
                     low_variance_count += 1
 
-            return float(100.0 * low_variance_count / n_windows) if n_windows > 0 else 0.0
+            return float(100.0 * low_variance_count / n_windows)
 
         breath_intervals = np.asarray(breath_intervals)
         breath_intervals = breath_intervals[np.isfinite(breath_intervals) & (breath_intervals > 0)]

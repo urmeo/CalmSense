@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import { Trophy, AlertTriangle, Activity } from 'lucide-react';
 import results from '../../../outputs/dashboard/results';
+import Panel from '../components/Panel';
 import SummaryCard from '../components/SummaryCard';
 
 type Task = 'binary' | 'multiclass';
@@ -102,10 +103,7 @@ const ModelComparison: React.FC = () => {
         </div>
       )}
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Subject-independent performance ({data.n_windows} windows)
-        </h3>
+      <Panel title={`Subject-independent performance (${data.n_windows} windows)`}>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -136,11 +134,10 @@ const ModelComparison: React.FC = () => {
             </tbody>
           </table>
         </div>
-      </div>
+      </Panel>
 
       <div className={`grid grid-cols-1 ${task === 'binary' ? 'lg:grid-cols-2' : ''} gap-6`}>
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">LOSO accuracy</h3>
+        <Panel title="LOSO accuracy">
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={barData} margin={{ top: 10, right: 20, left: 0, bottom: 60 }}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
@@ -155,13 +152,10 @@ const ModelComparison: React.FC = () => {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-        </div>
+        </Panel>
 
         {task === 'binary' && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Binary XGBoost · full-data SHAP
-            </h3>
+          <Panel title="Binary XGBoost · full-data SHAP">
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
               Descriptive mean |SHAP| on the training data; not held-out or causal evidence.
             </p>
@@ -178,7 +172,7 @@ const ModelComparison: React.FC = () => {
             ) : (
               <p className="text-sm text-gray-500">Run the experiment to populate SHAP values.</p>
             )}
-          </div>
+          </Panel>
         )}
       </div>
     </div>

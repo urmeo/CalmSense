@@ -10,7 +10,6 @@ from ..preprocessing.filters import _positive_number
 class AccelerometerFeatureExtractor(LoggerMixin):
     def __init__(self, sampling_rate: float = 32.0):
         self.sampling_rate = _positive_number(sampling_rate, "sampling_rate")
-        self.logger.debug(f"AccelerometerFeatureExtractor initialized, fs={sampling_rate} Hz")
 
     def _validate_signal(self, signal: np.ndarray) -> Optional[np.ndarray]:
         if signal is None:
@@ -43,9 +42,7 @@ class AccelerometerFeatureExtractor(LoggerMixin):
         az = np.asarray(acc_z).flatten()
         if not ax.size == ay.size == az.size:
             raise ValueError("Accelerometer axes must have equal lengths")
-        n = min(ax.size, ay.size, az.size)
-        magnitude = self.compute_magnitude(ax[:n], ay[:n], az[:n])
-        return self.extract_from_magnitude(magnitude)
+        return self.extract_from_magnitude(self.compute_magnitude(ax, ay, az))
 
     def extract_from_magnitude(self, magnitude: np.ndarray) -> Dict[str, float]:
         features = dict.fromkeys(self.get_feature_descriptions(), np.nan)
@@ -64,14 +61,8 @@ class AccelerometerFeatureExtractor(LoggerMixin):
             pairs_finite = np.isfinite(original[:-1]) & np.isfinite(original[1:])
             zero_crossings = np.count_nonzero(np.diff(np.signbit(mag_centered)) & pairs_finite)
             duration = len(original) / self.sampling_rate
-            features["ACC_zero_crossings"] = (
-                float(zero_crossings / duration) if duration > 0 else 0.0
-            )
-
-            n_samples = len(magnitude)
-            features["ACC_energy"] = (
-                float(np.sum(magnitude**2) / n_samples) if n_samples > 0 else 0.0
-            )
+            features["ACC_zero_crossings"] = float(zero_crossings / duration)
+            features["ACC_energy"] = float(np.sum(magnitude**2) / len(magnitude))
 
             if len(magnitude) >= 64 and np.isfinite(original).all() and np.std(magnitude) > 1e-10:
                 # Fine resolution so the 0.1-10 Hz movement band has frequency bins

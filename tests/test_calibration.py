@@ -70,7 +70,6 @@ def test_perfect_calibration_has_zero_ece():
 
 
 def test_overconfident_model_has_large_ece():
-    # always says 0.99 but only half right
     y = np.array([1, 0] * 50)
     proba = np.full(100, 0.99)
     ece = expected_calibration_error(y, proba, n_bins=10)
@@ -105,7 +104,6 @@ def test_mce_at_least_ece():
 
 
 def test_net_benefit_treat_none_baseline():
-    # a useless model flagging nobody yields zero benefit
     y = np.array([1, 0, 1, 0])
     nb = net_benefit(y, np.zeros(4), np.array([0.2, 0.5]))
     assert np.allclose(nb, 0.0)
@@ -119,7 +117,7 @@ def test_gap_significance_detects_consistent_gap():
     sig = gap_significance(loso, within)
     assert sig["n_subjects"] == 12
     assert abs(sig["mean_brier_gap"] - 0.10) < 1e-9
-    assert sig["ci95"][0] > 0  # gap is consistently positive
+    assert sig["ci95"][0] > 0
     assert sig["wilcoxon_p"] < 0.05
 
 

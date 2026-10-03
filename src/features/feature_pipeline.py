@@ -20,24 +20,18 @@ FEATURE_SCHEMA_VERSION = 2
 
 
 class FeatureExtractionPipeline(LoggerMixin):
-    """Turn one preprocessed window into a flat, prefixed feature dict.
+    """Extract enabled signal groups; missing groups keep their registered NaN columns."""
 
-    Composes seven per-modality extractors (HRV time/frequency/nonlinear, EDA,
-    temperature, respiration, accelerometer) and namespaces their outputs with
-    ``HRV_``/``EDA_``/``TEMP_``/``RESP_``/``ACC_`` prefixes. Groups can be toggled
-    via ``feature_config``; disabled groups are omitted and unavailable groups yield
-    NaN placeholders so columns stay stable across windows. Extraction never sees labels.
-    """
-
-    DEFAULT_CONFIG = {
-        "hrv_time": True,
-        "hrv_frequency": True,
-        "hrv_nonlinear": True,
-        "eda": True,
-        "temperature": True,
-        "respiration": True,
-        "accelerometer": True,
+    _GROUPS = {
+        "hrv_time": ("HRV_", "HRV Time-Domain"),
+        "hrv_frequency": ("HRV_", "HRV Frequency-Domain"),
+        "hrv_nonlinear": ("HRV_", "HRV Nonlinear"),
+        "eda": ("EDA_", "EDA"),
+        "temperature": ("TEMP_", "Temperature"),
+        "respiration": ("RESP_", "Respiration"),
+        "accelerometer": ("ACC_", "Accelerometer"),
     }
+    DEFAULT_CONFIG = dict.fromkeys(_GROUPS, True)
 
     def __init__(
         self,
@@ -70,22 +64,9 @@ class FeatureExtractionPipeline(LoggerMixin):
         }
 
         self._feature_names: Optional[List[str]] = None
-        self.logger.info(
-            f"FeatureExtractionPipeline initialized with config: "
-            f"{sum(self.feature_config.values())} feature groups enabled"
-        )
 
     def extract_window_features(self, window_data: Dict[str, Any]) -> Dict[str, float]:
-        """Extract all enabled features for a single window.
-
-        Args:
-            window_data: One window's signals (``rr_intervals``, ``eda_tonic``,
-                ``eda_phasic``, ``temperature``, ``respiration``, ``accelerometer``,
-                ...). Missing modalities produce NaN placeholders.
-
-        Returns:
-            Prefixed feature-name to value mapping for this window.
-        """
+        """Return prefixed features from one preprocessed window without reading labels."""
         rr = window_data.get("rr_intervals")
 
         features: Dict[str, float] = {}
@@ -197,35 +178,12 @@ class FeatureExtractionPipeline(LoggerMixin):
         return len(self.get_feature_names())
 
     def get_feature_descriptions(self) -> Dict[str, str]:
-        descriptions = {}
-
-        if self.feature_config.get("hrv_time", True):
-            for k, v in self.extractors["hrv_time"].get_feature_descriptions().items():
-                descriptions[f"HRV_{k}"] = v
-
-        if self.feature_config.get("hrv_frequency", True):
-            for k, v in self.extractors["hrv_frequency"].get_feature_descriptions().items():
-                descriptions[f"HRV_{k}"] = v
-
-        if self.feature_config.get("hrv_nonlinear", True):
-            for k, v in self.extractors["hrv_nonlinear"].get_feature_descriptions().items():
-                descriptions[f"HRV_{k}"] = v
-
-        if self.feature_config.get("eda", True):
-            for k, v in self.extractors["eda"].get_feature_descriptions().items():
-                key = k if k.startswith("EDA_") else f"EDA_{k}"
-                descriptions[key] = v
-
-        if self.feature_config.get("temperature", True):
-            descriptions.update(self.extractors["temperature"].get_feature_descriptions())
-
-        if self.feature_config.get("respiration", True):
-            descriptions.update(self.extractors["respiration"].get_feature_descriptions())
-
-        if self.feature_config.get("accelerometer", True):
-            descriptions.update(self.extractors["accelerometer"].get_feature_descriptions())
-
-        return descriptions
+        return {
+            key if key.startswith(prefix) else prefix + key: description
+            for group, (prefix, _) in self._GROUPS.items()
+            if self.feature_config.get(group, True)
+            for key, description in self.extractors[group].get_feature_descriptions().items()
+        }
 
     def save_features(
         self,
@@ -268,38 +226,12 @@ class FeatureExtractionPipeline(LoggerMixin):
             raise ValueError(f"Unknown format: {file_format}")
 
     def get_feature_groups(self) -> Dict[str, List[str]]:
-        all_features = self.get_feature_names()
-
-        groups: Dict[str, List[str]] = {
-            "HRV Time-Domain": [],
-            "HRV Frequency-Domain": [],
-            "HRV Nonlinear": [],
-            "EDA": [],
-            "Temperature": [],
-            "Respiration": [],
-            "Accelerometer": [],
+        enabled = set(self.get_feature_names())
+        return {
+            label: [
+                name
+                for key in self.extractors[group].get_feature_descriptions()
+                if (name := key if key.startswith(prefix) else prefix + key) in enabled
+            ]
+            for group, (prefix, label) in self._GROUPS.items()
         }
-
-        time_features = set(self.extractors["hrv_time"].get_feature_descriptions().keys())
-        freq_features = set(self.extractors["hrv_frequency"].get_feature_descriptions().keys())
-        nl_features = set(self.extractors["hrv_nonlinear"].get_feature_descriptions().keys())
-
-        for feat in all_features:
-            if feat.startswith("HRV_"):
-                base = feat[4:]
-                if base in time_features:
-                    groups["HRV Time-Domain"].append(feat)
-                elif base in freq_features:
-                    groups["HRV Frequency-Domain"].append(feat)
-                elif base in nl_features:
-                    groups["HRV Nonlinear"].append(feat)
-            elif feat.startswith("EDA_"):
-                groups["EDA"].append(feat)
-            elif feat.startswith("TEMP_"):
-                groups["Temperature"].append(feat)
-            elif feat.startswith("RESP_"):
-                groups["Respiration"].append(feat)
-            elif feat.startswith("ACC_"):
-                groups["Accelerometer"].append(feat)
-
-        return groups

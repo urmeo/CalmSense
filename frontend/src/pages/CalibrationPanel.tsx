@@ -2,6 +2,7 @@ import React from 'react';
 import Plot from '../components/Plot';
 import { Gauge, Target, AlertTriangle, TrendingDown, Info } from 'lucide-react';
 import results from '../../../outputs/dashboard/results';
+import Panel from '../components/Panel';
 import SummaryCard from '../components/SummaryCard';
 import { Calibration } from '../types';
 
@@ -83,8 +84,7 @@ const CalibrationPanel: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Reliability · all windows</h3>
+        <Panel title="Reliability · all windows">
           <Plot
             data={[
               {
@@ -108,18 +108,11 @@ const CalibrationPanel: React.FC = () => {
               xaxis: { title: { text: 'Confidence' }, range: [0, 1] },
               yaxis: { title: { text: 'Accuracy' }, range: [0, 1] },
               legend: { x: 0.02, y: 0.98, bgcolor: TRANSPARENT, font: { size: 10 } },
-              paper_bgcolor: TRANSPARENT,
-              plot_bgcolor: TRANSPARENT,
             }}
-            config={{ responsive: true, showSendToCloud: false, displayModeBar: false }}
-            style={{ width: '100%' }}
           />
-        </div>
+        </Panel>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Expected calibration error · all windows
-          </h3>
+        <Panel title="Expected calibration error · all windows">
           <Plot
             data={[
               {
@@ -136,19 +129,12 @@ const CalibrationPanel: React.FC = () => {
               height: 380,
               margin: { l: 50, r: 20, t: 20, b: 50 },
               yaxis: { title: { text: 'ECE' }, rangemode: 'tozero' },
-              paper_bgcolor: TRANSPARENT,
-              plot_bgcolor: TRANSPARENT,
             }}
-            config={{ responsive: true, showSendToCloud: false, displayModeBar: false }}
-            style={{ width: '100%' }}
           />
-        </div>
+        </Panel>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-          Decision-curve analysis
-        </h3>
+      <Panel title="Decision-curve analysis">
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
           Exploratory net benefit on full-window LOSO predictions, versus alerting everyone
           or no one. No clinical deployment has been validated.
@@ -180,18 +166,11 @@ const CalibrationPanel: React.FC = () => {
             xaxis: { title: { text: 'Alert threshold' } },
             yaxis: { title: { text: 'Net benefit' } },
             legend: { orientation: 'h', y: -0.2, font: { size: 11 } },
-            paper_bgcolor: TRANSPARENT,
-            plot_bgcolor: TRANSPARENT,
           }}
-          config={{ responsive: true, showSendToCloud: false, displayModeBar: false }}
-          style={{ width: '100%' }}
         />
-      </div>
+      </Panel>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Calibration metrics by evaluation
-        </h3>
+      <Panel title="Calibration metrics by evaluation">
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
           Brier is the mean squared error of the stress probability, averaged over windows.
           Matched and full-window rows use different evaluation sets.
@@ -218,7 +197,7 @@ const CalibrationPanel: React.FC = () => {
             </tbody>
           </table>
         </div>
-      </div>
+      </Panel>
 
       <div className="flex items-start gap-2 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm">
         <Info className="w-5 h-5 text-blue-500 mt-0.5 shrink-0" />

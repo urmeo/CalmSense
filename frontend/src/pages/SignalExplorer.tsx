@@ -22,15 +22,10 @@ const PANELS = [
   },
 ] as const;
 
-const CONDITION_COLORS: Record<string, string> = {
-  Baseline: 'rgba(56, 161, 105, 0.10)',
-  Stress: 'rgba(229, 62, 62, 0.10)',
-  Amusement: 'rgba(214, 158, 46, 0.10)',
-};
-const LABEL_COLORS: Record<string, string> = {
-  Baseline: '#38A169',
-  Stress: '#E53E3E',
-  Amusement: '#D69E2E',
+const CONDITIONS: Record<string, { background: string; color: string; swatch: string; label: string }> = {
+  Baseline: { background: 'rgba(56, 161, 105, 0.10)', color: '#38A169', swatch: 'bg-green-200', label: 'Baseline (Rest)' },
+  Stress: { background: 'rgba(229, 62, 62, 0.10)', color: '#E53E3E', swatch: 'bg-red-200', label: 'Stress (TSST)' },
+  Amusement: { background: 'rgba(214, 158, 46, 0.10)', color: '#D69E2E', swatch: 'bg-yellow-200', label: 'Amusement (Fun Videos)' },
 };
 
 const SignalExplorer: React.FC = () => {
@@ -93,8 +88,6 @@ const SignalExplorer: React.FC = () => {
     xaxis: { title: { text: 'Displayed time (s)' }, range: xRange, showgrid: true, gridcolor: 'rgba(0,0,0,0.1)' },
     height: 600,
     margin: { t: 70, b: 70, l: 60, r: 40 },
-    paper_bgcolor: 'rgba(0,0,0,0)',
-    plot_bgcolor: 'rgba(0,0,0,0)',
     shapes: segments.map((s) => ({
       type: 'rect',
       xref: 'x',
@@ -103,7 +96,7 @@ const SignalExplorer: React.FC = () => {
       x1: s.x1,
       y0: 0,
       y1: 1,
-      fillcolor: CONDITION_COLORS[s.name] || 'rgba(0,0,0,0.04)',
+      fillcolor: CONDITIONS[s.name]?.background || 'rgba(0,0,0,0.04)',
       line: { width: 0 },
     })),
     annotations: segments.map((s) => ({
@@ -113,7 +106,7 @@ const SignalExplorer: React.FC = () => {
       yref: 'paper',
       text: s.name,
       showarrow: false,
-      font: { color: LABEL_COLORS[s.name] || '#666' },
+      font: { color: CONDITIONS[s.name]?.color || '#666' },
     })),
   };
 
@@ -193,8 +186,7 @@ const SignalExplorer: React.FC = () => {
         ) : <Plot
           data={buildTraces()}
           layout={layout}
-          config={{ responsive: true, showSendToCloud: false, displayModeBar: true, modeBarButtonsToRemove: ['lasso2d', 'select2d'] }}
-          style={{ width: '100%' }}
+          config={{ displayModeBar: true, modeBarButtonsToRemove: ['lasso2d', 'select2d'] }}
           onRelayout={(e: any) => {
             if (e['xaxis.autorange']) {
               handleReset();
@@ -211,18 +203,12 @@ const SignalExplorer: React.FC = () => {
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Condition Legend</h3>
         <div className="flex flex-wrap gap-4">
-          <div className="flex items-center space-x-2">
-            <div className="w-6 h-4 bg-green-200 rounded"></div>
-            <span className="text-sm text-gray-600 dark:text-gray-400">Baseline (Rest)</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-6 h-4 bg-red-200 rounded"></div>
-            <span className="text-sm text-gray-600 dark:text-gray-400">Stress (TSST)</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-6 h-4 bg-yellow-200 rounded"></div>
-            <span className="text-sm text-gray-600 dark:text-gray-400">Amusement (Fun Videos)</span>
-          </div>
+          {Object.entries(CONDITIONS).map(([name, { swatch, label }]) => (
+            <div key={name} className="flex items-center space-x-2">
+              <div className={`w-6 h-4 rounded ${swatch}`}></div>
+              <span className="text-sm text-gray-600 dark:text-gray-400">{label}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>

@@ -12,38 +12,26 @@ python scripts/calibration.py --synthetic  # calibration smoke check; no downloa
 
 ```bash
 ruff format src/ tests/ scripts/
-ruff check --fix src/ tests/ scripts/
 ruff check src/ tests/ scripts/
 mypy src/ --ignore-missing-imports
 python -m pytest tests/ -q  # CI enforces ≥60% coverage on src/
 ```
 
 - Target `main` with one focused change.
-- Test behavior and methodology changes, including leakage, calibration, and windowing.
-- Fit imputation, scaling, balancing, and calibration inside each LOSO training fold.
-  Tests must verify that the held-out subject stays excluded from fitting.
-- **Don't commit generated artifacts** in `outputs/generated/` or local datasets in `data/`.
-  Committed `outputs/results/` and `outputs/figures/` preserve research snapshots;
-  see [result provenance](README.md#result-provenance).
-- Use short commit messages, such as `updated readme`, `updated features`, or `updated tests`.
+- Test changed behavior, calibration, and windowing. Verify that held-out subjects stay
+  excluded from fitting imputation, scaling, balancing, and calibration.
+- Keep local data and `outputs/generated/` out of commits. Preserve published
+  [research snapshots](README.md#result-provenance) unless explicitly updating results.
+- Use short commit messages: `updated readme`, `updated features`, or `updated tests`.
 
 ## Adding a new dataset (for cross-dataset transfer)
 
-Use [`src/datasets/non_eeg.py`](src/datasets/non_eeg.py) as the template. A dataset module needs one
-function that returns a per-window `DataFrame`:
-
-```python
-def build(subjects: list[str] | None = None) -> pd.DataFrame:
-    # one row per window, with the shared device-agnostic feature columns
-    # plus "subject" and "label" (0 = non-stress, 1 = stress).
-    ...
-```
-
-- Add the module to `scripts/cross_dataset.py` and its download to `scripts/download_data.py`,
-  with [SHA-256 verification](README.md#dataset-download-and-integrity).
-- Use shared HRV/EDA/TEMP/ACC summaries and binary stress/non-stress labels.
-- Evaluate leave-one-dataset-out generalization on **≥3 corpora with matched stress constructs**;
-  see [transfer limitations](README.md#cross-dataset-transfer).
+Follow [`src/datasets/non_eeg.py`](src/datasets/non_eeg.py): return one `DataFrame` row per
+window with the 18 shared HRV/EDA/TEMP/ACC features, `subject`, and `label`
+(0 = non-stress, 1 = stress). Register the adapter in `scripts/cross_dataset.py` and
+the download with SHA-256 verification in `scripts/download_data.py`.
+For generalization claims, evaluate **≥3 corpora with matched stress constructs**;
+see [transfer limitations](README.md#cross-dataset-transfer).
 
 ## Reporting bugs
 

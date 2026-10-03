@@ -2,20 +2,15 @@
 
 ### A Machine Learning and Deep Learning Framework for Wearable Biosignal Analysis, Integrating 1D CNNs, Explainable AI, Probability Calibration, and Cross-Dataset Evaluation.
 
-ML: Logistic Regression, Random Forest, XGBoost, LightGBM
-
-DL: 1D-CNN · Explainability: SHAP
-
 [Live demo](https://urmeo.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urmeo/CalmSense/blob/main/notebooks/CalmSense.ipynb) · [Structure](#architecture) · [Shipped model](#shipped-model)
 
 [![CalmSense dashboard](outputs/figures/demo.gif)](https://urmeo.github.io/CalmSense/)
 
 ## Overview
 
-- Classifies stress vs baseline from ECG, EDA (skin conductance), temperature, respiration, and motion.
-- Leave-One-Subject-Out (LOSO): train on 14 subjects, test on the 15th; repeat for all 15.
-- Compares LOSO with subject-mixed evaluation, motion ablation, transfer, and calibration.
-- Static dashboard displays committed results; synthetic calibration check runs offline.
+Stress classification from ECG, EDA, temperature, respiration, and motion.
+**LOSO:** train on 14 subjects, test on the 15th; repeat for all 15.
+The static dashboard displays committed results.
 
 | **15** | **58** | **869** | **1,032** |
 | :--: | :--: | :--: | :--: |
@@ -99,10 +94,10 @@ Click figures to enlarge.
 | LOSO, all windows + isotonic | 0.025 | 0.271 | 0.064 |
 <!-- AUTOGEN:calibration END -->
 
-15 bins; pooled binary RF predictions. Isotonic uses training-subject OOF probabilities.
-The plot compares full-window LOSO and its isotonic recalibration; matched windows are separate rows.
-Binary Brier is stress-probability MSE; multiclass sums squared class errors. Stored calibration's
-two-class scores and paired Brier gap/CI are halved for display; source JSON, ECE, curves and p-values are preserved.
+15 bins; pooled binary RF predictions; isotonic fitted to training-subject OOF probabilities.
+The plot uses full-window LOSO; matched windows are separate rows.
+Binary Brier is stress-probability MSE; multiclass sums squared class errors.
+Historical two-class Brier scores and paired gap/CI are halved for display; source values, ECE, curves and p-values remain unchanged.
 
 [Decision-curve analysis](outputs/figures/calibration_decision_curve.png).
 
@@ -239,9 +234,6 @@ Legacy chest/wrist caches rebuild automatically. Transfer caches verify extracto
 `--rebuild` replaces stale caches. Provenance stamping records the current environment and file hashes;
 it does not prove that this environment produced existing results.
 
-[Result provenance](#result-provenance) ·
-[Dashboard setup](#dashboard-development) · [Architecture](#architecture) · [Contributing](CONTRIBUTING.md).
-
 ### Dashboard development
 
 Node **24** and npm. From `frontend/`:
@@ -270,12 +262,6 @@ From the repository root: `python scripts/build_dashboard_data.py` refreshes das
 <details>
 <summary>Repository layout · 8 pipeline stages · data flow</summary>
 
-Wearable signals pass through preprocessing, windowing, and a LOSO benchmark.
-Feature models use extracted features; the CNN uses raw signal windows.
-The static dashboard displays exported experiment results.
-
-[Shipped model](#shipped-model) · [Data protocol](#data-and-evaluation-protocol) · [Result provenance](#result-provenance)
-
 ### Repository layout
 
 | Location | Contents |
@@ -285,17 +271,11 @@ The static dashboard displays exported experiment results.
 | `frontend/src/pages/` · `components/` | Dashboard views and shared UI |
 | `frontend/config/` · `frontend/tooling.mjs` | Configuration sources and dashboard commands |
 | `data/` | Local raw datasets |
-| [outputs/](#outputs) | Results, figures, model + SHA-256, dashboard exports and ignored generated files |
-
-### Outputs
-
-| Under `outputs/` | Contents |
-| --- | --- |
-| `results/` | Committed metrics, tables, history and provenance |
-| `figures/` | Committed research plots and `demo.gif` |
-| `models/` | Shipped model and checksum |
-| `dashboard/` | Committed results and signal modules |
-| `generated/` | Ignored caches, figures, logs, site builds and synthetic runs |
+| `outputs/results/` | Committed metrics, tables, history and provenance |
+| `outputs/figures/` | Committed research plots and `demo.gif` |
+| `outputs/models/` | Shipped model and SHA-256 checksum |
+| `outputs/dashboard/` | Committed results and signal modules |
+| `outputs/generated/` | Ignored caches, figures, logs, site builds and synthetic runs |
 
 Experiments refresh `results/` and `models/`; local plots use `generated/figures/`.
 Synthetic outputs stay in `generated/demo/{results,figures,models}/`; committed figures remain separate.
@@ -313,17 +293,9 @@ Synthetic outputs stay in `generated/demo/{results,figures,models}/`; committed 
 | 7. Analysis | Optimism gap, ablation, wrist/chest, transfer, SHAP, statistics, tuning | `scripts/{ablation,wrist,cross_dataset,stats,tuning}.py`, `src/portable.py` |
 | 8. Dashboard | Export results for the static React dashboard | `scripts/build_dashboard_data.py`, `scripts/export_signals.py`, `frontend/` |
 
-### Shared modules and reproducibility
-
-- **Configuration:** sampling rates, filters, feature settings, and subject list in `src/config.py`.
-- **Logging:** structured logs through `LoggerMixin` in `src/logging_config.py`.
-- **Synthetic data:** `src/synthetic.py`; `python scripts/calibration.py --synthetic` runs offline
-  in `outputs/generated/demo/`.
-  Near-separable synthetic signals produce no meaningful calibration or optimism evidence.
-- **Portable features:** version 2 EDA/TEMP slopes are per second; caches use versioned sidecars.
-- **Reproduction:** default `SEED = 42`; [experiment commands](#reproduce-experiments) regenerate
-  `outputs/results/` and local `outputs/generated/figures/`; see [result provenance](#result-provenance).
-  Committed `outputs/figures/` remain a separate snapshot.
+Sampling rates, filters, feature settings, subjects, and **seed 42**: `src/config.py`.
+Structured logs: `src/logging_config.py`. Offline demo: `src/synthetic.py`.
+Portable schema v2 uses per-second slopes and versioned cache sidecars.
 
 ### Data flow
 
@@ -352,17 +324,6 @@ flowchart TD
     J --> K["Static React dashboard; no backend"]
 ```
 
-Plain-text fallback:
-
-```text
-WESAD -> preprocess -> windows -> 58 features -> feature-model LOSO -> metrics
-                              -> raw windows -> 1D-CNN LOSO -> metrics
-Chest features -> calibration / personalization / full-data SHAP / ablation / statistics / tuning
-WESAD wrist -> wrist-only LOSO -> chest comparison
-WESAD wrist + Non-EEG -> portable features -> transfer analysis
-Experiment results -> dashboard data export -> static React dashboard
-```
-
 </details>
 
 ## Models
@@ -370,14 +331,13 @@ Experiment results -> dashboard data export -> static React dashboard
 <details>
 <summary>5 models · settings</summary>
 
-<table width="100%">
-<tr><th align="left" width="220">Model</th><th align="left" width="230">Type</th><th align="left" width="330">Key settings</th></tr>
-<tr><td>Logistic Regression</td><td>Linear</td><td>C=1.0, L2, class-balanced</td></tr>
-<tr><td>Random Forest</td><td>Bagged trees</td><td>200 trees, depth 10, class-balanced</td></tr>
-<tr><td>XGBoost</td><td>Boosted trees</td><td>200 trees, depth 7, lr 0.1</td></tr>
-<tr><td>LightGBM</td><td>Boosted trees</td><td>200 trees, 50 leaves, lr 0.1</td></tr>
-<tr><td>1D-CNN</td><td>Deep net on raw signal</td><td>Residual blocks, AdamW, early stopping</td></tr>
-</table>
+| Model | Key settings |
+| --- | --- |
+| Logistic Regression | C=1.0, L2, class-balanced |
+| Random Forest | 200 trees, depth 10, class-balanced |
+| XGBoost | 200 trees, depth 7, learning rate 0.1 |
+| LightGBM | 200 trees, 50 leaves, learning rate 0.1 |
+| 1D-CNN | Residual blocks, AdamW, early stopping |
 
 Feature models: fold-local imputation/scaling. CNN: raw windows.
 
@@ -388,33 +348,21 @@ Feature models: fold-local imputation/scaling. CNN: raw windows.
 <details>
 <summary>6 groups · counts and examples</summary>
 
-<table width="100%">
-<tr><th align="left" width="220">Group</th><th align="left" width="230">Count</th><th align="left" width="330">Examples</th></tr>
-<tr><td>HRV time domain</td><td>12</td><td>MeanNN, SDNN, RMSSD, pNN50</td></tr>
-<tr><td>HRV frequency</td><td>8</td><td>LF/HF power, LF/HF ratio</td></tr>
-<tr><td>HRV nonlinear</td><td>10</td><td>SampEn, DFA, SD1/SD2, CSI</td></tr>
-<tr><td>EDA (skin conductance)</td><td>15</td><td>SCL level, SCR count, SCR amplitude</td></tr>
-<tr><td>Temperature + respiration</td><td>8</td><td>temp slope, respiration rate</td></tr>
-<tr><td>Accelerometer (motion)</td><td>5</td><td>magnitude mean, std, energy</td></tr>
-</table>
+| Group | Count | Examples |
+| --- | ---: | --- |
+| HRV time domain | 12 | MeanNN, SDNN, RMSSD, pNN50 |
+| HRV frequency | 8 | LF/HF power, LF/HF ratio |
+| HRV nonlinear | 10 | SampEn, DFA, SD1/SD2, CSI |
+| EDA | 15 | SCL level, SCR count, SCR amplitude |
+| Temperature + respiration | 8 | Temperature slope, respiration rate |
+| Accelerometer | 5 | Magnitude mean, standard deviation, energy |
 
 </details>
 
 ## Tech stack
 
-<details>
-<summary>Python research pipeline · React dashboard</summary>
-
-<table width="100%">
-<tr><th align="left" width="220">Area</th><th align="left" width="560">Tools</th></tr>
-<tr><td>Modelling</td><td>scikit-learn, XGBoost, LightGBM, PyTorch</td></tr>
-<tr><td>Signal processing</td><td>NeuroKit2, SciPy</td></tr>
-<tr><td>Explainability</td><td>SHAP</td></tr>
-<tr><td>Dashboard</td><td>React, TypeScript</td></tr>
-<tr><td>Tooling</td><td>GitHub Actions, ruff, mypy, pytest</td></tr>
-</table>
-
-</details>
+**Models:** scikit-learn, XGBoost, LightGBM, PyTorch · **Signals:** NeuroKit2, SciPy · **Explainability:** SHAP.
+**Dashboard:** React, TypeScript · **Checks:** GitHub Actions, Ruff, mypy, pytest.
 
 ## Limitations
 

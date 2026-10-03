@@ -1,39 +1,35 @@
-import React from 'react';
-import {
-  Heart,
-  BookOpen,
-  Database,
-  Cpu,
-  Shield,
-  ExternalLink,
-} from 'lucide-react';
+import { Heart, BookOpen, Database, Cpu, Shield, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import results from '../../../outputs/dashboard/results';
+import Panel from '../components/Panel';
 
-const r = results as any;
-const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
+const details = [
+  {
+    title: 'Dataset', icon: Database,
+    items: ['WESAD: Wearable Stress and Affect Detection', '15 lab subjects; ECG, EDA, TEMP, RESP, ACC', 'Baseline, stress, amusement'],
+  },
+  {
+    title: 'Models', icon: Cpu,
+    items: ['Logistic Regression, Random Forest, XGBoost, LightGBM', 'Residual 1D-CNN on raw signals', 'LOSO with training-fold imputation and scaling'],
+  },
+  {
+    title: 'Features', icon: BookOpen,
+    items: [`${results.binary.n_features} features; 60 s windows, 50% overlap`, 'HRV, EDA, temperature, respiration, motion', 'EDA tonic/phasic decomposition'],
+  },
+  {
+    title: 'Explainability', icon: Shield,
+    items: ['Binary XGBoost mean |SHAP| on the full-data fit', 'Descriptive; no held-out or causal interpretation', 'Motion confounds and dataset-transfer limitations'],
+  },
+];
 
-// GitHub mark, inlined since lucide-react v1 dropped brand icons
-const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>
-    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-  </svg>
-);
+const links = [
+  ['Repository', 'https://github.com/urmeo/CalmSense'],
+  ['Architecture', 'https://github.com/urmeo/CalmSense#architecture'],
+  ['References', 'https://github.com/urmeo/CalmSense#references'],
+  ['License', 'https://github.com/urmeo/CalmSense/blob/main/LICENSE'],
+];
 
-const FeatureCard: React.FC<{
-  icon: React.ReactNode;
-  title: string;
-  children: React.ReactNode;
-}> = ({ icon, title, children }) => (
-  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-    <div className="flex items-center space-x-3 mb-3">
-      {icon}
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
-    </div>
-    <ul className="space-y-2 text-gray-600 dark:text-gray-400">{children}</ul>
-  </div>
-);
-
-const About: React.FC = () => {
+export default function About() {
   return (
     <div className="space-y-8 animate-fade-in max-w-4xl mx-auto">
       <div className="text-center">
@@ -41,175 +37,39 @@ const About: React.FC = () => {
           <Heart className="w-12 h-12 text-red-500" />
           <h1 className="text-4xl font-bold text-gradient">CalmSense</h1>
         </div>
-        <p className="text-xl text-gray-600 dark:text-gray-400">
-          Multimodal Stress Detection from Physiological Signals
-        </p>
-        <p className="mt-2 text-gray-500 dark:text-gray-500">
-          Version 1.0.0
-        </p>
+        <p className="text-xl text-gray-600 dark:text-gray-400">Wearable stress detection · v1.0.0</p>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-2">
-        {['Python 3.11+', 'PyTorch', 'React', 'WESAD Dataset'].map((badge) => (
-          <span
-            key={badge}
-            className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 rounded-full text-sm font-medium"
-          >
-            {badge}
-          </span>
+      <Panel title="Project">
+        <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+          Signal preprocessing, feature extraction, and Leave-One-Subject-Out evaluation:
+          each fold tests a person excluded from training.
+          The dashboard displays saved experiment results.
+        </p>
+        <Link to="/models" className="inline-block mt-4 text-blue-600 dark:text-blue-400 underline">
+          Compare model accuracy, macro-F1, and transfer results
+        </Link>
+      </Panel>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {details.map(({ title, icon: Icon, items }) => (
+          <Panel key={title} title={<span className="flex items-center gap-3"><Icon className="w-6 h-6 text-blue-500" />{title}</span>}>
+            <ul className="list-disc pl-5 space-y-2 text-gray-600 dark:text-gray-400">
+              {items.map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          </Panel>
         ))}
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          About the Project
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-          CalmSense benchmarks stress detection on the WESAD dataset using signal preprocessing,
-          feature extraction, and Leave-One-Subject-Out evaluation of four feature models and a
-          raw-signal 1D-CNN.
-        </p>
-        <p className="mt-4 text-gray-600 dark:text-gray-400 leading-relaxed">
-          Benchmark model comparisons use <strong>Leave-One-Subject-Out</strong> cross-validation:
-          each fold tests a person excluded from training. The highest observed binary accuracy
-          ({r.binary.best_model}) is{' '}
-          <strong>{pct(r.binary.loso_accuracy)}</strong>; the three-class result
-          ({r.multiclass.best_model}) is <strong>{pct(r.multiclass.loso_accuracy)}</strong>{' '}
-          (baseline/stress/amusement). Subject-mixed validation is a separate comparison;
-          SHAP describes a full-data binary XGBoost fit.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <FeatureCard icon={<Database className="w-6 h-6 text-blue-500" />} title="Dataset">
-          <li>• WESAD: Wearable Stress and Affect Detection</li>
-          <li>• 15 subjects with multimodal signals</li>
-          <li>• ECG, EDA, TEMP, RESP, ACC</li>
-          <li>• Three conditions: Baseline, Stress, Amusement</li>
-        </FeatureCard>
-
-        <FeatureCard icon={<Cpu className="w-6 h-6 text-green-500" />} title="Models">
-          <li>• Classical ML: Logistic Regression, Random Forest, XGBoost, LightGBM</li>
-          <li>• Deep Learning: residual 1D-CNN on raw signals</li>
-          <li>• Leakage-free per-fold imputation and scaling</li>
-          <li>• Leave-One-Subject-Out cross-validation</li>
-        </FeatureCard>
-
-        <FeatureCard icon={<BookOpen className="w-6 h-6 text-purple-500" />} title="Features">
-          <li>• {r.binary.n_features} physiological features extracted</li>
-          <li>• HRV time/frequency/nonlinear analysis</li>
-          <li>• EDA phasic/tonic decomposition</li>
-          <li>• 60s windows, 50% overlap</li>
-        </FeatureCard>
-
-        <FeatureCard icon={<Shield className="w-6 h-6 text-orange-500" />} title="Explainability">
-          <li>• Binary XGBoost feature ranking (mean |SHAP|)</li>
-          <li>• Descriptive full-data fit, not held-out evidence</li>
-          <li>• Matched-window optimism-gap analysis</li>
-          <li>• Motion-confound and transfer limitations</li>
-        </FeatureCard>
-      </div>
-
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          System Architecture
-        </h2>
-        <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 font-mono text-sm overflow-x-auto">
-          <pre className="text-gray-700 dark:text-gray-300">
-{`CalmSense pipeline
-
-  WESAD signals
-      │   per-channel filtering · R-peak detection · EDA decomposition
-      ▼
-  60 s windows
-      ├─ 58 features → LR / RF / XGBoost / LightGBM LOSO
-      └─ raw signals → 1D-CNN LOSO
-      ▼
-  Experiment results
-      │   full-data XGBoost SHAP · RF calibration & decision curves
-      │
-      ▼
-  dashboard data export  ──▶  React dashboard (static, no backend)`}
-          </pre>
-        </div>
-      </div>
-
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          Key Results
-        </h2>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200 dark:border-gray-700">
-                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Model</th>
-                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">LOSO Accuracy</th>
-                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Macro-F1</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[...r.binary.models]
-                .sort((a: any, b: any) => b.accuracy_mean - a.accuracy_mean)
-                .map((row: any, i: number) => (
-                  <tr key={row.model} className={`border-b border-gray-100 dark:border-gray-700 ${i === 0 ? 'bg-green-50 dark:bg-green-900/20' : ''}`}>
-                    <td className="px-4 py-2 text-gray-900 dark:text-white font-medium">{row.model}</td>
-                    <td className="px-4 py-2 text-gray-600 dark:text-gray-400">{pct(row.accuracy_mean)}</td>
-                    <td className="px-4 py-2 text-gray-600 dark:text-gray-400">{pct(row.f1_macro_mean)}</td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          References
-        </h2>
-        <ul className="space-y-3 text-gray-600 dark:text-gray-400">
-          <li className="flex items-start space-x-2">
-            <span className="text-blue-500 mt-1">•</span>
-            <span>
-              Schmidt, P., et al. (2018). "Introducing WESAD, a Multimodal Dataset for Wearable Stress and Affect Detection."
-              <em> ICMI 2018</em>.
-            </span>
-          </li>
-          <li className="flex items-start space-x-2">
-            <span className="text-blue-500 mt-1">•</span>
-            <span>
-              Task Force of ESC and NASPE (1996). "Heart rate variability: Standards of measurement, physiological interpretation, and clinical use."
-              <em> Circulation</em>.
-            </span>
-          </li>
-          <li className="flex items-start space-x-2">
-            <span className="text-blue-500 mt-1">•</span>
-            <span>
-              Lundberg & Lee (2017). "A Unified Approach to Interpreting Model Predictions."
-              <em> NeurIPS 2017</em>.
-            </span>
-          </li>
-        </ul>
-      </div>
-
-      <div className="flex flex-wrap justify-center gap-4">
-        <a
-          href="https://github.com/urmeo/CalmSense"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center space-x-2 px-4 py-2 bg-gray-900 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors"
-        >
-          <GithubIcon className="w-5 h-5" />
-          <span>GitHub Repository</span>
-          <ExternalLink className="w-4 h-4" />
-        </a>
-      </div>
-
-      <div className="text-center text-gray-500 dark:text-gray-500 text-sm">
-        <p>© 2025 Urme Bose. Licensed under MIT License.</p>
-        <p className="mt-1">Built with React, TypeScript, Tailwind CSS, and PyTorch.</p>
-      </div>
+      <nav aria-label="Project resources" className="flex flex-wrap justify-center gap-4">
+        {links.map(([label, href]) => (
+          <a key={label} href={href} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 text-blue-600 dark:text-blue-400 underline">
+            {label}<ExternalLink aria-hidden="true" className="w-4 h-4" />
+          </a>
+        ))}
+      </nav>
+      <p className="text-center text-gray-500 dark:text-gray-400 text-sm">© 2025 Urme Bose · MIT License</p>
     </div>
   );
-};
-
-export default About;
+}

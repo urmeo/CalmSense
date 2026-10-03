@@ -12,6 +12,7 @@ import pandas as pd
 
 from .config import FS
 from .data.loader import WESADLoader
+from .preprocessing.filters import _positive_number
 
 WINDOW_SEC = 60.0
 OVERLAP = 0.5
@@ -31,14 +32,7 @@ PORTABLE_FEATURE_COLUMNS = [
 def _stats(
     x: np.ndarray, prefix: str, keys: List[str], sampling_rate: float = 1.0
 ) -> Dict[str, float]:
-    if isinstance(sampling_rate, (bool, np.bool_)):
-        raise ValueError("sampling_rate must be finite and positive")
-    try:
-        sampling_rate = float(sampling_rate)
-    except (TypeError, ValueError) as error:
-        raise ValueError("sampling_rate must be finite and positive") from error
-    if not np.isfinite(sampling_rate) or sampling_rate <= 0:
-        raise ValueError("sampling_rate must be finite and positive")
+    sampling_rate = _positive_number(sampling_rate, "sampling_rate")
     x = np.asarray(x, dtype=float).ravel()
     # Build timestamps before masking NaNs so gaps do not change the estimated slope.
     t = np.arange(len(x), dtype=float) / sampling_rate

@@ -15,8 +15,8 @@ import numpy as np
 from sklearn.metrics import average_precision_score, roc_auc_score, roc_curve
 from sklearn.model_selection import LeaveOneGroupOut
 
-from scripts.calibration import _pos_proba
-from scripts.run_experiment import CLF_NAMES, _fit_params, build_pipeline, load_cached, prepare_task
+from scripts.calibration import _pooled_proba
+from scripts.run_experiment import CLF_NAMES, build_pipeline, load_cached, prepare_task
 from src.calibration import brier_score
 from src.config import RESULTS_DIR
 from src.utils import provenance
@@ -27,14 +27,10 @@ POINT_MODEL = "rf"  # the shipped model
 
 def loso_pos_proba(key, X, y, groups):
     """Pooled out-of-fold P(class == 1), aligned with pooled true labels."""
-    logo = LeaveOneGroupOut()
-    p1, true = [], []
-    for train_idx, test_idx in logo.split(X, y, groups):
-        pipe = build_pipeline(key)
-        pipe.fit(X[train_idx], y[train_idx], **_fit_params(pipe, y[train_idx]))
-        p1.extend(_pos_proba(pipe, X[test_idx]))
-        true.extend(y[test_idx])
-    return np.asarray(true), np.asarray(p1)
+    true, proba, _ = _pooled_proba(
+        lambda: build_pipeline(key), X, y, groups, LeaveOneGroupOut().split(X, y, groups)
+    )
+    return true, proba[:, 1]
 
 
 def operating_point(y_true, p1):

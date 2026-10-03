@@ -1,8 +1,12 @@
 """The shared cross-dataset feature space is consistent and robust."""
 
+import sys
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
 
+from src.datasets import non_eeg
 from src.portable import portable_features
 
 
@@ -74,11 +78,6 @@ def test_sampling_rates_must_be_explicit():
 
 
 def test_noneeg_windows_align_annotations_sensor_channels_and_hr(tmp_path, monkeypatch):
-    import sys
-    from types import SimpleNamespace
-
-    from src.datasets import non_eeg
-
     monkeypatch.setattr(non_eeg, "DATA_DIR", tmp_path)
     (tmp_path / "Subject1_AccTempEDA.hea").touch()
     sensor_time = np.arange(180 * 8) / 8
@@ -113,11 +112,6 @@ def test_noneeg_windows_align_annotations_sensor_channels_and_hr(tmp_path, monke
 
 
 def test_noneeg_rejects_annotations_beyond_available_samples(tmp_path, monkeypatch):
-    import sys
-    from types import SimpleNamespace
-
-    from src.datasets import non_eeg
-
     monkeypatch.setattr(non_eeg, "DATA_DIR", tmp_path)
     (tmp_path / "Subject1_AccTempEDA.hea").touch()
     annotations = SimpleNamespace(sample=np.array([0, 900]), aux_note=["Relax", "CognitiveStress"])

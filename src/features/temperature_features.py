@@ -10,7 +10,6 @@ from ..preprocessing.filters import _positive_number
 class TemperatureFeatureExtractor(LoggerMixin):
     def __init__(self, sampling_rate: float = 4.0):
         self.sampling_rate = _positive_number(sampling_rate, "sampling_rate")
-        self.logger.debug(f"TemperatureFeatureExtractor initialized, fs={sampling_rate} Hz")
 
     def _validate_signal(self, signal: np.ndarray) -> Optional[np.ndarray]:
         if signal is None:
@@ -50,10 +49,6 @@ class TemperatureFeatureExtractor(LoggerMixin):
             if len(x) > 1:
                 slope, _, _, _, _ = stats.linregress(x, temp)
                 features["TEMP_slope"] = float(slope)
-
-            self.logger.debug(
-                f"Extracted 5 temperature features, mean={features['TEMP_mean']:.2f}°C"
-            )
 
         except Exception as e:
             self.logger.error(f"Temperature feature extraction failed: {e}")

@@ -25,8 +25,6 @@ class WESADLoader(LoggerMixin):
         self._validate_path()
         self.subjects = self._discover_subjects()
 
-        self.logger.info(f"WESADLoader initialized: {len(self.subjects)} subjects available")
-
     def _validate_path(self) -> None:
         if not self.data_path.is_dir():
             self.logger.error(f"WESAD data path not found: {self.data_path}")
@@ -115,7 +113,6 @@ class WESADLoader(LoggerMixin):
             signals_upper = {s.upper() for s in signals}
             chest_signals = {k: v for k, v in chest_signals.items() if k.upper() in signals_upper}
             wrist_signals = {k: v for k, v in wrist_signals.items() if k.upper() in signals_upper}
-            self.logger.debug(f"Filtered to signals: {signals}")
 
         result = {
             "subject": subject_id,

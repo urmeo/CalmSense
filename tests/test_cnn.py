@@ -1,8 +1,4 @@
-"""The 1D-CNN learns a signal and generalizes to held-out data.
-
-torch is an optional heavy dependency; if it is not installed these tests skip
-cleanly rather than erroring at collection (which would abort the whole run).
-"""
+"""The 1D-CNN learns a signal and separates training from validation subjects."""
 
 import numpy as np
 import pytest
