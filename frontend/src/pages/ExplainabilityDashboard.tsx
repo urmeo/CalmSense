@@ -1,11 +1,11 @@
 import React from 'react';
-import Plot from 'react-plotly.js';
+import Plot from '../components/Plot';
 import { FileSearch, Info, AlertTriangle } from 'lucide-react';
-import results from '../results.json';
+import results from '../../../outputs/dashboard/results';
 
 const prettify = (f: string) => f.replace(/_/g, ' ');
 
-// Real global feature importance: mean |SHAP| from the trained Random Forest
+// Descriptive mean |SHAP| from a binary XGBoost fit on the full dataset.
 const shap: { feature: string; mean_abs_shap: number }[] = (results as any).shap || [];
 const importance = shap
   .slice()
@@ -17,19 +17,17 @@ const maxImportance = Math.max(...importance.map((d) => d.value), 0);
 const ExplainabilityDashboard: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
           <FileSearch className="w-6 h-6" /> Explainability
         </h1>
         <p className="text-gray-500 dark:text-gray-400">
-          Global feature importance (mean |SHAP|) from the trained Random Forest, over the
-          held-out predictions.
+          Global mean |SHAP| from binary XGBoost fitted and explained on the full dataset.
+          These summaries describe that fit, not held-out performance or causal effects.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Importance bars */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Top features (mean |SHAP|)
@@ -52,7 +50,6 @@ const ExplainabilityDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Ranking chart */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Importance ranking
@@ -71,18 +68,17 @@ const ExplainabilityDashboard: React.FC = () => {
             layout={{
               height: 360,
               margin: { l: 150, r: 20, t: 10, b: 40 },
-              xaxis: { title: 'mean |SHAP|' },
+              xaxis: { title: { text: 'mean |SHAP|' } },
               yaxis: { autorange: 'reversed' },
               paper_bgcolor: 'rgba(0,0,0,0)',
               plot_bgcolor: 'rgba(0,0,0,0)',
             }}
-            config={{ responsive: true, displayModeBar: false }}
+            config={{ responsive: true, showSendToCloud: false, displayModeBar: false }}
             style={{ width: '100%' }}
           />
         </div>
       </div>
 
-      {/* Honest interpretation */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
           What the model relies on
@@ -90,10 +86,9 @@ const ExplainabilityDashboard: React.FC = () => {
         <div className="space-y-4 text-sm text-gray-700 dark:text-gray-300">
           {importance.length > 0 ? (
             <p>
-              The strongest single contributor is <strong>{importance[0].feature}</strong>, a motion
-              feature. Autonomic biomarkers follow: heart-rate-interval features (HRV MedianNN /
-              MeanNN) and electrodermal activity (EDA SCR / SCL), which track the sympathetic arousal
-              expected under acute stress (Task Force, 1996).
+              The largest mean absolute contribution in this fit is{' '}
+              <strong>{importance[0].feature}</strong>. The ranking summarizes model behavior
+              across the training rows; it is not a per-person physiological assessment.
             </p>
           ) : (
             <p>Run the experiment to populate SHAP values.</p>
@@ -101,17 +96,16 @@ const ExplainabilityDashboard: React.FC = () => {
           <div className="flex items-start gap-2 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
             <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5 shrink-0" />
             <p className="text-yellow-800 dark:text-yellow-300">
-              <strong>Motion confound:</strong> the top feature is accelerometer-based. The stress
-              condition (public speaking) involves more movement than seated baseline, so motion may
-              partly stand in for the task rather than for physiology. The ablation study quantifies
-              how much accuracy survives without motion features.
+              <strong>Motion confound:</strong> accelerometer features may encode differences
+              between laboratory tasks. The ablation study measures accuracy after removing
+              motion features; a high SHAP value alone does not establish a stress biomarker.
             </p>
           </div>
           <div className="flex items-start gap-2 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
             <Info className="w-5 h-5 text-blue-500 mt-0.5 shrink-0" />
             <p className="text-blue-800 dark:text-blue-300">
-              <strong>Disclaimer:</strong> research demonstration only, not a medical device.
-              Reference ranges follow Task Force (1996) HRV guidelines.
+              <strong>Research scope:</strong> aggregate feature importance only. This dashboard
+              does not diagnose stress or provide individual clinical interpretation.
             </p>
           </div>
         </div>

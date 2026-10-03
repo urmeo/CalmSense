@@ -1,53 +1,49 @@
 # Contributing to CalmSense
 
-Thanks for your interest. CalmSense is a research codebase, so the bar is **honest, reproducible
-results** over features. Contributions that tighten methodology, add tests, or improve clarity are
-especially welcome.
-
 ## Setup
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-make install-dev          # pinned deps (requirements.lock) + editable package + dev tools
-make demo                 # smoke-test the full pipeline on synthetic data (no download)
+python -m pip install -e ".[dev]"
+python scripts/calibration.py --synthetic  # calibration smoke check; no download
 ```
 
 ## Before you open a PR
 
 ```bash
-make format               # ruff format + autofix
-make lint                 # ruff check
-make test                 # pytest (must pass; CI enforces ≥60% coverage on src/)
+ruff format src/ tests/ scripts/
+ruff check --fix src/ tests/ scripts/
+ruff check src/ tests/ scripts/
+mypy src/ --ignore-missing-imports
+python -m pytest tests/ -q  # CI enforces ≥60% coverage on src/
 ```
 
-- **Target main** with a focused PR; keep unrelated changes out.
-- **Add a test** for any behavior change, methodology changes (leakage, calibration, windowing)
-  must come with a guard test in tests/.
-- **Never weaken the leakage guarantees.** Imputation, scaling, balancing, and calibration are fit
-  *inside* each LOSO fold; if you touch the evaluation path, prove the test subject stays unseen.
-- **Don't commit generated artifacts** (data/processed/, results/calibration.json,
-  results/personalization.json, figures from synthetic runs). The committed results/ are a fixed
-  WESAD snapshot, see [results/README.md](results/README.md).
-- **Commit messages:** short and concrete (1 to 3 words describing what changed), e.g. honest readme,
-  fix leak, dedup windowing.
+- Target `main` with one focused change.
+- Test behavior and methodology changes, including leakage, calibration, and windowing.
+- Fit imputation, scaling, balancing, and calibration inside each LOSO training fold.
+  Tests must verify that the held-out subject stays excluded from fitting.
+- **Don't commit generated artifacts** in `outputs/generated/` or local datasets in `data/`.
+  Committed `outputs/results/` and `outputs/figures/` preserve research snapshots;
+  see [result provenance](README.md#result-provenance).
+- Use short commit messages, such as `updated readme`, `updated features`, or `updated tests`.
 
 ## Adding a new dataset (for cross-dataset transfer)
 
 Use [`src/datasets/non_eeg.py`](src/datasets/non_eeg.py) as the template. A dataset module needs one
-function that returns a tidy per-window `DataFrame`:
+function that returns a per-window `DataFrame`:
 
 ```python
-def build(subjects: Optional[list] = None) -> pd.DataFrame:
+def build(subjects: list[str] | None = None) -> pd.DataFrame:
     # one row per window, with the shared device-agnostic feature columns
     # plus "subject" and "label" (0 = non-stress, 1 = stress).
     ...
 ```
 
-Then wire it into `scripts/cross_dataset.py` alongside WESAD and Non-EEG, and add its download to
-`scripts/download_data.py` (with a SHA-256, see [README dataset integrity](README.md#dataset-download-and-integrity)). Keep the feature space
-*device-agnostic* (HRV/EDA/TEMP/ACC summaries), harmonize labels to the binary stress vs. non-stress
-contrast, and remember: a robust leave-one-dataset-out claim needs **≥3 corpora with matched stress
-constructs** (see [README: Cross-dataset transfer](README.md#cross-dataset-transfer)).
+- Add the module to `scripts/cross_dataset.py` and its download to `scripts/download_data.py`,
+  with [SHA-256 verification](README.md#dataset-download-and-integrity).
+- Use shared HRV/EDA/TEMP/ACC summaries and binary stress/non-stress labels.
+- Evaluate leave-one-dataset-out generalization on **≥3 corpora with matched stress constructs**;
+  see [transfer limitations](README.md#cross-dataset-transfer).
 
 ## Reporting bugs
 

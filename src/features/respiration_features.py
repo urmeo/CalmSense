@@ -31,13 +31,7 @@ class RespirationFeatureExtractor(LoggerMixin):
         breath_troughs: Optional[np.ndarray] = None,
         breath_intervals: Optional[np.ndarray] = None,
     ) -> Dict[str, float]:
-        features = {
-            "RESP_rate": np.nan,
-            "RESP_amplitude": np.nan,
-            "RESP_variability": np.nan,
-            "RESP_inhale_exhale_ratio": np.nan,
-            "RESP_apnea_index": np.nan,
-        }
+        features = dict.fromkeys(self.get_feature_descriptions(), np.nan)
 
         validated = self._validate_signal(resp)
         if validated is None:

@@ -39,6 +39,7 @@ def prepare_binary(df):
 
 
 def run():
+    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     df = load_wrist()
     if df is None:
         print("Building wrist features...")
@@ -64,7 +65,7 @@ def run():
     with open(RESULTS_DIR / "metrics.json") as f:
         chest = json.load(f)["binary"]
     chest_best = max(chest["models"], key=lambda r: r["accuracy_mean"])
-    # Same-model (RF) comparison is the honest headline
+    # Hold the classifier family fixed when comparing chest and wrist feature sets.
     chest_rf = next(m["accuracy_mean"] for m in chest["models"] if m["model"] == "Random Forest")
     wrist_rf = next(m["accuracy_mean"] for m in rows if m["model"] == "Random Forest")
 

@@ -4,18 +4,18 @@
 
 ML: Logistic Regression, Random Forest, XGBoost, LightGBM
 
-DL: 1D-CNN, SHAP
+DL: 1D-CNN · Explainability: SHAP
 
-[Live demo](https://urmeo.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urmeo/CalmSense/blob/main/notebooks/CalmSense.ipynb)
+[Live demo](https://urmeo.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urmeo/CalmSense/blob/main/notebooks/CalmSense.ipynb) · [Structure](#architecture) · [Shipped model](#shipped-model)
 
-[![CalmSense dashboard](docs/demo.gif)](https://urmeo.github.io/CalmSense/)
+[![CalmSense dashboard](outputs/figures/demo.gif)](https://urmeo.github.io/CalmSense/)
 
-## What this is
+## Overview
 
-- Detects stress vs baseline from wearable signals: ECG, EDA (skin conductance), temperature, respiration, motion.
-- Scored Leave-One-Subject-Out (LOSO): train on 14 people, test on the 15th, rotate.
-- Shows where the usual high numbers come from: subject leakage, motion, dataset shift, calibration.
-- Ships a static dashboard of the committed results (no backend). `make demo` runs the full pipeline offline on synthetic signals.
+- Classifies stress vs baseline from ECG, EDA (skin conductance), temperature, respiration, and motion.
+- Leave-One-Subject-Out (LOSO): train on 14 subjects, test on the 15th; repeat for all 15.
+- Compares LOSO with subject-mixed evaluation, motion ablation, transfer, and calibration.
+- Static dashboard displays committed results; synthetic calibration check runs offline.
 
 | **15** | **58** | **869** | **1,032** |
 | :--: | :--: | :--: | :--: |
@@ -34,8 +34,9 @@ DL: 1D-CNN, SHAP
 | 1D-CNN | 0.718 | 0.648 | n/a | n/a | 0.626 | 0.543 |
 
 Accuracy / macro-F1: subject means. *AUROC/AUPRC: separate pooled pass; see notes below.
+RF balanced accuracy: **0.903** (pooled default decisions).
 
-**RF 95% CI: [0.860, 0.960]** · four feature models statistically tied (**p = 0.806**).
+**RF accuracy 95% CI: [0.860, 0.960]** · no significant difference detected among four feature models (**p = 0.806**).
 
 <details>
 <summary>6 checks · numeric summary</summary>
@@ -45,7 +46,7 @@ Accuracy / macro-F1: subject means. *AUROC/AUPRC: separate pooled pass; see note
 | Subject leakage | Binary **0.907 → 0.964** (+5.7 pp) · three-class **0.658 → 0.792** (+13.3 pp) |
 | Motion ablation | **0.913 → 0.901** without motion |
 | Chest / wrist | **0.913 / 0.893** · same RF |
-| Transfer | **0.573 / 0.500** balanced accuracy |
+| Transfer | **0.557 / 0.494** balanced accuracy |
 | Isotonic calibration | ECE **0.070 → 0.025** |
 | Personalization | ECE **0.146 → 0.069** · requested 20 windows |
 
@@ -69,7 +70,7 @@ Click figures to enlarge.
 <td align="center" valign="top" width="50%"><strong>Chest vs wrist</strong><br><a href="outputs/figures/chest_vs_wrist.png"><img src="outputs/figures/chest_vs_wrist.png" width="390" alt="Same-model Random Forest binary LOSO accuracy for chest and wrist"></a><br><sub>RF: <b>0.913 vs 0.893</b></sub></td>
 </tr>
 <tr>
-<td align="center" valign="top" width="50%"><strong>Cross-dataset transfer</strong><br><a href="outputs/figures/cross_dataset.png"><img src="outputs/figures/cross_dataset.png" width="390" alt="Within-dataset and cross-dataset balanced accuracy on 18 shared features"></a><br><sub>Balanced accuracy: <b>0.573 / 0.500</b></sub></td>
+<td align="center" valign="top" width="50%"><strong>Cross-dataset transfer</strong><br><a href="outputs/figures/cross_dataset.png"><img src="outputs/figures/cross_dataset.png" width="390" alt="Within-dataset and cross-dataset balanced accuracy on 18 shared features"></a><br><sub>Balanced accuracy: <b>0.557 / 0.494</b></sub></td>
 <td align="center" valign="top" width="50%"><strong>SHAP explainability</strong><br><a href="outputs/figures/shap_beeswarm.png"><img src="outputs/figures/shap_beeswarm.png" width="390" alt="Global signed SHAP contributions and feature values for the full-data gradient-boosted model"></a><br><sub>Full-data fit: motion · heart rate · EDA · respiration</sub></td>
 </tr>
 <tr>
@@ -90,14 +91,18 @@ Click figures to enlarge.
 <!-- AUTOGEN:calibration START -->
 | Evaluation | ECE | MCE | Brier |
 | --- | :-: | :-: | :-: |
-| Subject-mixed 5-fold, non-overlapping | 0.085 | 0.290 | 0.077 |
-| LOSO, matched non-overlapping | 0.090 | 0.256 | 0.144 |
-| LOSO, all windows | 0.070 | 0.160 | 0.136 |
-| LOSO, all windows + isotonic | 0.025 | 0.271 | 0.129 |
+| Subject-mixed 5-fold, non-overlapping | 0.085 | 0.290 | 0.038 |
+| LOSO, matched non-overlapping | 0.090 | 0.256 | 0.072 |
+| LOSO, all windows | 0.070 | 0.160 | 0.068 |
+| LOSO, all windows + isotonic | 0.025 | 0.271 | 0.064 |
 <!-- AUTOGEN:calibration END -->
 
 15 bins; pooled binary RF predictions. Isotonic uses training-subject OOF probabilities.
-The plot shows full LOSO and subject-mixed curves; compare matched windows in the table.
+The plot compares full-window LOSO and its isotonic recalibration; matched windows are separate rows.
+Binary Brier is stress-probability MSE; multiclass sums squared class errors. Stored calibration's
+two-class scores and paired Brier gap/CI are halved for display; source JSON, ECE, curves and p-values are preserved.
+
+[Decision-curve analysis](outputs/figures/calibration_decision_curve.png).
 
 ### Personalization through probability recalibration
 
@@ -112,7 +117,8 @@ The plot shows full LOSO and subject-mixed curves; compare matched windows in th
 <!-- AUTOGEN:personalization END -->
 
 Subject means on a reserved half; no classifier retraining. Budgets are requests:
-5 draws 4 balanced windows; class availability can reduce enrollment.
+5 draws 4 balanced windows; class availability can reduce enrollment. Brier uses the same positive-class MSE convention.
+Enrollment and evaluation windows are disjoint.
 
 </details>
 
@@ -131,7 +137,7 @@ Imputation/scaling/balancing/calibration use training subjects only.
 Leakage gaps use matched non-overlapping windows; chart error bars are subject SDs.
 Chest/wrist differences do not establish sensor equivalence.
 
-*AUROC/AUPRC: pooled OOF [threshold pass](results/threshold_metrics.json);
+*AUROC/AUPRC: pooled OOF [threshold pass](outputs/results/threshold_metrics.json);
 AUPRC is average precision. XGBoost omits benchmark sample weights; CNN values unavailable.
 
 RF Youden J: **0.454** threshold · sensitivity **0.902** · specificity **0.913** ·
@@ -140,17 +146,26 @@ Confusion matrices instead use default decisions, pooled and row-normalized.
 
 ### Cross-dataset transfer
 
-18 shared features; balanced accuracy. Within WESAD **0.864**; within Non-EEG **0.699**.
+Separate wrist-feature RF; 18 shared features; version 2 slopes per second; balanced accuracy. Within WESAD **0.868**; within Non-EEG **0.699**.
+15 WESAD / 20 Non-EEG subjects; NeuroKit2 0.2.12. Heart-rate extraction differs from the benchmark's 0.2.7 environment.
+Portable features preserve sample timestamps when non-finite values are omitted.
 Transfer is confounded by devices, stressors, and labels. SHAP explains a full-data fit;
 it is not causal or held-out evidence.
 
 ### Shipped model
 
-The [shipped RF](outputs/models/stress_classifier.joblib) is refit on all 869 binary windows;
-LOSO evaluates separate fits. No pretrained third-party weights.
+The [shipped chest RF](outputs/models/stress_classifier.joblib) is refit on all **869** binary windows;
+LOSO evaluates separate fits. Median imputation → standardization → RF, trained with **scikit-learn 1.6.1**.
+Outputs: baseline/stress label and **uncalibrated stress probability**; recalibration maps are not bundled.
+No pretrained third-party weights. [Checksum verification](SECURITY.md).
 
-Sources: [benchmark](results/metrics.json) · [statistics](results/stats.json) ·
-[ablation](results/ablation.csv) · [wrist](results/wrist.json) · [transfer](results/cross_dataset.json).
+Sources: [benchmark](outputs/results/metrics.json) · [statistics](outputs/results/stats.json) ·
+[ablation](outputs/results/ablation.csv) · [wrist](outputs/results/wrist.json) · [transfer](outputs/results/cross_dataset.json).
+
+### Result provenance
+
+[Benchmark metadata](outputs/results/provenance.json) · [Transfer metadata](outputs/results/cross_dataset.json).
+Transfer records raw-file manifests, source-file hashes and a working-tree dirty flag.
 
 </details>
 
@@ -162,20 +177,21 @@ Python **3.11 / 3.12**. From the repository root:
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-make install-dev
-make demo                     # offline synthetic smoke check
+python -m pip install -e ".[dev]"
+python scripts/calibration.py --synthetic  # offline calibration smoke check
 ```
 
 ### Dataset download and integrity
 
 WESAD: [official UCI source](https://archive.ics.uci.edu/dataset/465/wesad+wearable+stress+and+affect+detection),
-research agreement; not redistributed. Non-EEG downloads directly.
+research agreement; not redistributed.
+Non-EEG: [PhysioNet source](https://physionet.org/content/noneeg/1.0.0/), downloads directly;
+[Birjandtalab et al., IEEE SiPS 2016](https://doi.org/10.1109/SiPS.2016.27).
 
 ```bash
-make wesad                    # data/raw/WESAD
-make data                     # data/external/noneeg
+python scripts/download_data.py --wesad  # data/raw/WESAD
+python scripts/download_data.py          # data/external/noneeg
 python scripts/download_data.py --verify-wesad
-make reproduce                # regenerates scientific outputs
 ```
 
 Manual extraction: `data/raw/WESAD/S2/S2.pkl` through `S17/S17.pkl`, excluding S12.
@@ -186,11 +202,151 @@ Binary uses 1/2; three-class uses 1/2/3.
 
 No official version tag/checksums; verification uses all 15 committed SHA-256 references.
 Trusted pickles only: [security](SECURITY.md). macOS OpenMP: `brew install libomp`.
-`requirements.lock` records the published environment; newer NeuroKit2 can change wrist/transfer
-results (commit `61d0d2c`). `make demo` provides no scientific evidence.
+Package environments: [benchmark](outputs/results/provenance.json) · [transfer](outputs/results/cross_dataset.json).
+NeuroKit2 versions can change wrist/transfer results. The synthetic demo provides no scientific evidence.
 
-Tables: `python scripts/update_readme_tables.py`. [Results snapshot](results/README.md) ·
-[Dashboard setup](frontend/README.md) · [Architecture](docs/ARCHITECTURE.md) · [Contributing](CONTRIBUTING.md).
+### Reproduce experiments
+
+After downloading both datasets, run these scripts in order to regenerate results, local figures,
+the model and checksum, README tables, and dashboard data:
+
+```bash
+python scripts/run_experiment.py
+python scripts/ablation.py
+python scripts/wrist.py
+python scripts/cross_dataset.py
+python scripts/calibration.py
+python scripts/personalize.py
+python scripts/update_readme_tables.py
+python scripts/tuning.py
+python scripts/stats.py
+python scripts/threshold_metrics.py
+python scripts/build_dashboard_data.py
+python scripts/stamp_provenance.py
+```
+
+[Result provenance](#result-provenance) ·
+[Dashboard setup](#dashboard-development) · [Architecture](#architecture) · [Contributing](CONTRIBUTING.md).
+
+### Dashboard development
+
+Node **24** and npm. From `frontend/`:
+
+```bash
+node tooling.mjs install
+node tooling.mjs dev
+node tooling.mjs build    # TypeScript check and production build
+node tooling.mjs preview
+node tooling.mjs audit
+node tooling.mjs update   # Dependency edits: review source lock changes
+```
+
+Edit `frontend/config/*.mjs`; commands generate ignored npm/TypeScript JSON files.
+GitHub dependency discovery does not read the custom manifest.
+CI installs locked dependencies, blocks moderate or higher frontend audit findings, builds once and publishes `outputs/generated/site/`
+under `/CalmSense/` with a deep-link fallback after all checks pass on `main` (push or manual run).
+From the repository root: `python scripts/build_dashboard_data.py` refreshes dashboard results;
+`python scripts/export_signals.py` refreshes signal snapshots and requires WESAD.
+
+</details>
+
+## Architecture
+
+<details>
+<summary>Repository layout · 8 pipeline stages · data flow</summary>
+
+Wearable signals pass through preprocessing, windowing, and a LOSO benchmark.
+Feature models use extracted features; the CNN uses raw signal windows.
+The static dashboard displays exported experiment results.
+
+[Shipped model](#shipped-model) · [Data protocol](#data-and-evaluation-protocol) · [Result provenance](#result-provenance)
+
+### Repository layout
+
+| Location | Contents |
+| --- | --- |
+| `src/` · `scripts/` | Research modules and experiment commands |
+| `notebooks/` | Runnable synthetic demo |
+| `frontend/src/pages/` · `components/` | Dashboard views and shared UI |
+| `frontend/config/` · `frontend/tooling.mjs` | Configuration sources and dashboard commands |
+| `data/` | Local raw datasets |
+| [outputs/](#outputs) | Results, figures, model + SHA-256, dashboard exports and ignored generated files |
+
+### Outputs
+
+| Under `outputs/` | Contents |
+| --- | --- |
+| `results/` | Committed metrics, tables, history and provenance |
+| `figures/` | Committed research plots and `demo.gif` |
+| `models/` | Shipped model and checksum |
+| `dashboard/` | Committed results and signal modules |
+| `generated/` | Ignored caches, figures, logs, site builds and synthetic runs |
+
+Experiments refresh `results/` and `models/`; local plots use `generated/figures/`.
+Synthetic outputs stay in `generated/demo/{results,figures,models}/`; committed figures remain separate.
+
+### Pipeline stages
+
+| Stage | Operation | Code |
+| --- | --- | --- |
+| 1. Ingest | WESAD chest/wrist pickles; Non-EEG records for transfer | `src/data/loader.py`, `src/datasets/non_eeg.py` |
+| 2. Preprocess | Butterworth filtering, ECG R-peaks and ectopic correction, EDA tonic/phasic decomposition | `src/preprocessing/{filters,ecg_processor,eda_processor}.py` |
+| 3. Window | 60 s; 50% overlap; ≥90% label purity | `src/dataset.py` (chest), `src/dataset_wrist.py` (wrist), shared `window_label()` |
+| 4. Features | 60-column extraction schema; 58 benchmark features after dropping two all-NaN respiration columns | `src/features/feature_pipeline.py` and modality extractors |
+| 5. Benchmark | LOSO; training-fold imputation/scaling/balancing; LR/RF/XGBoost/LightGBM and raw-window 1D-CNN | `scripts/run_experiment.py`, `src/models/ml/classifiers.py`, `src/models/dl/cnn_1d.py` |
+| 6. Calibration | ECE/MCE/Brier, decision-curve net benefit, training-subject recalibration, few-shot personalization | `src/calibration.py`, `scripts/{calibration,personalize}.py` |
+| 7. Analysis | Optimism gap, ablation, wrist/chest, transfer, SHAP, statistics, tuning | `scripts/{ablation,wrist,cross_dataset,stats,tuning}.py`, `src/portable.py` |
+| 8. Dashboard | Export results for the static React dashboard | `scripts/build_dashboard_data.py`, `scripts/export_signals.py`, `frontend/` |
+
+### Shared modules and reproducibility
+
+- **Configuration:** sampling rates, filters, feature settings, and subject list in `src/config.py`.
+- **Logging:** structured logs through `LoggerMixin` in `src/logging_config.py`.
+- **Synthetic data:** `src/synthetic.py`; `python scripts/calibration.py --synthetic` runs offline
+  in `outputs/generated/demo/`.
+  Near-separable synthetic signals produce no meaningful calibration or optimism evidence.
+- **Portable features:** version 2 EDA/TEMP slopes are per second; caches use versioned sidecars.
+- **Reproduction:** default `SEED = 42`; [experiment commands](#reproduce-experiments) regenerate
+  `outputs/results/` and local `outputs/generated/figures/`; see [result provenance](#result-provenance).
+  Committed `outputs/figures/` remain a separate snapshot.
+
+### Data flow
+
+```mermaid
+flowchart TD
+    A["WESAD chest signals"] --> B["Preprocess: filters, R-peaks, EDA decomposition"]
+    B --> C["Windows: 60 s, 50% overlap, label purity ≥90%"]
+    C --> D["58 features: HRV, EDA, temperature, respiration, motion"]
+    C --> R["Signal tensors for 1D-CNN: 5 channels × 1,024 samples"]
+    D --> E["LOSO: LR, RF, XGBoost, LightGBM"]
+    R --> N["LOSO: 1D-CNN"]
+    E --> F["Benchmark metrics"]
+    N --> F
+    D --> G["Calibration and few-shot personalization"]
+    D --> H["SHAP (full-data fit), ablation, statistics, tuning"]
+    D --> I["Full-data RF refit and checksum"]
+    W["WESAD wrist signals"] --> V["Wrist-only LOSO and chest comparison"]
+    E --> V
+    W --> P["18 portable features: transfer analysis"]
+    O["Non-EEG records"] --> P
+    F --> J["Dashboard data export"]
+    G --> J
+    H --> J
+    V --> J
+    P --> J
+    J --> K["Static React dashboard; no backend"]
+```
+
+Plain-text fallback:
+
+```text
+WESAD -> preprocess -> windows -> 58 features -> feature-model LOSO -> metrics
+                              -> raw windows -> 1D-CNN LOSO -> metrics
+Chest features -> calibration / personalization / full-data SHAP / ablation / statistics / tuning
+WESAD wrist -> wrist-only LOSO -> chest comparison
+WESAD wrist + Non-EEG -> portable features -> transfer analysis
+Experiment results -> dashboard data export -> static React dashboard
+```
 
 </details>
 
@@ -247,48 +403,32 @@ Feature models: fold-local imputation/scaling. CNN: raw windows.
 
 ## Limitations
 
-- **15 lab subjects** · wide CIs · weak CNN baseline · no clinical claim.
-- Exploratory ablation/calibration/personalization; no multiplicity correction. One confounded transfer pair.
+1. **Cohort:** 15 WESAD lab subjects; wide confidence intervals and no clinical validation.
+2. **Analysis:** Weak CNN baseline. Exploratory ablation, calibration, and personalization analyses have no correction for multiple comparisons.
+3. **Transfer:** One WESAD/Non-EEG pair; devices, stressors, and labels differ.
 
 ## Future work
 
-Third matched corpus · free-living data · streaming wearable inference.
+1. Test transfer on a third dataset with matched sensors and stress labels.
+2. Evaluate stress predictions during daily life outside the lab.
+3. Build live wearable inference; measure prediction latency and battery use.
 
 ## Ethics & data use
 
-Sensitive signals: informed consent, minimal collection, research use only. Dataset licenses apply.
+1. Obtain informed consent before collecting physiological recordings.
+2. Collect only required signals; omit names and direct identifiers.
+3. Use predictions for research only; follow each dataset's terms.
+
+## References
+
+1. Schmidt et al. (2018). [Introducing WESAD, a Multimodal Dataset for Wearable Stress and Affect Detection](https://doi.org/10.1145/3242969.3242985). *ACM ICMI*, 400-408.
+2. ESC/NASPE Task Force (1996). [Heart Rate Variability: Standards of Measurement, Physiological Interpretation, and Clinical Use](https://doi.org/10.1161/01.CIR.93.5.1043). *Circulation*, 93(5), 1043-1065.
+3. Guo et al. (2017). [On Calibration of Modern Neural Networks](https://proceedings.mlr.press/v70/guo17a.html). *ICML*, PMLR 70, 1321-1330.
+4. Vos et al. (2023). [Generalizable Machine Learning for Stress Monitoring from Wearable Devices: A Systematic Literature Review](https://doi.org/10.1016/j.ijmedinf.2023.105026). *International Journal of Medical Informatics*, 173, 105026.
 
 ## License
 
-[MIT](LICENSE) · [Software citation](CITATION.cff)
+[MIT](LICENSE) · © 2025 Urme Bose · [Citation](CITATION.cff)
 
-<details>
-<summary>Scientific references · dataset and method attribution</summary>
-
-- Schmidt, Reiss, Duerichen, Marberger, and Van Laerhoven. "Introducing WESAD, a Multimodal Dataset for Wearable Stress and Affect Detection." ICMI, 2018.
-- Birjandtalab, Cogan, Pouyan, and Nourani. "A Non-EEG Dataset for Assessment of Neurological Status." IEEE BHI / PhysioNet, 2016.
-- Task Force of the ESC and NASPE. "Heart Rate Variability: Standards of Measurement, Physiological Interpretation, and Clinical Use." Circulation, 1996.
-- Guo, Pleiss, Sun, and Weinberger. "On Calibration of Modern Neural Networks." ICML, 2017.
-- Vickers and Elkin. "Decision Curve Analysis: A Novel Method for Evaluating Prediction Models." Medical Decision Making, 2006. The committed [decision-curve figure](outputs/figures/calibration_decision_curve.png) remains available.
-- Lundberg and Lee. "A Unified Approach to Interpreting Model Predictions." NeurIPS, 2017.
-- Bhanushali et al. "Stress Classification and Personalization: Getting the Most out of the Least." arXiv:2107.05666, 2021.
-- Vos, Trinh, Sarnyai, and Rahimi Azghadi. "Generalizable Machine Learning for Stress Monitoring from Wearable Devices: A Systematic Literature Review." International Journal of Medical Informatics 173, 105026, 2023.
-- Oliver and Dakshit. "Cross-Modality Investigation on WESAD Stress Classification." arXiv:2502.18733, 2025.
-- Benchekroun et al. "Cross Dataset Analysis for Generalizability of HRV-Based Stress Detection Models." Sensors 23(4), 1807, 2023.
-- Prajod, Mahesh, and André. "Stressor Type Matters! Exploring Factors Influencing Cross-Dataset Generalizability of Physiological Stress Detection." ICMI Companion, 2024.
-- Vos et al. "Ensemble Machine Learning Model Trained on a New Synthesized Dataset Generalizes Well for Stress Prediction Using Wearable Devices." Journal of Biomedical Informatics, 2023.
-
-### WESAD dataset citation
-
-```bibtex
-@inproceedings{schmidt2018wesad,
-  title     = {Introducing WESAD, a Multimodal Dataset for Wearable Stress and Affect Detection},
-  author    = {Schmidt, Philip and Reiss, Attila and Duerichen, Robert and Marberger, Claus and Van Laerhoven, Kristof},
-  booktitle = {Proceedings of the 20th ACM International Conference on Multimodal Interaction},
-  pages     = {400--408},
-  year      = {2018}
-}
-```
-
-
-</details>
+Use, modify, distribute, or sell; retain copyright and license notices.
+Provided "AS IS", without warranty. Dataset and dependency terms apply separately.

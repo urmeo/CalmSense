@@ -1,14 +1,8 @@
-"""Threshold-free discrimination and one operating point for the binary task.
+"""Compute binary AUROC, AUPRC, and a descriptive Random Forest operating point.
 
-The rest of the benchmark reports accuracy and F1 at the default 0.5 threshold, but
-the project's thesis is that the probability matters. This computes AUROC and AUPRC
-(threshold-free) from the pooled out-of-fold LOSO probabilities, and one operating
-point for the shipped model (random forest) at the Youden-J threshold: sensitivity,
-specificity, PPV, NPV. Same folds as scripts/run_experiment.py, so the numbers line up.
-
-Run inside `make reproduce` (needs cached features from run_experiment.py first).
-xgboost/lightgbm need OpenMP (brew install libomp on macOS); models that cannot import
-are skipped with an "available": false marker rather than failing the whole run.
+Use cached features and pooled LOSO probabilities. The Youden-J threshold is
+selected and scored on the same pooled labels, so its rates are exploratory.
+Failed model runs are recorded as unavailable.
 """
 
 import json
@@ -21,7 +15,8 @@ import numpy as np
 from sklearn.metrics import average_precision_score, roc_auc_score, roc_curve
 from sklearn.model_selection import LeaveOneGroupOut
 
-from scripts.run_experiment import CLF_NAMES, RESULTS_DIR, build_pipeline, load_cached, prepare_task
+from scripts.run_experiment import CLF_NAMES, build_pipeline, load_cached, prepare_task
+from src.config import RESULTS_DIR
 from src.utils import provenance
 
 FEATURE_MODELS = ["lr", "rf", "xgb", "lgbm"]
@@ -43,7 +38,7 @@ def loso_pos_proba(key, X, y, groups):
 
 
 def operating_point(y_true, p1):
-    """Youden-J threshold and the confusion-derived rates at that threshold."""
+    """Select Youden-J and describe its rates on the same supplied predictions."""
     fpr, tpr, thr = roc_curve(y_true, p1)
     j = int(np.argmax(tpr - fpr))
     t = float(thr[j])
@@ -92,6 +87,7 @@ def run():
 
     out["provenance"] = provenance()
     path = RESULTS_DIR / "threshold_metrics.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         json.dump(out, f, indent=2)
     print(f"\nWrote {path}")

@@ -1,6 +1,7 @@
-{
+// Native module source; generated tool files are ignored.
+export default {
   "name": "calmsense-dashboard",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "vite",
@@ -9,7 +10,7 @@
   },
   "dependencies": {
     "lucide-react": "^1.23.0",
-    "plotly.js": "^3.6.0",
+    "plotly.js": "^4.1.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-plotly.js": "^4.0.0",
@@ -18,7 +19,6 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.0",
-    "@types/plotly.js": "^3.0.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^4.7.0",
@@ -26,4 +26,4 @@
     "typescript": "^6.0.0",
     "vite": "^7.0.0"
   }
-}
+};

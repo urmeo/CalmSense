@@ -1,7 +1,10 @@
 """Cross-dataset generalization: WESAD <-> PhysioNet Non-EEG on a shared feature space."""
 
+import hashlib
 import json
+import subprocess
 import sys
+from importlib.metadata import version
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -11,15 +14,117 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score
 
-from scripts.run_experiment import FIGURES_DIR, RESULTS_DIR, build_pipeline, loso_evaluate
-from src.config import PROCESSED_DATA_DIR
+from scripts.run_experiment import build_pipeline, loso_evaluate
+from src.config import FIGURES_DIR, FS, PROCESSED_DATA_DIR, PROJECT_ROOT, RESULTS_DIR
 from src.datasets import non_eeg
-from src.portable import wesad_portable
+from src.portable import (
+    OVERLAP,
+    PORTABLE_FEATURE_COLUMNS,
+    PORTABLE_SCHEMA_VERSION,
+    PURITY,
+    WINDOW_SEC,
+    wesad_portable,
+)
 from src.utils import provenance
 
 META = ["subject", "label"]
+
+
+def _cache_schema(dataset):
+    if dataset not in {"wesad", "noneeg"}:
+        raise ValueError(f"Unknown portable dataset: {dataset}")
+    rates = (
+        {"eda": FS.WRIST_EDA, "temp": FS.WRIST_TEMP}
+        if dataset == "wesad"
+        else {"eda": non_eeg.EDA_FS, "temp": non_eeg.TEMP_FS}
+    )
+    return {
+        "schema_version": PORTABLE_SCHEMA_VERSION,
+        "dataset": dataset,
+        "slope_units": "per_second",
+        "finite_sample_timestamps": "original_sample_positions",
+        "sampling_rates_hz": rates,
+        "window_seconds": WINDOW_SEC,
+        "overlap": OVERLAP,
+        "wesad_label_purity": PURITY,
+        "feature_columns": PORTABLE_FEATURE_COLUMNS,
+    }
+
+
+def _validate_frame(frame):
+    expected = PORTABLE_FEATURE_COLUMNS + META
+    if frame.empty or len(frame.columns) != len(expected) or set(frame.columns) != set(expected):
+        raise ValueError(
+            "Portable cache requires 18 feature columns, subject, label and nonempty rows"
+        )
+    if frame["subject"].isna().any() or not frame["label"].isin([0, 1]).all():
+        raise ValueError("Portable cache requires nonmissing subjects and binary labels")
+    if not all(pd.api.types.is_numeric_dtype(frame[column]) for column in PORTABLE_FEATURE_COLUMNS):
+        raise ValueError("Portable features must be numeric")
+    if np.isinf(frame[PORTABLE_FEATURE_COLUMNS].to_numpy(dtype=float)).any():
+        raise ValueError("Portable features may contain NaN, but not infinity")
+
+
+def _load_or_build_cache(dataset, builder, source_provenance=None):
+    """Reuse caches only when their protocol metadata and file checksum match."""
+    PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    cache = PROCESSED_DATA_DIR / f"portable_{dataset}_v{PORTABLE_SCHEMA_VERSION}.parquet"
+    sidecar = cache.with_suffix(".json")
+    schema = _cache_schema(dataset)
+    if cache.exists():
+        try:
+            metadata = json.loads(sidecar.read_text())
+        except (OSError, ValueError) as error:
+            raise ValueError(f"Missing or invalid portable cache metadata: {sidecar}") from error
+        if not isinstance(metadata, dict) or any(
+            metadata.get(key) != value for key, value in schema.items()
+        ):
+            raise ValueError(f"Portable cache schema mismatch: {cache}; rebuild from raw data")
+        # Schema equality checks feature units; the checksum detects modified cached values.
+        if metadata.get("cache_sha256") != hashlib.sha256(cache.read_bytes()).hexdigest():
+            raise ValueError(f"Portable cache checksum mismatch: {cache}")
+        frame = pd.read_parquet(cache)
+    else:
+        frame = builder()
+        _validate_frame(frame)
+        frame.to_parquet(cache, index=False)
+        metadata = {
+            **schema,
+            "cache_sha256": hashlib.sha256(cache.read_bytes()).hexdigest(),
+            "source_provenance": source_provenance or {},
+        }
+        sidecar.write_text(json.dumps(metadata, indent=2) + "\n")
+    _validate_frame(frame)
+    return frame, metadata
+
+
+def _generation_context():
+    files = (
+        "src/portable.py",
+        "src/datasets/non_eeg.py",
+        "scripts/cross_dataset.py",
+        "scripts/run_experiment.py",
+        "src/models/ml/classifiers.py",
+        "src/config.py",
+    )
+    try:
+        dirty = bool(
+            subprocess.check_output(
+                ["git", "status", "--porcelain"], cwd=PROJECT_ROOT, text=True
+            ).strip()
+        )
+    except (OSError, subprocess.CalledProcessError):
+        dirty = None
+    return {
+        **provenance(),
+        "working_tree_dirty": dirty,
+        "source_file_sha256": {
+            path: hashlib.sha256((PROJECT_ROOT / path).read_bytes()).hexdigest() for path in files
+        },
+    }
 
 
 def _xy(df, feature_cols):
@@ -29,9 +134,11 @@ def _xy(df, feature_cols):
 
 
 def transfer(train_df, test_df, feature_cols):
+    """Fit the source dataset's pipeline and evaluate it on all target windows."""
     Xtr, ytr, _ = _xy(train_df, feature_cols)
     Xte, yte, _ = _xy(test_df, feature_cols)
     pipe = build_pipeline("rf")
+    # Target values do not set imputation medians, scaling, or classifier parameters.
     pipe.fit(Xtr, ytr)
     pred = pipe.predict(Xte)
     return {
@@ -52,16 +159,10 @@ def within(df, feature_cols):
 
 
 def run():
-    cache_w = PROCESSED_DATA_DIR / "portable_wesad.parquet"
-    cache_n = PROCESSED_DATA_DIR / "portable_noneeg.parquet"
-    import pandas as pd
-
-    wesad = pd.read_parquet(cache_w) if cache_w.exists() else wesad_portable()
-    noneeg = pd.read_parquet(cache_n) if cache_n.exists() else non_eeg.build()
-    if not cache_w.exists():
-        wesad.to_parquet(cache_w, index=False)
-    if not cache_n.exists():
-        noneeg.to_parquet(cache_n, index=False)
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+    wesad, wesad_cache = _load_or_build_cache("wesad", wesad_portable)
+    noneeg, noneeg_cache = _load_or_build_cache("noneeg", non_eeg.build)
 
     feature_cols = sorted((set(wesad.columns) & set(noneeg.columns)) - set(META))
     print(
@@ -73,12 +174,39 @@ def run():
 
     out = {
         "n_shared_features": len(feature_cols),
+        "methodology": {
+            "portable_schema_version": PORTABLE_SCHEMA_VERSION,
+            "slope_units": "per_second",
+            "finite_sample_timestamps": "original_sample_positions",
+            "window_seconds": WINDOW_SEC,
+            "overlap": OVERLAP,
+            "packages": {
+                name: version(name)
+                for name in ("numpy", "pandas", "scikit-learn", "neurokit2", "wfdb")
+            },
+        },
+        "datasets": {
+            name: {
+                "n_windows": len(frame),
+                "n_subjects": int(frame["subject"].nunique()),
+                "label_counts": {
+                    str(label): int(count)
+                    for label, count in frame["label"].value_counts().sort_index().items()
+                },
+                "cache_sha256": metadata["cache_sha256"],
+                "source_provenance": metadata.get("source_provenance", {}),
+            }
+            for name, frame, metadata in (
+                ("wesad", wesad, wesad_cache),
+                ("noneeg", noneeg, noneeg_cache),
+            )
+        },
         "within_wesad": within(wesad, feature_cols),
         "within_noneeg": within(noneeg, feature_cols),
         "wesad_to_noneeg": transfer(wesad, noneeg, feature_cols),
         "noneeg_to_wesad": transfer(noneeg, wesad, feature_cols),
     }
-    out["provenance"] = provenance()
+    out["provenance"] = _generation_context()
     with open(RESULTS_DIR / "cross_dataset.json", "w") as f:
         json.dump(out, f, indent=2)
 
@@ -110,7 +238,7 @@ def run():
     plt.tight_layout()
     plt.savefig(FIGURES_DIR / "cross_dataset.png", dpi=150)
     plt.close()
-    print("\nWrote results/cross_dataset.json and cross_dataset.png")
+    print(f"\nWrote {RESULTS_DIR / 'cross_dataset.json'} and {FIGURES_DIR / 'cross_dataset.png'}")
 
 
 if __name__ == "__main__":

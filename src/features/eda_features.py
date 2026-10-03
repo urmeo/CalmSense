@@ -24,14 +24,13 @@ class EDAFeatureExtractor(LoggerMixin):
 
         return signal
 
-    def extract_tonic_features(self, scl: np.ndarray) -> Dict[str, float]:
-        features = {
-            "SCL_mean": np.nan,
-            "SCL_std": np.nan,
-            "SCL_slope": np.nan,
-            "SCL_min": np.nan,
-            "SCL_max": np.nan,
-        }
+    def _empty_features(self, prefix: str) -> Dict[str, float]:
+        return dict.fromkeys(
+            (key for key in self.get_feature_descriptions() if key.startswith(prefix)), np.nan
+        )
+
+    def extract_tonic_features(self, scl: Optional[np.ndarray]) -> Dict[str, float]:
+        features = self._empty_features("SCL_")
 
         validated = self._validate_signal(scl)
         if validated is None:
@@ -57,25 +56,10 @@ class EDAFeatureExtractor(LoggerMixin):
     def extract_phasic_features(
         self, scr_peaks: Optional[List[Dict]], signal_duration: float
     ) -> Dict[str, float]:
-        features = {
-            "SCR_count": np.nan,
-            "SCR_rate": np.nan,
-            "SCR_amplitude_mean": np.nan,
-            "SCR_amplitude_max": np.nan,
-            "SCR_rise_time_mean": np.nan,
-            "SCR_recovery_time_mean": np.nan,
-            "SCR_AUC": np.nan,
-        }
+        features = self._empty_features("SCR_")
 
         if scr_peaks is None or len(scr_peaks) == 0:
-            features["SCR_count"] = 0.0
-            features["SCR_rate"] = 0.0
-            features["SCR_amplitude_mean"] = 0.0
-            features["SCR_amplitude_max"] = 0.0
-            features["SCR_rise_time_mean"] = 0.0
-            features["SCR_recovery_time_mean"] = 0.0
-            features["SCR_AUC"] = 0.0
-            return features
+            return dict.fromkeys(features, 0.0)
 
         try:
             n_scr = len(scr_peaks)
@@ -117,11 +101,7 @@ class EDAFeatureExtractor(LoggerMixin):
         return features
 
     def extract_statistical_features(self, eda: Optional[np.ndarray]) -> Dict[str, float]:
-        features = {
-            "EDA_mean": np.nan,
-            "EDA_range": np.nan,
-            "EDA_kurtosis": np.nan,
-        }
+        features = self._empty_features("EDA_")
 
         validated = self._validate_signal(eda)
         if validated is None:
@@ -143,27 +123,10 @@ class EDAFeatureExtractor(LoggerMixin):
         scr_peaks: Optional[List[Dict]] = None,
         raw_eda: Optional[np.ndarray] = None,
     ) -> Dict[str, float]:
-        features = {}
-
         tonic = eda_decomposed.get("tonic") if eda_decomposed else None
-        if tonic is not None:
-            tonic_features = self.extract_tonic_features(tonic)
-            features.update(tonic_features)
-            signal_duration = len(tonic) / self.sampling_rate
-        else:
-            features.update(
-                {
-                    "SCL_mean": np.nan,
-                    "SCL_std": np.nan,
-                    "SCL_slope": np.nan,
-                    "SCL_min": np.nan,
-                    "SCL_max": np.nan,
-                }
-            )
-            signal_duration = 60.0
-
-        phasic_features = self.extract_phasic_features(scr_peaks, signal_duration)
-        features.update(phasic_features)
+        features = self.extract_tonic_features(tonic)
+        signal_duration = len(tonic) / self.sampling_rate if tonic is not None else 60.0
+        features.update(self.extract_phasic_features(scr_peaks, signal_duration))
 
         if raw_eda is None and eda_decomposed:
             tonic = eda_decomposed.get("tonic")
@@ -171,8 +134,7 @@ class EDAFeatureExtractor(LoggerMixin):
             if tonic is not None and phasic is not None:
                 raw_eda = tonic + phasic
 
-        stat_features = self.extract_statistical_features(raw_eda)
-        features.update(stat_features)
+        features.update(self.extract_statistical_features(raw_eda))
 
         if np.isfinite(features.get("SCL_mean", np.nan)):
             self.logger.debug(

@@ -7,7 +7,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import joblib
 import matplotlib
 
 matplotlib.use("Agg")
@@ -27,12 +26,10 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.class_weight import compute_sample_weight
 
-from src.config import FIGURES_DIR, MODELS_DIR, PROJECT_ROOT, SEED
+from src.config import DEMO_DIR, FIGURES_DIR, MODELS_DIR, RESULTS_DIR, SEED
 from src.dataset import WindowedDataset, load_cached
 from src.models.ml.classifiers import get_classifier
-from src.utils import provenance, set_seed
-
-RESULTS_DIR = PROJECT_ROOT / "results"
+from src.utils import provenance, save_verified_joblib, set_seed
 
 TASKS = {
     "binary": {"keep": [1, 2], "names": ["baseline", "stress"]},
@@ -49,6 +46,7 @@ CLF_NAMES = {
 
 
 def build_pipeline(clf_key: str) -> Pipeline:
+    """Keep imputation and scaling inside the estimator fitted for each CV fold."""
     estimator = get_classifier(clf_key)
     return Pipeline(
         [
@@ -67,7 +65,7 @@ def _fit_params(pipe, y_train):
 
 
 def loso_evaluate(pipeline_factory, X, y, groups):
-    """Leak-free LOSO: impute + scale fit per fold."""
+    """Fit preprocessing on training subjects and predict the held-out subject."""
     logo = LeaveOneGroupOut()
     classes = np.unique(y)
     pooled_true, pooled_pred = [], []
@@ -92,6 +90,7 @@ def loso_evaluate(pipeline_factory, X, y, groups):
     pooled_true = np.array(pooled_true)
     pooled_pred = np.array(pooled_pred)
     subj_df = pd.DataFrame(per_subject)
+    # Subject means weight people equally; pooled metrics weight their window counts.
     return {
         "accuracy_mean": float(subj_df["accuracy"].mean()),
         "accuracy_std": float(subj_df["accuracy"].std()),
@@ -136,6 +135,7 @@ def cnn_loso(x_raw, y, groups):
         "f1_macro_mean": float(subj_df["f1_macro"].mean()),
         "f1_macro_std": float(subj_df["f1_macro"].std()),
         "balanced_accuracy": float(balanced_accuracy_score(pooled_true, pooled_pred)),
+        "pooled_accuracy": float(accuracy_score(pooled_true, pooled_pred)),
         "per_subject": subj_df,
         "y_true": np.array(pooled_true),
         "y_pred": np.array(pooled_pred),
@@ -144,7 +144,7 @@ def cnn_loso(x_raw, y, groups):
 
 
 def nonoverlap_mask(groups):
-    """Every other window per subject, non-overlapping at 50% overlap."""
+    """Keep alternating chronological windows per subject at the default 50% overlap."""
     keep = np.zeros(len(groups), dtype=bool)
     for g in np.unique(groups):
         idx = np.where(groups == g)[0]
@@ -155,9 +155,8 @@ def nonoverlap_mask(groups):
 def kfold_accuracy(pipeline_factory, X, y, groups) -> float:
     """Subject-mixed 5-fold pooled accuracy for the optimism gap.
 
-    Windows overlap 50%, so adjacent ones share half their signal. We keep only
-    non-overlapping windows (every other window per subject) so the gap reflects
-    subject mixing, not leakage between near-duplicate neighbours.
+    Keep alternating windows to remove direct signal overlap; the same subjects
+    can still appear in training and validation folds.
     """
     keep = nonoverlap_mask(groups)
     Xk, yk = X[keep], y[keep]
@@ -232,6 +231,7 @@ def plot_gap(loso_acc, kfold_acc, path):
 
 
 def plot_embedding(X, y, names, path):
+    """Fit a descriptive PCA on all windows; it is not used to score classifiers."""
     from sklearn.decomposition import PCA
 
     Xi = SimpleImputer(strategy="median").fit_transform(X)
@@ -251,6 +251,7 @@ def plot_embedding(X, y, names, path):
 
 
 def shap_analysis(X, y, feature_names, fig_dir):
+    """Explain an XGBoost fit on all available windows, separate from LOSO scoring."""
     import shap
 
     pipe = build_pipeline("xgb")
@@ -285,7 +286,7 @@ def prepare_task(features_df, x_raw, keep):
     feature_cols = [c for c in sub.columns if c not in meta]
     X = sub[feature_cols].to_numpy(dtype=float)
     X[~np.isfinite(X)] = np.nan
-    # Drop all-NaN features
+    # Omit columns with no observed values; median imputation remains inside each fold.
     keep_cols = ~np.isnan(X).all(axis=0)
     X = X[:, keep_cols]
     feature_cols = [c for c, k in zip(feature_cols, keep_cols) if k]
@@ -305,10 +306,10 @@ def run():
     args = parser.parse_args()
     set_seed(SEED)
 
-    # Synthetic runs write to demo/ so they never overwrite the committed real-WESAD results.
-    results_dir = RESULTS_DIR / "demo" if args.synthetic else RESULTS_DIR
-    figures_dir = FIGURES_DIR / "demo" if args.synthetic else FIGURES_DIR
-    models_dir = MODELS_DIR / "demo" if args.synthetic else MODELS_DIR
+    # Synthetic runs share a separate output root and never overwrite real-WESAD results.
+    results_dir = DEMO_DIR / "results" if args.synthetic else RESULTS_DIR
+    figures_dir = DEMO_DIR / "figures" if args.synthetic else FIGURES_DIR
+    models_dir = DEMO_DIR / "models" if args.synthetic else MODELS_DIR
     results_dir.mkdir(parents=True, exist_ok=True)
     figures_dir.mkdir(parents=True, exist_ok=True)
     models_dir.mkdir(parents=True, exist_ok=True)
@@ -371,7 +372,6 @@ def run():
         best_key = max(rows, key=lambda r: r["accuracy_mean"])["model"]
         best = max(results.items(), key=lambda kv: kv[1]["accuracy_mean"])
 
-        # Figures
         plot_model_comparison(rows, figures_dir / f"{task}_model_comparison.png")
         plot_confusion(
             best[1], cfg["names"], f"{task} ({best_key})", figures_dir / f"{task}_confusion.png"
@@ -409,7 +409,7 @@ def run():
             "per_subject": best[1]["per_subject"].to_dict("records"),
         }
 
-        # Serialize best classical model for the API
+        # Refit for inference after evaluation; this full-data fit supplies no LOSO scores.
         if task == "binary":
             top_clf = max(
                 [(k, results[k]) for k in CLASSIFIERS],
@@ -419,18 +419,19 @@ def run():
             importance.to_csv(results_dir / "shap_top_features.csv", index=False)
             final = build_pipeline(top_clf)
             final.fit(X, y, **_fit_params(final, y))
-            joblib.dump(
+            save_verified_joblib(
                 {"pipeline": final, "features": feature_cols, "classes": cfg["names"]},
                 models_dir / "stress_classifier.joblib",
             )
-            print(f"  Saved API model ({CLF_NAMES[top_clf]}) + SHAP.")
+            print(f"  Saved inference model ({CLF_NAMES[top_clf]}) + SHAP.")
 
     summary["provenance"] = provenance()
     with open(results_dir / "metrics.json", "w") as f:
         json.dump(summary, f, indent=2)
 
     print(f"\nResults written to {results_dir}")
-    print("Run scripts/build_dashboard_data.py to refresh the dashboard.")
+    if not args.synthetic:
+        print("Run scripts/build_dashboard_data.py to refresh the dashboard.")
 
 
 if __name__ == "__main__":

@@ -104,7 +104,7 @@ class CNN1DClassifier(LoggerMixin):
         self.classes_ = np.unique(y)
         y_idx = np.searchsorted(self.classes_, y)
 
-        # Per-channel train stats
+        # fit() receives the outer training fold; held-out LOSO subjects do not set these statistics.
         self._mean = X.mean(axis=(0, 2), keepdims=True)
         self._std = X.std(axis=(0, 2), keepdims=True) + 1e-8
         X = self._standardize(X)
@@ -150,12 +150,13 @@ class CNN1DClassifier(LoggerMixin):
                 optimizer.step()
             scheduler.step()
 
-            # Early stopping
+            # Validation chooses the checkpoint; the outer test subject is scored after fit().
             self.model.eval()
             with torch.no_grad():
                 val_loss = criterion(self.model(x_val_t), y_val_t).item()
             if val_loss < best_loss - 1e-4:
                 best_loss = val_loss
+                # Clone tensors so later optimizer updates cannot alter the saved checkpoint.
                 best_state = {k: v.cpu().clone() for k, v in self.model.state_dict().items()}
                 stale = 0
             else:

@@ -23,8 +23,8 @@ class FeatureExtractionPipeline(LoggerMixin):
     Composes seven per-modality extractors (HRV time/frequency/nonlinear, EDA,
     temperature, respiration, accelerometer) and namespaces their outputs with
     ``HRV_``/``EDA_``/``TEMP_``/``RESP_``/``ACC_`` prefixes. Groups can be toggled
-    via ``feature_config``; a disabled or unavailable group yields NaN placeholders
-    so the feature columns stay stable across windows. Extraction never sees labels.
+    via ``feature_config``; disabled groups are omitted and unavailable groups yield
+    NaN placeholders so columns stay stable across windows. Extraction never sees labels.
     """
 
     DEFAULT_CONFIG = {

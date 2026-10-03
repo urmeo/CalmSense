@@ -12,13 +12,12 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from scripts.run_experiment import (
-    FIGURES_DIR,
-    RESULTS_DIR,
     build_pipeline,
     load_cached,
     loso_evaluate,
     prepare_task,
 )
+from src.config import FIGURES_DIR, RESULTS_DIR
 
 # Canonical feature-group prefixes; every feature column is named "<GROUP>_...".
 # Subsets below are defined against these, so a prefix rename is caught by the
@@ -41,7 +40,8 @@ def _group_of(col: str) -> str:
 
 
 def run():
-    RESULTS_DIR.mkdir(exist_ok=True)
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     cached = load_cached()
     if cached is None:
         raise SystemExit("No cached features. Run scripts/run_experiment.py first.")
@@ -84,7 +84,7 @@ def run():
     plt.tight_layout()
     plt.savefig(FIGURES_DIR / "ablation.png", dpi=150)
     plt.close()
-    print(f"\nWrote {RESULTS_DIR / 'ablation.csv'} and ablation.png")
+    print(f"\nWrote {RESULTS_DIR / 'ablation.csv'} and {FIGURES_DIR / 'ablation.png'}")
 
 
 if __name__ == "__main__":

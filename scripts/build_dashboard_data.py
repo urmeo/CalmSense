@@ -1,4 +1,4 @@
-"""Assemble every result file into the single JSON the dashboard reads."""
+"""Assemble experiment results into the TypeScript module the dashboard reads."""
 
 import json
 import sys
@@ -8,10 +8,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pandas as pd
 
-from src.config import PROJECT_ROOT
+from src.calibration import BINARY_BRIER_DEFINITION, normalize_binary_calibration
+from src.config import OUTPUT_DIR, RESULTS_DIR
 
-RESULTS_DIR = PROJECT_ROOT / "results"
-FRONTEND = PROJECT_ROOT / "frontend" / "src" / "results.json"
+DASHBOARD_RESULTS = OUTPUT_DIR / "dashboard" / "results.ts"
 
 # Keys the dashboard consumes per task (per-subject lists stay out of the bundle)
 TASK_KEYS = [
@@ -22,6 +22,7 @@ TASK_KEYS = [
     "best_model",
     "loso_accuracy",
     "loso_pooled_accuracy",
+    "loso_matched_accuracy",
     "within_subject_accuracy",
     "optimism_gap_pts",
 ]
@@ -43,7 +44,9 @@ def _load_csv(name):
 def run():
     metrics = _load_json("metrics.json")
     if metrics is None:
-        raise SystemExit("results/metrics.json missing. Run scripts/run_experiment.py first.")
+        raise SystemExit(
+            f"{RESULTS_DIR / 'metrics.json'} missing. Run scripts/run_experiment.py first."
+        )
 
     out = {}
     for task in ("binary", "multiclass"):
@@ -63,16 +66,21 @@ def run():
     ]:
         data = _load_json(fname)
         if data is not None:
+            if key == "calibration":
+                data = normalize_binary_calibration(data)
+            elif key == "personalization":
+                data.setdefault("brier_definition", BINARY_BRIER_DEFINITION)
             out[key] = data
     ablation = _load_csv("ablation.csv")
     if ablation:
         out["ablation"] = ablation
 
-    if not FRONTEND.parent.exists():
-        raise SystemExit(f"{FRONTEND.parent} missing")
-    with open(FRONTEND, "w") as f:
-        json.dump(out, f, indent=2)
-    print(f"Wrote {FRONTEND} with sections: {sorted(out)}")
+    payload = json.dumps(out, indent=2, allow_nan=False)
+    DASHBOARD_RESULTS.parent.mkdir(parents=True, exist_ok=True)
+    DASHBOARD_RESULTS.write_text(
+        f"const data = {payload};\n\nexport default data;\n", encoding="utf-8"
+    )
+    print(f"Wrote {DASHBOARD_RESULTS} with sections: {sorted(out)}")
 
 
 if __name__ == "__main__":

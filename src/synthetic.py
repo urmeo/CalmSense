@@ -1,17 +1,9 @@
-"""Synthetic WESAD-format data so the full pipeline runs without the real dataset.
+"""Generate WESAD-format recordings for smoke tests and demos.
 
-NeuroKit2 simulators generate physiologically plausible chest and wrist signals.
-Stress blocks carry higher heart rate, more skin-conductance responses, faster
-breathing, and more motion, so the models learn a real (if easy) signal. This is
-for smoke tests and demos only, never for reported results.
-
-Statistical fidelity (important): the per-condition means below are well separated
-and each subject is drawn i.i.d. from the same distribution, so the synthetic task
-is close to linearly separable and has almost no between-subject shift. Two
-consequences the demo must NOT be read as evidence for: accuracy is near-ceiling,
-and the model looks *better* calibrated than it ever would on real subjects (ECE
-~0, optimism gap ~0). The synthetic generator exercises the code path; the calibration
-and optimism-gap findings only hold on real WESAD (see `scripts/calibration.py`).
+NeuroKit2 simulates chest ECG, EDA, and respiration; other channels use simplified
+signals. Fixed condition differences and shared subject distributions make this
+task easier than real WESAD. Synthetic scores do not estimate real accuracy,
+calibration, or cross-subject generalization.
 """
 
 import pickle
@@ -94,8 +86,10 @@ def _chest_block(cond: str, seconds: int, rng: np.random.RandomState, seed: int)
 
 
 def _wrist_block(cond: str, seconds: int, chest: Dict, rng: np.random.RandomState) -> Dict:
-    """Mirror WESAD's signal.wrist layout. The chest pipeline never reads it, so the
-    BVP is a cheap placeholder rather than a full PPG simulation."""
+    """Mirror WESAD's wrist layout with simplified sinusoidal BVP.
+
+    BVP is not a physiological PPG simulation; the chest pipeline does not read it.
+    """
     bvp_n = int(seconds * WRIST["BVP"])
     eda_n = int(seconds * WRIST["EDA"])
     acc_n = int(seconds * WRIST["ACC"])

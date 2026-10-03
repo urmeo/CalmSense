@@ -1,4 +1,4 @@
-"""Window WESAD wrist (Empatica E4) signals into features for a deployable model."""
+"""Build WESAD wrist (Empatica E4) features for the wrist-only LOSO benchmark."""
 
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -60,6 +60,7 @@ class WristDataset(LoggerMixin):
         windows, ys = [], []
         t = 0.0
         while t + self.window_sec <= duration:
+            # Labels use chest time; each wrist modality is sliced at its own sampling rate.
             lab = self._window_label(
                 labels[int(t * self.label_fs) : int((t + self.window_sec) * self.label_fs)]
             )

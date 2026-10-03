@@ -7,16 +7,10 @@ from typing import Generator, Union
 
 
 def set_seed(seed: int = 42, deterministic: bool = True) -> None:
-    """Seed Python, NumPy, and PyTorch (CPU + CUDA) for reproducible runs.
+    """Seed Python, NumPy, and PyTorch (CPU + CUDA).
 
-    Call once at the top of every entry point. With ``deterministic`` it also pins
-    cuDNN and requests deterministic torch algorithms (``warn_only`` so ops without a
-    deterministic kernel warn instead of crashing), so repeated runs with the same
-    seed produce identical metrics. ``PYTHONHASHSEED`` is exported for subprocesses.
-
-    Args:
-        seed: The seed applied to every RNG.
-        deterministic: Enable deterministic algorithm/cuDNN settings.
+    Deterministic mode warns when an operation lacks a deterministic kernel.
+    ``PYTHONHASHSEED`` applies to new child processes.
     """
     os.environ["PYTHONHASHSEED"] = str(seed)
     random.seed(seed)
@@ -60,8 +54,7 @@ def ensure_directory(path: Union[str, Path]) -> Path:
 
 
 def provenance() -> dict:
-    """Git commit + UTC timestamp for stamping result artifacts, so every committed
-    JSON records exactly which code produced it."""
+    """Record Git HEAD and UTC time, excluding uncommitted code state."""
     import subprocess
     from datetime import datetime, timezone
 
@@ -73,6 +66,19 @@ def provenance() -> dict:
     except Exception:
         sha = "unknown"
     return {"git_sha": sha, "generated_at": datetime.now(timezone.utc).isoformat()}
+
+
+def save_verified_joblib(bundle, path: Union[str, Path]) -> None:
+    """Write a joblib bundle and the SHA-256 sidecar used to verify its bytes."""
+    import hashlib
+
+    import joblib
+
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    joblib.dump(bundle, path)
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    path.with_name(path.name + ".sha256").write_text(f"{digest}  {path.name}\n")
 
 
 def load_verified_joblib(path: Union[str, Path]):
@@ -96,11 +102,7 @@ def load_verified_joblib(path: Union[str, Path]):
 
 
 def paired_effect_size(a, b) -> dict:
-    """Paired Cohen's d and (small-sample-corrected) Hedges' g for two per-subject vectors.
-
-    Complements p-values: reports the standardized magnitude of a - b, which is what
-    matters at N=15 where significance is low-powered.
-    """
+    """Return paired Cohen's d, corrected Hedges' g, and sample count."""
     import numpy as np
 
     a, b = np.asarray(a, dtype=float), np.asarray(b, dtype=float)

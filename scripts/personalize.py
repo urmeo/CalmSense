@@ -1,7 +1,8 @@
-"""Few-shot per-subject recalibration. A short labeled enrollment from the target
-subject should beat global recalibration at no extra modeling cost. Leak-free: per
-subject we keep only non-overlapping windows, then hold out a fixed evaluation half
-and draw enrollment from the other half, so enrollment never overlaps an eval window."""
+"""Compare global calibration with labeled enrollment from the held-out subject.
+
+Use non-overlapping target windows and one fixed evaluation half for every budget.
+Enrollment labels fit the subject calibrator, never the base classifier.
+"""
 
 import argparse
 import json
@@ -19,14 +20,13 @@ from sklearn.model_selection import GroupKFold, LeaveOneGroupOut
 
 from scripts.calibration import _apply_calibrator, _fit_calibrator, _pos_proba
 from scripts.run_experiment import (
-    RESULTS_DIR,
     _fit_params,
     build_pipeline,
     load_cached,
     prepare_task,
 )
 from src import calibration as cal
-from src.config import FIGURES_DIR, SEED
+from src.config import DEMO_DIR, FIGURES_DIR, RESULTS_DIR, SEED
 from src.utils import provenance
 
 K_VALUES = [5, 10, 20]
@@ -45,6 +45,7 @@ def _stratified_split(y, frac, rng):
 
 
 def _sample_k(y_pool, k, rng):
+    """Sample equally by class; rounding and available windows can yield fewer than k."""
     per = max(1, k // len(np.unique(y_pool)))
     picks = []
     for c in np.unique(y_pool):
@@ -58,6 +59,7 @@ def _global_calibrator(factory, Xtr, ytr, gtr, method):
     if len(np.unique(gtr)) < 2:
         return None
     oof = np.zeros(len(ytr))
+    # Each calibration probability comes from a model that excluded its subject.
     for itr, ical in GroupKFold(n_splits=min(5, len(np.unique(gtr)))).split(Xtr, ytr, gtr):
         p = factory()
         p.fit(Xtr[itr], ytr[itr], **_fit_params(p, ytr[itr]))
@@ -82,14 +84,14 @@ def compute(X, y, groups, model="rf", k_values=K_VALUES):
         base.fit(Xtr, ytr, **_fit_params(base, ytr))
         raw = _pos_proba(base, X[test_idx])
         y_s = y[test_idx]
-        # Windows overlap 50%, so adjacent ones share half their signal. Keep every
-        # other window for this subject so enrollment can never overlap an eval window.
+        # Alternating chronological windows remove direct overlap at the default 50% stride.
         nov = np.zeros(len(y_s), dtype=bool)
         nov[::2] = True
         raw, y_s = raw[nov], y_s[nov]
         if len(np.unique(y_s)) < 2:
             continue
 
+        # Reuse this evaluation set for every enrollment budget in the subject.
         ev, pool = _stratified_split(y_s, 0.5, rng)
         raw_ev, y_ev = raw[ev], y_s[ev]
         glob = _global_calibrator(factory, Xtr, ytr, gtr, METHOD)
@@ -102,6 +104,7 @@ def compute(X, y, groups, model="rf", k_values=K_VALUES):
         for k in k_values:
             pick = _sample_k(y_s[pool], k, rng)
             if len(np.unique(y_s[pool][pick])) < 2:
+                # A one-class enrollment cannot estimate the baseline/stress calibration map.
                 acc[k].append(_metrics(y_ev, raw_ev))
                 continue
             calib = _fit_calibrator(raw[pool][pick], y_s[pool][pick], METHOD)
@@ -113,6 +116,7 @@ def compute(X, y, groups, model="rf", k_values=K_VALUES):
 
     return {
         "model": model,
+        "brier_definition": cal.BINARY_BRIER_DEFINITION,
         "eval_frac": 0.5,
         "k_values": k_values,
         "n_subjects": len(acc["uncalibrated"]),
@@ -130,7 +134,7 @@ def _plot(out, path):
     plt.plot(
         ks, [out["fewshot"][str(k)]["ece"] for k in ks], "o-", color="#2ecc71", label="few-shot"
     )
-    plt.xlabel("Enrollment windows per subject")
+    plt.xlabel("Requested enrollment budget (windows)")
     plt.ylabel("ECE (mean over subjects)")
     plt.title("Few-shot personalization closes the calibration gap")
     plt.legend()
@@ -140,14 +144,16 @@ def _plot(out, path):
 
 
 def run(synthetic=False, model="rf"):
-    RESULTS_DIR.mkdir(exist_ok=True)
-    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+    results_dir = DEMO_DIR / "results" if synthetic else RESULTS_DIR
+    figures_dir = DEMO_DIR / "figures" if synthetic else FIGURES_DIR
+    results_dir.mkdir(parents=True, exist_ok=True)
+    figures_dir.mkdir(parents=True, exist_ok=True)
 
     if synthetic:
         from src.synthetic import features
 
         print("Using synthetic data (demo only).")
-        features_df, x_raw, _ = features(n_subjects=8, block_sec=150, seed=SEED)
+        features_df, x_raw, _ = features(n_subjects=8, block_sec=150, seed=SEED, cache=False)
     else:
         cached = load_cached()
         if cached is None:
@@ -158,9 +164,9 @@ def run(synthetic=False, model="rf"):
     out = compute(X, y, groups, model=model)
 
     out["provenance"] = provenance()
-    with open(RESULTS_DIR / "personalization.json", "w") as f:
+    with open(results_dir / "personalization.json", "w") as f:
         json.dump(out, f, indent=2)
-    _plot(out, FIGURES_DIR / "personalization.png")
+    _plot(out, figures_dir / "personalization.png")
 
     print(f"\n{'condition':18s} {'ECE':>7s} {'Brier':>7s}")
     print(
@@ -170,7 +176,7 @@ def run(synthetic=False, model="rf"):
     for k in out["k_values"]:
         f = out["fewshot"][str(k)]
         print(f"{'few-shot k=' + str(k):18s} {f['ece']:>7.3f} {f['brier']:>7.3f}")
-    print(f"\nWrote {RESULTS_DIR / 'personalization.json'}")
+    print(f"\nWrote {results_dir / 'personalization.json'}")
 
 
 if __name__ == "__main__":

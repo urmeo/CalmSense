@@ -1,16 +1,8 @@
-# =============================================================================
-# CalmSense - Python/Data Science .gitignore
-# =============================================================================
-
-# Byte-compiled / optimized / DLL files
+# Python, notebooks, packaging and tool caches
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
-
-# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -29,16 +21,10 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-
-# PyInstaller
 *.manifest
 *.spec
-
-# Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
-
-# Unit test / coverage reports
 htmlcov/
 .tox/
 .nox/
@@ -52,12 +38,8 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
-
-# Translations
 *.mo
 *.pot
-
-# Environments
 .venv
 env/
 venv/
@@ -65,57 +47,25 @@ ENV/
 env.bak/
 venv.bak/
 .python-version
-
-# Spyder project settings
 .spyderproject
 .spyproject
-
-# Rope project settings
 .ropeproject
-
-# mypy
 .mypy_cache/
 .dmypy.json
 dmypy.json
-
-# Pyre type checker
 .pyre/
-
-# pytype static type analyzer
 .pytype/
-
-# Cython debug symbols
 cython_debug/
-
-# =============================================================================
-# Jupyter Notebooks
-# =============================================================================
 .ipynb_checkpoints
 */.ipynb_checkpoints/*
 profile_default/
 ipython_config.py
 
-# =============================================================================
-# Data Science / ML Specific
-# =============================================================================
-
-# Raw data files (too large for git)
+# Local datasets and models; keep the shipped RF and checksum
 data/raw/*
-!data/raw/.gitkeep
-
-# Processed data
-data/processed/*
-!data/processed/.gitkeep
-
-# Interim data
+data/processed/
 data/interim/*
-!data/interim/.gitkeep
-
-# External data
 data/external/*
-!data/external/.gitkeep
-
-# Model files, except the small serving + in-browser models
 *.pkl
 *.pickle
 *.h5
@@ -124,37 +74,24 @@ data/external/*
 *.pth
 *.ckpt
 outputs/models/*
-!outputs/models/.gitkeep
 !outputs/models/stress_classifier.joblib
+!outputs/models/stress_classifier.joblib.sha256
 
-# =============================================================================
-# IDE / Editor
-# =============================================================================
-
-# VS Code
+# Editors and operating systems
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
 *.code-workspace
-
-# PyCharm
 .idea/
 *.iml
 *.iws
 *.ipr
-
-# Sublime Text
 *.sublime-project
 *.sublime-workspace
-
-# Vim
 *.swp
 *.swo
-*~
-
-# Emacs
 *~
 \#*\#
 /.emacs.desktop
@@ -163,78 +100,44 @@ outputs/models/*
 auto-save-list
 tramp
 .\#*
-
-# =============================================================================
-# OS Generated
-# =============================================================================
-
-# macOS
 .DS_Store
 .AppleDouble
 .LSOverride
 ._*
-
-# Windows
 Thumbs.db
 ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
-
-# Linux
-*~
 .fuse_hidden*
 .directory
 .Trash-*
 .nfs*
 
-# =============================================================================
-# Project Specific
-# =============================================================================
-
-# Logs
-logs/*
-!logs/.gitkeep
+# Generated outputs, logs and temporary files
+/logs/
 *.log
-
-# Figures: keep generated result PNGs
-outputs/figures/*
-!outputs/figures/.gitkeep
-!outputs/figures/*.png
-# Unreferenced figures; make reproduce still generates them, not committed
-outputs/figures/binary_pca.png
-outputs/figures/multiclass_pca.png
-outputs/figures/multiclass_optimism_gap.png
-outputs/figures/multiclass_per_subject.png
-outputs/figures/calibration_gap.png
-
-# Demo (synthetic) outputs, never overwrite the committed real-WESAD results
-results/demo/
-outputs/figures/demo/
+/outputs/generated/
 outputs/models/demo/
-
-# Reports
 outputs/reports/*
-!outputs/reports/.gitkeep
-
-# Temporary files
 tmp/
 temp/
 *.tmp
 *.temp
 
-# API keys and secrets
+# Secrets and local configuration
 .env
 .env.*
 secrets.yaml
 credentials.json
 *.pem
 *.key
-
-# Configuration overrides (local)
 configs/local/
 *.local.yaml
 
-# Node.js (for frontend)
+# Frontend, profiling and generated documents
+frontend/package.json
+frontend/package-lock.json
+frontend/tsconfig.json
 frontend/node_modules/
 frontend/build/
 frontend/dist/
@@ -244,10 +147,6 @@ frontend/.cache/
 frontend/npm-debug.log*
 frontend/yarn-debug.log*
 frontend/yarn-error.log*
-
-# Profiling
 *.prof
 *.lprof
-
-# Reports and generated docs
 *.docx

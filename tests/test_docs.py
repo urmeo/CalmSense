@@ -1,12 +1,4 @@
-"""Guard the docs against regressions to the original scaffold README.
-
-The first commit shipped a templated README that named models the project never
-trains (Transformer with cross-modal attention, BiLSTM, CatBoost, EfficientNet),
-ranked one "Best overall" (the real finding is a statistical tie), and listed
-eight notebooks (01 to 08) that do not exist; the repo ships a single notebook.
-Those claims were removed in the 2026-05-28 rewrite. These tests fail if any of
-them reappear, or if the docs ever point at a notebook file that is not on disk.
-"""
+"""Documentation describes implemented models and references existing artifacts."""
 
 import re
 from pathlib import Path
@@ -18,7 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 README = (ROOT / "README.md").read_text()
 
 
-# Names that appear only in the scaffold: the project never trains these.
+# These models are not implemented by the project.
 PHANTOM_MODELS = ["Transformer", "BiLSTM", "CatBoost", "EfficientNet", "cross-modal attention"]
 
 
@@ -29,14 +21,13 @@ def test_readme_names_no_untrained_models():
 
 
 def test_docs_make_no_best_overall_ranking_claim():
-    # The scaffold crowned a single model "Best overall"; the honest result is that
-    # the four feature models are statistically tied (Friedman p = 0.81).
+    # No significant difference was detected among the four feature models.
     assert "best overall" not in README.lower(), "README makes a 'Best overall' ranking claim"
 
 
 def test_readme_local_links_and_images_exist():
     """Check the overview's Markdown destinations and HTML image sources."""
-    refs = re.findall(r"\]\(([^\s)]+)\)", README) + re.findall(r'src="([^"]+)"', README)
+    refs = re.findall(r"\]\(([^\s)]+)\)", README) + re.findall(r'(?:src|href)="([^"]+)"', README)
     for ref in refs:
         url = urlsplit(ref)
         if url.scheme or not url.path:
@@ -70,29 +61,27 @@ def test_referenced_notebooks_exist():
     assert not missing, f"Docs reference notebooks that do not exist: {missing}"
 
 
-def test_no_scaffold_numbered_notebook_series():
-    # The scaffold listed notebooks/01_.. through notebooks/08_..; none exist.
+def test_no_nonexistent_numbered_notebook_series():
+    # The numbered 01-08 notebook series does not exist.
     assert not re.search(r"notebooks/0[1-8]_", README), (
-        "README references the scaffold's numbered 01-08 notebook series"
+        "README references a nonexistent numbered 01-08 notebook series"
     )
 
 
 def test_no_em_or_en_dashes_anywhere():
-    """The author's style bans em/en dashes in code, comments, and docs; guard the
-    whole tree so a stray dash cannot slip back in (an earlier pass missed several)."""
+    """Guard documentation and source punctuation."""
     targets = (
         sorted(ROOT.glob("src/**/*.py"))
         + sorted(ROOT.glob("scripts/*.py"))
         + sorted(ROOT.glob("tests/*.py"))
         + sorted(ROOT.glob("frontend/src/**/*.ts"))
         + sorted(ROOT.glob("frontend/src/**/*.tsx"))
+        + sorted(ROOT.glob("outputs/dashboard/**/*.ts"))
         + sorted(ROOT.glob("docs/*.md"))
         + sorted(ROOT.glob("notebooks/*.ipynb"))
         + [
             ROOT / "README.md",
-            ROOT / "MODEL_CARD.md",
             ROOT / "CONTRIBUTING.md",
-            ROOT / "results" / "README.md",
         ]
     )
     en_dash, em_dash = chr(0x2013), chr(0x2014)  # by codepoint, so this guard never flags itself

@@ -1,5 +1,7 @@
-"""Calibration as a fourth layer of optimism, plus leak-free recalibration and a
-decision-curve safety analysis. Binary baseline-vs-stress, Random Forest."""
+"""Compare binary calibration under LOSO, subject-mixed CV, and recalibration.
+
+Fit calibrators on out-of-fold training probabilities and report decision curves.
+"""
 
 import argparse
 import json
@@ -19,7 +21,6 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GroupKFold, LeaveOneGroupOut, StratifiedKFold
 
 from scripts.run_experiment import (
-    RESULTS_DIR,
     _fit_params,
     build_pipeline,
     load_cached,
@@ -27,7 +28,7 @@ from scripts.run_experiment import (
     prepare_task,
 )
 from src import calibration as cal
-from src.config import FIGURES_DIR, SEED
+from src.config import DEMO_DIR, FIGURES_DIR, RESULTS_DIR, SEED
 from src.utils import paired_effect_size, provenance, set_seed
 
 POSITIVE = "stress"
@@ -47,7 +48,7 @@ def loso_proba(factory, X, y, groups):
 
 
 def within_subject_proba(factory, X, y, groups):
-    """Subject-mixed 5-fold on non-overlapping windows (the optimistic baseline)."""
+    """Predict non-overlapping windows with subject-mixed stratified five-fold CV."""
     keep = nonoverlap_mask(groups)
     Xk, yk, gk = X[keep], y[keep], groups[keep]
 
@@ -67,13 +68,14 @@ def _subject_brier(y, proba, g):
 
 
 def gap_significance(loso, within):
-    """Paired test of per-subject Brier: is LOSO worse-calibrated than within-subject?"""
+    """Compare subject-paired Brier scores with a two-sided Wilcoxon test."""
     subjects = sorted(set(loso) & set(within))
     a = np.array([loso[s] for s in subjects])
     b = np.array([within[s] for s in subjects])
     gap = a - b
     pval = 1.0 if np.allclose(a, b) else float(wilcoxon(a, b).pvalue)
     rng = np.random.RandomState(SEED)
+    # Resample subject-level differences, preserving each LOSO/within-subject pair.
     means = [rng.choice(gap, len(gap), replace=True).mean() for _ in range(10000)]
     return {
         "n_subjects": len(subjects),
@@ -121,6 +123,7 @@ def loso_recalibrated_proba(factory, X, y, groups, method="isotonic"):
             cal_pos = raw_te  # too few subjects to fit a calibrator
         else:
             oof = np.zeros(len(ytr))
+            # Inner held-out subjects supply calibration targets; the outer test subject is excluded.
             inner = GroupKFold(n_splits=min(5, n_groups))
             for itr, ical in inner.split(Xtr, ytr, gtr):
                 p = factory()
@@ -137,13 +140,12 @@ def loso_recalibrated_proba(factory, X, y, groups, method="isotonic"):
 def compute(X, y, groups, model="rf", n_bins=N_BINS):
     factory = lambda: build_pipeline(model)  # noqa: E731
 
-    # Headline: all windows (the deployment-relevant calibration).
+    # Full-window LOSO supplies the calibration and decision-curve summaries.
     y_loso, p_loso, g_loso = loso_proba(factory, X, y, groups)
     y_iso, p_iso = loso_recalibrated_proba(factory, X, y, groups, "isotonic")
     y_sig, p_sig = loso_recalibrated_proba(factory, X, y, groups, "sigmoid")
 
-    # Gap: LOSO vs within-subject on the SAME non-overlapping windows, so only the
-    # CV scheme differs (not the sample size).
+    # Use the same non-overlapping windows to compare the two CV schemes.
     m = nonoverlap_mask(groups)
     y_within, p_within, g_within = within_subject_proba(factory, X, y, groups)
     y_lm, p_lm, g_lm = loso_proba(factory, X[m], y[m], groups[m])
@@ -158,7 +160,7 @@ def compute(X, y, groups, model="rf", n_bins=N_BINS):
         _subject_brier(y_within, p_within, g_within),
     )
 
-    # All all-window LOSO passes iterate identical splits, so labels line up; enforce it.
+    # Decision curves require labels and probabilities in the same outer-fold order.
     assert np.array_equal(y_loso, y_iso), "LOSO label order diverged across passes"
     thresholds = np.round(np.arange(0.05, 0.61, 0.05), 2)
     prevalence = float(np.mean(y_loso == 1))
@@ -174,6 +176,7 @@ def compute(X, y, groups, model="rf", n_bins=N_BINS):
         "positive_class": POSITIVE,
         "n_windows": int(len(y_loso)),
         "n_bins": n_bins,
+        "brier_definition": cal.BINARY_BRIER_DEFINITION,
         "loso": loso,
         "loso_matched": loso_matched,
         "within_subject": within,
@@ -191,9 +194,8 @@ def _plot_reliability(out, path):
     plt.figure(figsize=(5, 5))
     plt.plot([0, 1], [0, 1], "k:", label="perfect")
     for key, color, label in [
-        ("within_subject", "#e67e22", "within-subject"),
-        ("loso", "#3498db", "LOSO"),
-        ("recalibrated_isotonic", "#2ecc71", "LOSO recalibrated"),
+        ("loso", "#3498db", "LOSO, all windows"),
+        ("recalibrated_isotonic", "#2ecc71", "LOSO, all windows + isotonic"),
     ]:
         rows = out[key]["reliability"]
         plt.plot(
@@ -213,15 +215,15 @@ def _plot_reliability(out, path):
 
 
 def _plot_gap(out, path):
-    keys = ["within_subject", "loso_matched", "recalibrated_isotonic"]
-    labels = ["Within-subject", "LOSO", "LOSO recalibrated"]
+    keys = ["within_subject", "loso_matched"]
+    labels = ["Subject-mixed", "LOSO matched"]
     eces = [out[k]["ece"] for k in keys]
     plt.figure(figsize=(4.5, 4))
-    bars = plt.bar(labels, eces, color=["#e67e22", "#3498db", "#2ecc71"])
+    bars = plt.bar(labels, eces, color=["#e67e22", "#3498db"])
     for b, v in zip(bars, eces):
         plt.text(b.get_x() + b.get_width() / 2, v + 0.002, f"{v:.3f}", ha="center")
     plt.ylabel("Expected calibration error")
-    plt.title("Calibration optimism and its correction")
+    plt.title("Calibration gap on matched non-overlapping windows")
     plt.tight_layout()
     plt.savefig(path, dpi=150)
     plt.close()
@@ -246,9 +248,9 @@ def _plot_decision(out, path):
 
 def run(synthetic=False, model="rf", n_bins=N_BINS):
     set_seed(SEED)
-    # Synthetic runs write to demo/ so they never overwrite the committed real-WESAD snapshot.
-    results_dir = RESULTS_DIR / "demo" if synthetic else RESULTS_DIR
-    figures_dir = FIGURES_DIR / "demo" if synthetic else FIGURES_DIR
+    # Synthetic runs never overwrite the committed real-WESAD snapshot.
+    results_dir = DEMO_DIR / "results" if synthetic else RESULTS_DIR
+    figures_dir = DEMO_DIR / "figures" if synthetic else FIGURES_DIR
     results_dir.mkdir(parents=True, exist_ok=True)
     figures_dir.mkdir(parents=True, exist_ok=True)
 
@@ -256,7 +258,7 @@ def run(synthetic=False, model="rf", n_bins=N_BINS):
         from src.synthetic import features
 
         print("Using synthetic data (demo only).")
-        features_df, x_raw, _ = features(n_subjects=6, block_sec=150, seed=SEED)
+        features_df, x_raw, _ = features(n_subjects=6, block_sec=150, seed=SEED, cache=False)
     else:
         cached = load_cached()
         if cached is None:
@@ -290,7 +292,7 @@ def run(synthetic=False, model="rf", n_bins=N_BINS):
     if synthetic:
         print(
             "Note: synthetic stress is near-separable, so ECE is ~0 and the optimism gap is not "
-            "meaningful. Run `make reproduce` on real WESAD for the committed benchmark's numbers."
+            "meaningful. Run `python scripts/run_experiment.py` on real WESAD for benchmark results."
         )
     print(f"Wrote {results_dir / 'calibration.json'} and 3 figures.")
 

@@ -5,10 +5,9 @@ import {
   Database,
   Cpu,
   Shield,
-  Users,
   ExternalLink,
 } from 'lucide-react';
-import results from '../results.json';
+import results from '../../../outputs/dashboard/results';
 
 const r = results as any;
 const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
@@ -20,10 +19,23 @@ const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+const FeatureCard: React.FC<{
+  icon: React.ReactNode;
+  title: string;
+  children: React.ReactNode;
+}> = ({ icon, title, children }) => (
+  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+    <div className="flex items-center space-x-3 mb-3">
+      {icon}
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
+    </div>
+    <ul className="space-y-2 text-gray-600 dark:text-gray-400">{children}</ul>
+  </div>
+);
+
 const About: React.FC = () => {
   return (
     <div className="space-y-8 animate-fade-in max-w-4xl mx-auto">
-      {/* Header */}
       <div className="text-center">
         <div className="flex items-center justify-center space-x-3 mb-4">
           <Heart className="w-12 h-12 text-red-500" />
@@ -33,13 +45,12 @@ const About: React.FC = () => {
           Multimodal Stress Detection from Physiological Signals
         </p>
         <p className="mt-2 text-gray-500 dark:text-gray-500">
-          Version 0.1.0
+          Version 1.0.0
         </p>
       </div>
 
-      {/* Badges */}
       <div className="flex flex-wrap justify-center gap-2">
-        {['Python 3.9+', 'PyTorch', 'React', 'WESAD Dataset'].map((badge) => (
+        {['Python 3.11+', 'PyTorch', 'React', 'WESAD Dataset'].map((badge) => (
           <span
             key={badge}
             className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 rounded-full text-sm font-medium"
@@ -49,82 +60,56 @@ const About: React.FC = () => {
         ))}
       </div>
 
-      {/* Description */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
           About the Project
         </h2>
         <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-          CalmSense is a stress-detection benchmark that measures how much of the field's reported
-          accuracy survives honest, subject-independent evaluation. Using the WESAD dataset, it runs a
-          complete pipeline: signal preprocessing, feature extraction, and a leakage-free
-          Leave-One-Subject-Out comparison of classical models and a 1D-CNN.
+          CalmSense benchmarks stress detection on the WESAD dataset using signal preprocessing,
+          feature extraction, and Leave-One-Subject-Out evaluation of four feature models and a
+          raw-signal 1D-CNN.
         </p>
         <p className="mt-4 text-gray-600 dark:text-gray-400 leading-relaxed">
-          Every result uses <strong>Leave-One-Subject-Out</strong> cross-validation, so models are always tested
-          on people they never trained on. The best binary model ({r.binary.best_model}) reaches{' '}
-          <strong>{pct(r.binary.loso_accuracy)}</strong> for stress detection, and the best three-class model
-          ({r.multiclass.best_model}) reaches <strong>{pct(r.multiclass.loso_accuracy)}</strong>{' '}
-          (baseline/stress/amusement), with SHAP-based interpretation built on HRV standards.
+          Benchmark model comparisons use <strong>Leave-One-Subject-Out</strong> cross-validation:
+          each fold tests a person excluded from training. The highest observed binary accuracy
+          ({r.binary.best_model}) is{' '}
+          <strong>{pct(r.binary.loso_accuracy)}</strong>; the three-class result
+          ({r.multiclass.best_model}) is <strong>{pct(r.multiclass.loso_accuracy)}</strong>{' '}
+          (baseline/stress/amusement). Subject-mixed validation is a separate comparison;
+          SHAP describes a full-data binary XGBoost fit.
         </p>
       </div>
 
-      {/* Features Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center space-x-3 mb-3">
-            <Database className="w-6 h-6 text-blue-500" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Dataset</h3>
-          </div>
-          <ul className="space-y-2 text-gray-600 dark:text-gray-400">
-            <li>• WESAD: Wearable Stress and Affect Detection</li>
-            <li>• 15 subjects with multimodal signals</li>
-            <li>• ECG, EDA, TEMP, RESP, ACC</li>
-            <li>• Three conditions: Baseline, Stress, Amusement</li>
-          </ul>
-        </div>
+        <FeatureCard icon={<Database className="w-6 h-6 text-blue-500" />} title="Dataset">
+          <li>• WESAD: Wearable Stress and Affect Detection</li>
+          <li>• 15 subjects with multimodal signals</li>
+          <li>• ECG, EDA, TEMP, RESP, ACC</li>
+          <li>• Three conditions: Baseline, Stress, Amusement</li>
+        </FeatureCard>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center space-x-3 mb-3">
-            <Cpu className="w-6 h-6 text-green-500" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Models</h3>
-          </div>
-          <ul className="space-y-2 text-gray-600 dark:text-gray-400">
-            <li>• Classical ML: Logistic Regression, Random Forest, XGBoost, LightGBM</li>
-            <li>• Deep Learning: residual 1D-CNN on raw signals</li>
-            <li>• Leakage-free per-fold imputation and scaling</li>
-            <li>• Leave-One-Subject-Out cross-validation</li>
-          </ul>
-        </div>
+        <FeatureCard icon={<Cpu className="w-6 h-6 text-green-500" />} title="Models">
+          <li>• Classical ML: Logistic Regression, Random Forest, XGBoost, LightGBM</li>
+          <li>• Deep Learning: residual 1D-CNN on raw signals</li>
+          <li>• Leakage-free per-fold imputation and scaling</li>
+          <li>• Leave-One-Subject-Out cross-validation</li>
+        </FeatureCard>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center space-x-3 mb-3">
-            <BookOpen className="w-6 h-6 text-purple-500" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Features</h3>
-          </div>
-          <ul className="space-y-2 text-gray-600 dark:text-gray-400">
-            <li>• {r.binary.n_features} physiological features extracted</li>
-            <li>• HRV time/frequency/nonlinear analysis</li>
-            <li>• EDA phasic/tonic decomposition</li>
-            <li>• 60s windows, 50% overlap</li>
-          </ul>
-        </div>
+        <FeatureCard icon={<BookOpen className="w-6 h-6 text-purple-500" />} title="Features">
+          <li>• {r.binary.n_features} physiological features extracted</li>
+          <li>• HRV time/frequency/nonlinear analysis</li>
+          <li>• EDA phasic/tonic decomposition</li>
+          <li>• 60s windows, 50% overlap</li>
+        </FeatureCard>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center space-x-3 mb-3">
-            <Shield className="w-6 h-6 text-orange-500" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Explainability</h3>
-          </div>
-          <ul className="space-y-2 text-gray-600 dark:text-gray-400">
-            <li>• SHAP values for global/local importance</li>
-            <li>• Top-biomarker contributions per prediction</li>
-            <li>• Optimism-gap analysis (LOSO vs within-subject)</li>
-            <li>• Clinical interpretation (Task Force 1996)</li>
-          </ul>
-        </div>
+        <FeatureCard icon={<Shield className="w-6 h-6 text-orange-500" />} title="Explainability">
+          <li>• Binary XGBoost feature ranking (mean |SHAP|)</li>
+          <li>• Descriptive full-data fit, not held-out evidence</li>
+          <li>• Matched-window optimism-gap analysis</li>
+          <li>• Motion-confound and transfer limitations</li>
+        </FeatureCard>
       </div>
 
-      {/* Architecture */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
           System Architecture
@@ -150,7 +135,6 @@ const About: React.FC = () => {
         </div>
       </div>
 
-      {/* Results */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
           Key Results
@@ -179,7 +163,6 @@ const About: React.FC = () => {
         </div>
       </div>
 
-      {/* References */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
           References
@@ -209,7 +192,6 @@ const About: React.FC = () => {
         </ul>
       </div>
 
-      {/* Links */}
       <div className="flex flex-wrap justify-center gap-4">
         <a
           href="https://github.com/urmeo/CalmSense"
@@ -223,7 +205,6 @@ const About: React.FC = () => {
         </a>
       </div>
 
-      {/* Footer */}
       <div className="text-center text-gray-500 dark:text-gray-500 text-sm">
         <p>© 2026 CalmSense Project. Licensed under MIT License.</p>
         <p className="mt-1">Built with React, TypeScript, Tailwind CSS, and PyTorch.</p>

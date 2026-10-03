@@ -2,16 +2,13 @@ import pickle
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
-from ..config import (
-    VALID_SUBJECTS,
-    LABEL_NAMES,
-    FS,
-    WESAD_DIR,
-)
+from ..config import FS, LABEL_NAMES, VALID_SUBJECTS, WESAD_DIR
 from ..logging_config import LoggerMixin
 
 
 class WESADLoader(LoggerMixin):
+    """Load trusted WESAD pickles without resampling chest or wrist channels."""
+
     VALID_SUBJECTS = VALID_SUBJECTS
     LABELS = LABEL_NAMES
 
@@ -26,9 +23,7 @@ class WESADLoader(LoggerMixin):
         self._validate_path()
         self.subjects = self._discover_subjects()
 
-        self.logger.info(
-            f"WESADLoader initialized: {len(self.subjects)} subjects available"
-        )
+        self.logger.info(f"WESADLoader initialized: {len(self.subjects)} subjects available")
 
     def _validate_path(self) -> None:
         if not self.data_path.exists():
@@ -52,13 +47,11 @@ class WESADLoader(LoggerMixin):
 
         return subjects
 
-    def load_subject(
-        self, subject_id: str, signals: Optional[List[str]] = None
-    ) -> Dict:
+    def load_subject(self, subject_id: str, signals: Optional[List[str]] = None) -> Dict:
+        """Return requested signals and labels, which retain the 700 Hz chest timebase."""
         if subject_id not in self.VALID_SUBJECTS:
             raise ValueError(
-                f"Invalid subject ID: {subject_id}. "
-                f"Valid subjects: {self.VALID_SUBJECTS}"
+                f"Invalid subject ID: {subject_id}. Valid subjects: {self.VALID_SUBJECTS}"
             )
 
         pkl_path = self.data_path / subject_id / f"{subject_id}.pkl"
@@ -69,6 +62,7 @@ class WESADLoader(LoggerMixin):
 
         try:
             with open(pkl_path, "rb") as f:
+                # Official recordings use Python 2 pickles; latin1 preserves their byte strings.
                 data = pickle.load(f, encoding="latin1")
         except Exception as e:
             self.logger.error(f"Failed to load {subject_id}: {e}")
@@ -79,12 +73,8 @@ class WESADLoader(LoggerMixin):
 
         if signals is not None:
             signals_upper = {s.upper() for s in signals}
-            chest_signals = {
-                k: v for k, v in chest_signals.items() if k.upper() in signals_upper
-            }
-            wrist_signals = {
-                k: v for k, v in wrist_signals.items() if k.upper() in signals_upper
-            }
+            chest_signals = {k: v for k, v in chest_signals.items() if k.upper() in signals_upper}
+            wrist_signals = {k: v for k, v in wrist_signals.items() if k.upper() in signals_upper}
             self.logger.debug(f"Filtered to signals: {signals}")
 
         result = {

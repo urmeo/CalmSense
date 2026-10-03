@@ -1,9 +1,11 @@
 """Guards against the data-leakage traps that invalidate WESAD results."""
 
 import numpy as np
+import pytest
 
 from scripts.run_experiment import (
     build_pipeline,
+    cnn_loso,
     kfold_accuracy,
     loso_evaluate,
     nonoverlap_mask,
@@ -28,6 +30,38 @@ def test_loso_evaluate_holds_out_each_subject():
     # one score per subject, and every subject was the held-out one exactly once
     assert len(res["per_subject"]) == n_subjects
     assert set(res["per_subject"]["subject"]) == set(groups)
+
+
+def test_cnn_loso_reports_window_weighted_accuracy(monkeypatch):
+    from src.models.dl import cnn_1d
+
+    groups = np.array(["S0"] * 2 + ["S1"] * 6)
+    y = np.tile([0, 1], 4)
+    x_raw = np.zeros((8, 1, 2))
+    # S0 predictions are correct; S1 predictions are wrong. Subject sizes differ.
+    x_raw[:, 0, 0] = [0, 1, 1, 0, 1, 0, 1, 0]
+    x_raw[:, 0, 1] = np.arange(8)
+    train_sizes = []
+
+    class FixedCNN:
+        def __init__(self, in_channels, random_state):
+            self.training_ids = set()
+
+        def fit(self, X, labels):
+            self.training_ids = set(X[:, 0, 1])
+            train_sizes.append(len(labels))
+
+        def predict(self, X):
+            assert self.training_ids.isdisjoint(X[:, 0, 1])
+            return X[:, 0, 0].astype(int)
+
+    monkeypatch.setattr(cnn_1d, "CNN1DClassifier", FixedCNN)
+    result = cnn_loso(x_raw, y, groups)
+
+    assert train_sizes == [6, 2]
+    assert result["accuracy_mean"] == pytest.approx(0.5)
+    assert result["pooled_accuracy"] == pytest.approx(0.25)
+    np.testing.assert_array_equal(result["y_true"], y)
 
 
 def test_loso_splits_have_disjoint_subjects():

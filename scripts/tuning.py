@@ -1,5 +1,4 @@
-"""Nested hyperparameter tuning: inner grouped CV selects params, outer LOSO scores.
-The test subject never touches tuning, so the numbers stay leak-free. Binary task."""
+"""Tune binary classifiers with grouped inner CV and score outer LOSO subjects."""
 
 import argparse
 import json
@@ -21,13 +20,11 @@ from sklearn.model_selection import GridSearchCV, GroupKFold, LeaveOneGroupOut
 from scripts.run_experiment import (
     CLASSIFIERS,
     CLF_NAMES,
-    FIGURES_DIR,
-    RESULTS_DIR,
     build_pipeline,
     load_cached,
     prepare_task,
 )
-from src.config import SEED
+from src.config import DEMO_DIR, FIGURES_DIR, RESULTS_DIR, SEED
 from src.utils import provenance
 
 GRIDS = {
@@ -56,6 +53,7 @@ def tune_model(key, X, y, groups, inner_splits=3):
     for train_idx, test_idx in logo.split(X, y, groups):
         gtr = groups[train_idx]
         k = min(inner_splits, len(np.unique(gtr)))
+        # GridSearchCV refits the entire pipeline within each inner subject split.
         search = GridSearchCV(
             build_pipeline(key),
             GRIDS[key],
@@ -74,6 +72,7 @@ def tune_model(key, X, y, groups, inner_splits=3):
         )
         chosen.append(tuple(sorted(search.best_params_.items())))
     df = pd.DataFrame(rows)
+    # Report the modal choice across outer folds; it is not an additional full-data search.
     mode_params = dict(Counter(chosen).most_common(1)[0][0])
     return df, mode_params
 
@@ -92,8 +91,8 @@ def compute(X, y, groups, inner_splits=3):
     return out
 
 
-def _defaults():
-    path = RESULTS_DIR / "metrics.json"
+def _defaults(results_dir=None):
+    path = (RESULTS_DIR if results_dir is None else results_dir) / "metrics.json"
     if not path.exists():
         return {}
     with open(path) as f:
@@ -102,7 +101,7 @@ def _defaults():
 
 
 def _plot(tuned, defaults, path):
-    names = list(tuned)
+    names = [name for name in tuned if name != "provenance"]
     x = np.arange(len(names))
     plt.figure(figsize=(7, 4))
     plt.bar(x - 0.2, [defaults.get(n, 0) for n in names], 0.4, label="default", color="#95a5a6")
@@ -120,14 +119,16 @@ def _plot(tuned, defaults, path):
 
 
 def run(synthetic=False, inner_splits=3):
-    RESULTS_DIR.mkdir(exist_ok=True)
-    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+    results_dir = DEMO_DIR / "results" if synthetic else RESULTS_DIR
+    figures_dir = DEMO_DIR / "figures" if synthetic else FIGURES_DIR
+    results_dir.mkdir(parents=True, exist_ok=True)
+    figures_dir.mkdir(parents=True, exist_ok=True)
 
     if synthetic:
         from src.synthetic import features
 
         print("Using synthetic data (demo only).")
-        features_df, x_raw, _ = features(n_subjects=6, block_sec=150, seed=SEED)
+        features_df, x_raw, _ = features(n_subjects=6, block_sec=150, seed=SEED, cache=False)
     else:
         cached = load_cached()
         if cached is None:
@@ -136,13 +137,13 @@ def run(synthetic=False, inner_splits=3):
 
     X, y, groups, _, _ = prepare_task(features_df, x_raw, [1, 2])
     tuned = compute(X, y, groups, inner_splits)
-    defaults = _defaults()
+    defaults = _defaults(results_dir)
 
     tuned["provenance"] = provenance()
-    with open(RESULTS_DIR / "tuning.json", "w") as f:
+    with open(results_dir / "tuning.json", "w") as f:
         json.dump(tuned, f, indent=2)
     if defaults:
-        _plot(tuned, defaults, FIGURES_DIR / "tuning.png")
+        _plot(tuned, defaults, figures_dir / "tuning.png")
 
     print(f"\n{'Model':20s} {'default':>8s} {'tuned':>8s}")
     for name, r in tuned.items():
@@ -151,7 +152,7 @@ def run(synthetic=False, inner_splits=3):
         d = defaults.get(name)
         d_str = "n/a" if d is None else f"{d:.3f}"
         print(f"{name:20s} {d_str:>8} {r['accuracy_mean']:>8.3f}")
-    print(f"\nWrote {RESULTS_DIR / 'tuning.json'}")
+    print(f"\nWrote {results_dir / 'tuning.json'}")
 
 
 if __name__ == "__main__":
