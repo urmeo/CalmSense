@@ -102,6 +102,8 @@ The plot compares full-window LOSO and its isotonic recalibration; matched windo
 Binary Brier is stress-probability MSE; multiclass sums squared class errors. Stored calibration's
 two-class scores and paired Brier gap/CI are halved for display; source JSON, ECE, curves and p-values are preserved.
 
+[Decision-curve analysis](outputs/figures/calibration_decision_curve.png).
+
 ### Personalization through probability recalibration
 
 <!-- AUTOGEN:personalization START -->
@@ -182,7 +184,9 @@ python scripts/calibration.py --synthetic  # offline calibration smoke check
 ### Dataset download and integrity
 
 WESAD: [official UCI source](https://archive.ics.uci.edu/dataset/465/wesad+wearable+stress+and+affect+detection),
-research agreement; not redistributed. Non-EEG downloads directly.
+research agreement; not redistributed.
+Non-EEG: [PhysioNet source](https://physionet.org/content/noneeg/1.0.0/), downloads directly;
+[Birjandtalab et al., IEEE SiPS 2016](https://doi.org/10.1109/SiPS.2016.27).
 
 ```bash
 python scripts/download_data.py --wesad  # data/raw/WESAD
@@ -415,40 +419,16 @@ Feature models: fold-local imputation/scaling. CNN: raw windows.
 2. Collect only required signals; omit names and direct identifiers.
 3. Use predictions for research only; follow each dataset's terms.
 
+## References
+
+1. Schmidt et al. (2018). [Introducing WESAD, a Multimodal Dataset for Wearable Stress and Affect Detection](https://doi.org/10.1145/3242969.3242985). *ACM ICMI*, 400-408.
+2. ESC/NASPE Task Force (1996). [Heart Rate Variability: Standards of Measurement, Physiological Interpretation, and Clinical Use](https://doi.org/10.1161/01.CIR.93.5.1043). *Circulation*, 93(5), 1043-1065.
+3. Guo et al. (2017). [On Calibration of Modern Neural Networks](https://proceedings.mlr.press/v70/guo17a.html). *ICML*, PMLR 70, 1321-1330.
+4. Vos et al. (2023). [Generalizable Machine Learning for Stress Monitoring from Wearable Devices: A Systematic Literature Review](https://doi.org/10.1016/j.ijmedinf.2023.105026). *International Journal of Medical Informatics*, 173, 105026.
+
 ## License
 
 [MIT](LICENSE) · © 2025 Urme Bose · [Citation](CITATION.cff)
 
 Use, modify, distribute, or sell; retain copyright and license notices.
 Provided "AS IS", without warranty. Dataset and dependency terms apply separately.
-
-<details>
-<summary>Scientific references · dataset and method attribution</summary>
-
-- Schmidt, Reiss, Duerichen, Marberger, and Van Laerhoven. "Introducing WESAD, a Multimodal Dataset for Wearable Stress and Affect Detection." ICMI, 2018.
-- Birjandtalab, Cogan, Pouyan, and Nourani. "A Non-EEG Dataset for Assessment of Neurological Status." IEEE BHI / PhysioNet, 2016.
-- Task Force of the ESC and NASPE. "Heart Rate Variability: Standards of Measurement, Physiological Interpretation, and Clinical Use." Circulation, 1996.
-- Guo, Pleiss, Sun, and Weinberger. "On Calibration of Modern Neural Networks." ICML, 2017.
-- Vickers and Elkin. "Decision Curve Analysis: A Novel Method for Evaluating Prediction Models." Medical Decision Making, 2006. The committed [decision-curve figure](outputs/figures/calibration_decision_curve.png) remains available.
-- Lundberg and Lee. "A Unified Approach to Interpreting Model Predictions." NeurIPS, 2017.
-- Bhanushali et al. "Stress Classification and Personalization: Getting the Most out of the Least." arXiv:2107.05666, 2021.
-- Vos, Trinh, Sarnyai, and Rahimi Azghadi. "Generalizable Machine Learning for Stress Monitoring from Wearable Devices: A Systematic Literature Review." International Journal of Medical Informatics 173, 105026, 2023.
-- Oliver and Dakshit. "Cross-Modality Investigation on WESAD Stress Classification." arXiv:2502.18733, 2025.
-- Benchekroun et al. "Cross Dataset Analysis for Generalizability of HRV-Based Stress Detection Models." Sensors 23(4), 1807, 2023.
-- Prajod, Mahesh, and André. "Stressor Type Matters! Exploring Factors Influencing Cross-Dataset Generalizability of Physiological Stress Detection." ICMI Companion, 2024.
-- Vos et al. "Ensemble Machine Learning Model Trained on a New Synthesized Dataset Generalizes Well for Stress Prediction Using Wearable Devices." Journal of Biomedical Informatics, 2023.
-
-### WESAD dataset citation
-
-```bibtex
-@inproceedings{schmidt2018wesad,
-  title     = {Introducing WESAD, a Multimodal Dataset for Wearable Stress and Affect Detection},
-  author    = {Schmidt, Philip and Reiss, Attila and Duerichen, Robert and Marberger, Claus and Van Laerhoven, Kristof},
-  booktitle = {Proceedings of the 20th ACM International Conference on Multimodal Interaction},
-  pages     = {400--408},
-  year      = {2018}
-}
-```
-
-
-</details>
