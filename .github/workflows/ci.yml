@@ -118,5 +118,5 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .
-      - name: make demo (offline synthetic pipeline)
-        run: make demo
+      - name: Synthetic calibration smoke
+        run: python scripts/calibration.py --synthetic

@@ -8,16 +8,17 @@ especially welcome.
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-make install-dev          # supported package dependencies and dev tools
-make demo                 # smoke-test the full pipeline on synthetic data (no download)
+python -m pip install -e ".[dev]"
+python scripts/calibration.py --synthetic  # calibration smoke check; no download
 ```
 
 ## Before you open a PR
 
 ```bash
-make format               # ruff format + autofix
-make lint                 # ruff check
-make test                 # pytest (must pass; CI enforces ≥60% coverage on src/)
+ruff format src/ tests/ scripts/
+ruff check --fix src/ tests/ scripts/
+ruff check src/ tests/ scripts/
+python -m pytest tests/ -q  # CI enforces ≥60% coverage on src/
 ```
 
 - **Target main** with a focused PR; keep unrelated changes out.

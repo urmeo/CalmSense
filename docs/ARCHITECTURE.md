@@ -35,13 +35,13 @@ and calibration. The static dashboard renders the exported experiment results.
 
 - **Config**, frozen dataclasses (sampling rates, filter params, valid subjects): src/config.py.
 - **Logging**, structured logs via LoggerMixin: src/logging_config.py.
-- **Synthetic data**, src/synthetic.py reproduces the full pipeline without the real dataset for
-  make demo/CI. It is intentionally near-separable, so calibration/optimism numbers from it are not
+- **Synthetic data**, `python scripts/calibration.py --synthetic` runs an offline calibration smoke
+  check using src/synthetic.py. It is intentionally near-separable, so calibration/optimism numbers are not
   meaningful (see the module docstring).
 - **Portable features**, version 2 uses EDA/TEMP slopes per second and versioned cache sidecars.
   [Results history](../results/README.md) distinguishes the old unit-mismatched transfer snapshot.
-- **Reproducibility**, everything is seeded (SEED = 42). make reproduce regenerates results/ and
-  outputs/figures/ from WESAD; results/README.md records provenance. Committed figures in docs/figures/
+- **Reproducibility**, everything is seeded (SEED = 42). The [reproduction commands](../README.md#reproduce-experiments)
+  regenerate results/ and outputs/figures/ from WESAD; results/README.md records provenance. Committed figures in docs/figures/
   remain a separate snapshot.
 
 ## Data flow at a glance

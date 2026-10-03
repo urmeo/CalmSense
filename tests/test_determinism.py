@@ -17,7 +17,7 @@ def test_set_seed_makes_rngs_reproducible():
 
 
 def test_feature_extraction_is_deterministic():
-    """Same seed -> identical features, so make reproduce is reproducible end to end.
+    """Same seed -> identical features for reproducible experiments.
 
     Guards the whole synthetic path (signal simulation, filtering, R-peak
     detection, and every extractor) against an unseeded RNG creeping in.

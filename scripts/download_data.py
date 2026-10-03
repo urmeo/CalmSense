@@ -150,7 +150,7 @@ if __name__ == "__main__":
         _check(NONEEG_URL)
         _check(WESAD_URL)
     elif not args.wesad and not args.noneeg:
-        download_noneeg()  # default with no flags, keeps `make data` fetching Non-EEG
+        download_noneeg()  # No flags selects Non-EEG; --wesad selects the primary dataset.
     else:
         if args.noneeg:
             download_noneeg()

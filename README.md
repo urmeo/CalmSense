@@ -15,7 +15,7 @@ DL: 1D-CNN · Explainability: SHAP
 - Detects stress vs baseline from wearable signals: ECG, EDA (skin conductance), temperature, respiration, motion.
 - Scored Leave-One-Subject-Out (LOSO): train on 14 people, test on the 15th, rotate.
 - Shows where the usual high numbers come from: subject leakage, motion, dataset shift, calibration.
-- Ships a static dashboard of the committed results (no backend). `make demo` runs the full pipeline offline on synthetic signals.
+- Ships a static dashboard of committed results (no backend), plus an offline synthetic calibration smoke check.
 
 | **15** | **58** | **869** | **1,032** |
 | :--: | :--: | :--: | :--: |
@@ -165,8 +165,8 @@ Python **3.11 / 3.12**. From the repository root:
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-make install-dev
-make demo                     # offline synthetic smoke check
+python -m pip install -e ".[dev]"
+python scripts/calibration.py --synthetic  # offline calibration smoke check
 ```
 
 ### Dataset download and integrity
@@ -175,10 +175,9 @@ WESAD: [official UCI source](https://archive.ics.uci.edu/dataset/465/wesad+weara
 research agreement; not redistributed. Non-EEG downloads directly.
 
 ```bash
-make wesad                    # data/raw/WESAD
-make data                     # data/external/noneeg
+python scripts/download_data.py --wesad  # data/raw/WESAD
+python scripts/download_data.py          # data/external/noneeg
 python scripts/download_data.py --verify-wesad
-make reproduce                # regenerates scientific outputs
 ```
 
 Manual extraction: `data/raw/WESAD/S2/S2.pkl` through `S17/S17.pkl`, excluding S12.
@@ -190,7 +189,27 @@ Binary uses 1/2; three-class uses 1/2/3.
 No official version tag/checksums; verification uses all 15 committed SHA-256 references.
 Trusted pickles only: [security](SECURITY.md). macOS OpenMP: `brew install libomp`.
 `requirements.lock` records the published environment; newer NeuroKit2 can change wrist/transfer
-results (commit `61d0d2c`). `make demo` provides no scientific evidence.
+results (commit `61d0d2c`). The synthetic demo provides no scientific evidence.
+
+### Reproduce experiments
+
+After downloading both datasets, run these scripts in order to regenerate results, local figures,
+the model and checksum, README tables, and dashboard data:
+
+```bash
+python scripts/run_experiment.py
+python scripts/ablation.py
+python scripts/wrist.py
+python scripts/cross_dataset.py
+python scripts/calibration.py
+python scripts/personalize.py
+python scripts/update_readme_tables.py
+python scripts/tuning.py
+python scripts/stats.py
+python scripts/threshold_metrics.py
+python scripts/build_dashboard_data.py
+python scripts/stamp_provenance.py
+```
 
 Tables: `python scripts/update_readme_tables.py`. [Results snapshot](results/README.md) ·
 [Dashboard setup](frontend/README.md) · [Architecture](docs/ARCHITECTURE.md) · [Contributing](CONTRIBUTING.md).

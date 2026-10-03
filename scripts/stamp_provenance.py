@@ -1,7 +1,7 @@
 """Write results/provenance.json: the exact context the committed numbers came from.
 
 Closes the reproducibility loop for an auditor: which commit, which seed, which package
-versions, which dataset. Run at the end of `make reproduce` (and standalone any time).
+versions, which dataset. Run after the experiment scripts (or standalone any time).
 """
 
 import hashlib

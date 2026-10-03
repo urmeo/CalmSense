@@ -10,4 +10,4 @@ Local experiment and synthetic-demo outputs are written here.
 The README uses the preserved research snapshots in [../docs/figures/](../docs/figures/).
 The dashboard displays committed results; it does not load the model in the browser.
 
-Regenerate experiments with `make reproduce`; see [result provenance](../results/README.md).
+Use the [reproduction commands](../README.md#reproduce-experiments); see [result provenance](../results/README.md).

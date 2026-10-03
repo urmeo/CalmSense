@@ -3,7 +3,8 @@
 These files preserve the WESAD benchmark (15 subjects, S2 to S17 excluding S12), with a
 separate corrected transfer experiment. WESAD is not redistributed (see
 [README dataset download and integrity](../README.md#dataset-download-and-integrity)), so a clean clone cannot regenerate them without first
-downloading WESAD; make demo reproduces the same pipeline on synthetic data instead. For dataset and
+downloading WESAD. `python scripts/calibration.py --synthetic` provides an offline calibration smoke
+check. Use the [reproduction commands](../README.md#reproduce-experiments) for real datasets. For dataset and
 shipped-model lineage, see [README data protocol](../README.md#data-and-evaluation-protocol) and
 [shipped model](../README.md#shipped-model).
 

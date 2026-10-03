@@ -9,7 +9,7 @@ labels: bug
 A clear description of the bug.
 
 **To reproduce**
-The exact command(s) you ran, e.g. `make demo` or `pytest tests/...`.
+The exact command(s) you ran, e.g. `python scripts/calibration.py --synthetic` or `pytest tests/...`.
 
 **Expected vs actual**
 What you expected, and what happened instead (paste the error/output).
