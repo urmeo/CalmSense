@@ -49,7 +49,8 @@ After editing dependencies, run `node tooling.mjs update` and review the source 
 
 CI installs the exact locked dependencies, audits moderate or higher vulnerabilities, and builds
 the dashboard. GitHub's automatic dependency discovery does not read the custom manifest.
-The Pages workflow publishes `dist/` under `/CalmSense/` with a fallback for direct page links.
+The same workflow publishes `dist/` under `/CalmSense/` after every check passes on `main`,
+with a fallback for direct page links. Manual deployment also requires `main` and passing checks.
 
 ## Dashboard data
 

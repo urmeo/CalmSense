@@ -1,21 +1,20 @@
 ---
 name: Bug report
-about: Something doesn't work as documented
+about: Report a reproducible bug
 title: "[bug] "
 labels: bug
 ---
 
-**What happened**
-A clear description of the bug.
+[Security vulnerability? Report privately.](https://github.com/urmeo/CalmSense/security/advisories/new)
 
 **To reproduce**
-The exact command(s) you ran, e.g. `python scripts/calibration.py --synthetic` or `pytest tests/...`.
+Exact commands and minimal steps. Use synthetic or redacted data.
 
 **Expected vs actual**
-What you expected, and what happened instead (paste the error/output).
+Expected behavior, actual behavior, and relevant error output.
 
 **Environment**
 - OS:
-- Python version:
-- Install method (`pip install -e .`):
-- Commit / version:
+- Python / Node version:
+- Install command:
+- Commit or version:
