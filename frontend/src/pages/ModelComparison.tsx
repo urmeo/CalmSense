@@ -38,11 +38,11 @@ const ModelComparison: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Model Comparison</h1>
           <p className="text-gray-500 dark:text-gray-400">
-            WESAD: {data.n_subjects ?? 15} held-out subjects. Accuracy and macro-F1 are subject means;
+            WESAD: {data.n_subjects ?? 15} held-out subjects. Table accuracy and macro-F1 are subject means;
             balanced accuracy pools held-out predictions.
           </p>
         </div>
@@ -53,7 +53,7 @@ const ModelComparison: React.FC = () => {
             const value = e.target.value;
             if (value === 'binary' || value === 'multiclass') setTask(value);
           }}
-          className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg text-sm"
+          className="max-w-full shrink-0 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 border-0 rounded-lg text-sm"
         >
           <option value="binary">Binary (baseline vs. stress)</option>
           <option value="multiclass">3-class (baseline/stress/amusement)</option>
@@ -75,7 +75,7 @@ const ModelComparison: React.FC = () => {
       </div>
 
       {gap !== undefined && <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-4 text-sm text-orange-800 dark:text-orange-200">
-        On the same non-overlapping windows, {data.best_model} scores{' '}
+        On the same non-overlapping windows, {data.best_model} pooled accuracy is{' '}
         <strong>{pct(data.within_subject_accuracy)}</strong> under subject-mixed 5-fold validation
         versus <strong>{pct(losoMatched)}</strong> under LOSO. The gap is{' '}
         <strong>{gap.toFixed(1)} percentage points</strong>.
@@ -100,7 +100,7 @@ const ModelComparison: React.FC = () => {
               <strong>{pct(transfer.wesad_to_noneeg?.balanced_accuracy)}</strong>;
               reverse transfer{' '}
               <strong>{pct(transfer.noneeg_to_wesad?.balanced_accuracy)}</strong>.
-              Devices, stressors, and labels differ; this pair does not isolate dataset shift.
+              Signal units, devices, stressors, and labels differ; this pair does not isolate dataset shift.
             </p>
           </div>}
         </div>

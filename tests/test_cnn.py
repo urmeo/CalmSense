@@ -109,3 +109,25 @@ def test_cnn_rejects_nonfinite_normalization_or_inference(failure):
         model._std.fill(np.inf)
     with pytest.raises(ValueError, match="CNN (normalization|inference)"):
         model.predict_proba(X)
+
+
+def test_cnn_group_split_fallback_finds_rare_class_cover_deterministically():
+    pytest.importorskip("torch")
+    from src.models.dl.cnn_1d import CNN1DClassifier
+
+    y = np.array([0] * 28 + [1, 2])
+    groups = np.arange(30)
+    model = CNN1DClassifier(val_fraction=0.9, random_state=42)
+    train, validation = model._validation_split(y, groups)
+    assert len(train) == 3 and len(validation) == 27
+    assert set(groups[train]).isdisjoint(groups[validation])
+    np.testing.assert_array_equal(np.unique(y[train]), [0, 1, 2])
+    np.testing.assert_array_equal(model._validation_split(y, groups)[0], train)
+
+
+def test_cnn_group_split_rejects_impossible_class_cover_at_requested_fraction():
+    pytest.importorskip("torch")
+    from src.models.dl.cnn_1d import CNN1DClassifier
+
+    with pytest.raises(ValueError, match="retain every training class"):
+        CNN1DClassifier(val_fraction=0.5)._validation_split(np.array([0, 1, 2]), np.arange(3))

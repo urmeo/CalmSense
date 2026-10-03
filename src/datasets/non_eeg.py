@@ -90,9 +90,11 @@ def build(subjects: Optional[list] = None) -> pd.DataFrame:
             # Keep windows inside one annotation interval; no window spans condition changes.
             for w0 in range(s0, s1 - win + 1, step):
                 w1 = w0 + win
-                # The HR record is 1 Hz, so sensor indices must first be converted to seconds.
-                hr_win = hr[w0 // ACC_FS : w1 // ACC_FS]
-                if len(hr_win) != w1 // ACC_FS - w0 // ACC_FS:
+                # Include HR timestamps in [start, end); annotations can fall between seconds.
+                h0 = (w0 * HR_FS + ACC_FS - 1) // ACC_FS
+                h1 = (w1 * HR_FS + ACC_FS - 1) // ACC_FS
+                hr_win = hr[h0:h1]
+                if len(hr_win) != h1 - h0:
                     raise ValueError(
                         f"Non-EEG HR record is shorter than the sensor window for {sid}"
                     )

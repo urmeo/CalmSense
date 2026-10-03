@@ -1,7 +1,8 @@
 """18 EDA, temperature, motion, and heart-rate features shared by both wrist datasets.
 
 EDA and temperature slopes use units per second despite different sampling rates.
-The shared schema is separate from the 58-feature WESAD chest benchmark.
+Native signal units differ between datasets; shared columns do not harmonize them.
+The chest extraction schema has 60 columns; the saved benchmark used 58.
 """
 
 from pathlib import Path
@@ -17,7 +18,12 @@ from .preprocessing.filters import _positive_number
 WINDOW_SEC = 60.0
 OVERLAP = 0.5
 PURITY = 0.9
-PORTABLE_SCHEMA_VERSION = 2
+PORTABLE_SCHEMA_VERSION = 3
+# Empatica E4's native ACC ticks are 1/64 g; Non-EEG headers declare ACC/EDA as NU.
+PORTABLE_SIGNAL_UNITS = {
+    "wesad": {"EDA": "uS", "TEMP": "degC", "ACC": "1/64 g", "HR": "bpm"},
+    "noneeg": {"EDA": "NU", "TEMP": "degC", "ACC": "NU", "HR": "bpm"},
+}
 FEATURE_KEYS = {
     "EDA": ["mean", "std", "min", "max", "range", "slope"],
     "TEMP": ["mean", "std", "min", "max", "slope"],

@@ -136,3 +136,28 @@ def test_tuning_default_comparison_requires_matching_protocol_schema_and_cohort(
     (tmp_path / "metrics.json").write_text(json.dumps(summary))
     defaults = tuning._defaults(tmp_path, groups=np.array(["S1", "S0", "S0"]))
     assert defaults == ({"Random Forest": 0.91} if mismatch is None else {})
+
+
+def test_tuning_retires_only_generated_stale_plot_when_defaults_are_incompatible(
+    tmp_path, monkeypatch
+):
+    results, figures = tmp_path / "results", tmp_path / "generated" / "figures"
+    results.mkdir()
+    figures.mkdir(parents=True)
+    (results / "metrics.json").write_text(json.dumps({"benchmark_protocol_version": 1}))
+    stale = figures / "tuning.png"
+    stale.write_bytes(b"stale generated comparison")
+    historical = tmp_path / "figures" / "tuning.png"
+    historical.parent.mkdir()
+    historical.write_bytes(b"preserved historical figure")
+    monkeypatch.setattr(tuning, "RESULTS_DIR", results)
+    monkeypatch.setattr(tuning, "FIGURES_DIR", figures)
+    monkeypatch.setattr(tuning, "load_cached", lambda: (None, None))
+    monkeypatch.setattr(
+        tuning, "prepare_task", lambda *args: (None, None, np.array(["S0", "S1"]), None, None)
+    )
+    monkeypatch.setattr(tuning, "compute", lambda *args: {"Random Forest": {"accuracy_mean": 0.6}})
+    tuning.run()
+    assert (results / "tuning.json").exists()
+    assert not stale.exists()
+    assert historical.read_bytes() == b"preserved historical figure"

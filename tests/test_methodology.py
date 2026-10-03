@@ -325,7 +325,8 @@ def test_subject_bootstrap_rejects_insufficient_or_nonfinite_data(scores):
         bootstrap_ci(scores)
 
 
-def test_experiment_exports_zero_gap_and_feature_schema(tmp_path, monkeypatch):
+@pytest.mark.parametrize("cnn_wins", [False, True])
+def test_experiment_exports_zero_gap_and_feature_schema(tmp_path, monkeypatch, cnn_wins):
     import json
 
     import pandas as pd
@@ -374,20 +375,53 @@ def test_experiment_exports_zero_gap_and_feature_schema(tmp_path, monkeypatch):
         "shap_analysis",
         lambda *args: pd.DataFrame({"feature": ["HRV_test"], "mean_abs_shap": [0.1]}),
     )
+
+    def save_model(model, path):
+        saved_models.append(model)
+        path.write_bytes(b"temporary test model")
+
+    monkeypatch.setattr(run_experiment, "save_verified_joblib", save_model)
+    if cnn_wins:
+        groups = frame["subject_id"].to_numpy()
+        folds = [
+            (np.flatnonzero(groups == group), y[groups == group]) for group in np.unique(groups)
+        ]
+        cnn_result = run_experiment._loso_result(y, groups, folds)
+        monkeypatch.setattr(run_experiment, "cnn_loso", lambda *args: cnn_result)
     monkeypatch.setattr(
-        run_experiment, "save_verified_joblib", lambda model, path: saved_models.append(model)
+        run_experiment.sys, "argv", ["run_experiment.py"] + ([] if cnn_wins else ["--no-cnn"])
     )
-    monkeypatch.setattr(run_experiment.sys, "argv", ["run_experiment.py", "--no-cnn"])
 
     run_experiment.run()
 
     result = json.loads((run_experiment.RESULTS_DIR / "metrics.json").read_text())
-    assert result["binary"]["loso_matched_accuracy"] == 0
-    assert result["binary"]["within_subject_accuracy"] == 0
-    assert result["binary"]["optimism_gap_pts"] == 0
+    if cnn_wins:
+        assert result["binary"]["best_model"] == "1D-CNN"
+        assert result["binary"]["loso_matched_accuracy"] is None
+        assert result["binary"]["within_subject_accuracy"] is None
+        assert result["binary"]["optimism_gap_pts"] is None
+        assert result["methodology"]["cnn_validation"] == "training_subject_holdout"
+    else:
+        assert result["binary"]["loso_matched_accuracy"] == 0
+        assert result["binary"]["within_subject_accuracy"] == 0
+        assert result["binary"]["optimism_gap_pts"] == 0
+        assert result["methodology"]["cnn_validation"] is None
     assert result["binary"]["n_subjects"] == 3
     assert saved_models[0]["feature_schema_version"] == result["binary"]["feature_schema_version"]
-    assert result["methodology"]["cnn_validation"] is None
+    assert saved_models[0]["model_name"] == result["binary"]["inference_model"] == "Random Forest"
+    assert result["artifacts"]["shap"] == {
+        "model": "XGBoost",
+        "scope": "full_data_binary_fit",
+        "path": "shap_top_features.csv",
+        "sha256": run_experiment.sha256_file(run_experiment.RESULTS_DIR / "shap_top_features.csv"),
+    }
+    assert result["artifacts"]["inference_model"] == {
+        "model": "Random Forest",
+        "path": "stress_classifier.joblib",
+        "sha256": run_experiment.sha256_file(
+            run_experiment.MODELS_DIR / "stress_classifier.joblib"
+        ),
+    }
     assert result["benchmark_protocol_version"] == 2
 
 

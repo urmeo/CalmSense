@@ -14,7 +14,7 @@ The static dashboard displays committed results.
 
 | **15** | **58** | **869** | **1,032** |
 | :--: | :--: | :--: | :--: |
-| WESAD subjects | Features | Binary windows | Three-class windows |
+| WESAD subjects | Saved features | Binary windows | Three-class windows |
 
 ## Results
 
@@ -31,6 +31,7 @@ The static dashboard displays committed results.
 | 1D-CNN | 0.718 | 0.648 | n/a | n/a | 0.626 | 0.543 |
 
 Accuracy / macro-F1: subject means. *AUROC/AUPRC: separate pooled pass; see notes below.
+Saved comparison CSVs and plots contain four feature models; `metrics.json` also records the CNN.
 RF balanced accuracy: **0.903** (pooled default decisions).
 
 **RF accuracy 95% CI: [0.860, 0.960]** · no significant difference detected among four feature models (**p = 0.806**).
@@ -143,10 +144,12 @@ Confusion matrices instead use default decisions, pooled and row-normalized.
 
 ### Cross-dataset transfer
 
-Separate wrist-feature RF; 18 shared features; version 2 slopes per second; balanced accuracy. Within WESAD **0.868**; within Non-EEG **0.699**.
+Saved wrist-feature RF; 18 shared features; portable schema v2; balanced accuracy. Within WESAD **0.868**; within Non-EEG **0.699**.
 15 WESAD / 20 Non-EEG subjects; NeuroKit2 0.2.12. Heart-rate extraction differs from the benchmark's 0.2.7 environment.
 Portable features preserve sample timestamps when non-finite values are omitted.
-Transfer is confounded by devices, stressors, and labels. SHAP explains a full-data fit;
+Units are not harmonized: WESAD ACC uses [1/64 g ticks](https://www.empatica.com/blog/decoding-wearable-sensor-signals-what-to-expect-from-your-e4-data/);
+Non-EEG ACC/EDA headers declare NU. No physical conversion is supplied.
+Transfer is confounded by units, devices, stressors, and labels. SHAP explains a full-data fit;
 it is not causal or held-out evidence.
 
 ### Shipped model
@@ -169,6 +172,7 @@ Published metrics, figures, and the shipped model are preserved historical snaps
 Current extraction **schema v2** corrects HRV spectra, entropy, recurrence, slopes, and filtering;
 benchmark **protocol v2** holds out subjects for CNN validation and weights the XGBoost threshold pass.
 CNN LOSO reserves 3 of 14 training subjects for early stopping; 11 supply gradients and normalization.
+Portable **schema v3** also corrects Non-EEG heart-rate alignment at fractional-second window boundaries.
 Fresh extraction and model fitting are required to report results from this code.
 
 </details>
@@ -229,6 +233,10 @@ python scripts/threshold_metrics.py
 python scripts/build_dashboard_data.py
 python scripts/stamp_provenance.py
 ```
+
+The README updater refreshes only its two marked tables. Review benchmark summaries and
+committed figures explicitly before publishing a new run; dashboard ancillary snapshots remain
+unverified unless linked to their source benchmark.
 
 Legacy chest/wrist caches rebuild automatically. Transfer caches verify extractor hashes and package versions;
 `--rebuild` replaces stale caches. Provenance stamping records the current environment and file hashes;
@@ -295,7 +303,7 @@ Synthetic outputs stay in `generated/demo/{results,figures,models}/`; committed 
 
 Sampling rates, filters, feature settings, subjects, and **seed 42**: `src/config.py`.
 Structured logs: `src/logging_config.py`. Offline demo: `src/synthetic.py`.
-Portable schema v2 uses per-second slopes and versioned cache sidecars.
+Portable schema v3 uses per-second slopes, timestamp-aligned HR samples, and versioned cache sidecars.
 
 ### Data flow
 
@@ -303,7 +311,7 @@ Portable schema v2 uses per-second slopes and versioned cache sidecars.
 flowchart TD
     A["WESAD chest signals"] --> B["Preprocess: filters, R-peaks, EDA decomposition"]
     B --> C["Windows: 60 s, 50% overlap, label purity ≥90%"]
-    C --> D["58 features: HRV, EDA, temperature, respiration, motion"]
+    C --> D["60 registered features: HRV, EDA, temperature, respiration, motion"]
     C --> R["Signal tensors for 1D-CNN: 5 channels × 1,024 samples"]
     D --> E["LOSO: LR, RF, XGBoost, LightGBM"]
     R --> N["LOSO: 1D-CNN"]
@@ -343,7 +351,10 @@ Feature models: fold-local imputation/scaling. CNN: raw windows.
 
 </details>
 
-## Features (58)
+## Features
+
+**60 registered columns**; the saved benchmark retained **58**, excluding all-NaN
+`RESP_inhale_exhale_ratio` and `RESP_variability`.
 
 <details>
 <summary>6 groups · counts and examples</summary>
@@ -354,7 +365,7 @@ Feature models: fold-local imputation/scaling. CNN: raw windows.
 | HRV frequency | 8 | LF/HF power, LF/HF ratio |
 | HRV nonlinear | 10 | SampEn, DFA, SD1/SD2, CSI |
 | EDA | 15 | SCL level, SCR count, SCR amplitude |
-| Temperature + respiration | 8 | Temperature slope, respiration rate |
+| Temperature + respiration | 10 | Temperature slope, respiration rate |
 | Accelerometer | 5 | Magnitude mean, standard deviation, energy |
 
 </details>
@@ -368,7 +379,7 @@ Feature models: fold-local imputation/scaling. CNN: raw windows.
 
 1. **Cohort:** 15 WESAD lab subjects; wide confidence intervals and no clinical validation.
 2. **Analysis:** 60 s windows limit VLF and long-term DFA estimates. CNN performance is weak; exploratory analyses lack multiplicity correction.
-3. **Transfer:** One WESAD/Non-EEG pair; devices, stressors, and labels differ.
+3. **Transfer:** One WESAD/Non-EEG pair; signal units, devices, stressors, and labels differ.
 
 ## Future work
 

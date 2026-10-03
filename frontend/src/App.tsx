@@ -9,6 +9,7 @@ import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import results from './data';
 import { readDarkMode, saveDarkMode } from './lib/preferences';
+import { benchmarkStatus } from './lib/benchmarks';
 
 const SignalExplorer = lazy(() => import('./pages/SignalExplorer'));
 const ExplainabilityDashboard = lazy(() => import('./pages/ExplainabilityDashboard'));
@@ -16,6 +17,7 @@ const CalibrationPanel = lazy(() => import('./pages/CalibrationPanel'));
 
 // The calibration section is optional; only show it once the experiment has produced it.
 const hasCalibration = Boolean(results.calibration);
+const status = benchmarkStatus(results);
 
 const App: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -49,6 +51,18 @@ const App: React.FC = () => {
             <Header sidebarOpen={sidebarOpen} onMenuClick={() => setSidebarOpen(true)} />
 
             <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+              <aside aria-label="Benchmark provenance" className="mb-6 space-y-2 text-sm">
+                <p role="note" className={`rounded-lg border p-3 ${status.historical
+                  ? 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200'
+                  : 'border-gray-200 bg-white text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}>
+                  {status.primary}
+                </p>
+                {status.ancillary && (
+                  <p role="note" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+                    {status.ancillary}
+                  </p>
+                )}
+              </aside>
               <Suspense fallback={<p role="status" className="text-gray-600 dark:text-gray-300">Loading charts…</p>}>
                 <Routes>
                   <Route path="/" element={<ErrorBoundary key="dashboard"><Dashboard /></ErrorBoundary>} />

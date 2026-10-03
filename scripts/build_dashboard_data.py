@@ -10,7 +10,7 @@ import pandas as pd
 
 from src.calibration import BINARY_BRIER_DEFINITION, normalize_binary_calibration
 from src.config import OUTPUT_DIR, RESULTS_DIR
-from src.utils import atomic_write_text
+from src.utils import atomic_write_text, sha256_file
 
 DASHBOARD_RESULTS = OUTPUT_DIR / "dashboard" / "results.ts"
 
@@ -102,6 +102,27 @@ def _unit_metric(value, name):
         raise ValueError(f"{name} must be a numeric value in [0, 1]")
 
 
+def _unverified_sections(metrics, out):
+    """A primary protocol version cannot certify separately generated analyses."""
+    sections = set(out) - {"binary", "multiclass", "benchmark_protocol_version"}
+    artifacts = metrics.get("artifacts", {})
+    if not isinstance(artifacts, dict):
+        raise ValueError("Benchmark artifact metadata must be an object")
+    artifact = artifacts.get("shap")
+    if "shap" in sections and artifact is not None:
+        path = RESULTS_DIR / "shap_top_features.csv"
+        if (
+            not isinstance(artifact, dict)
+            or artifact.get("model") != "XGBoost"
+            or artifact.get("scope") != "full_data_binary_fit"
+            or artifact.get("path") != path.name
+            or artifact.get("sha256") != sha256_file(path)
+        ):
+            raise ValueError("SHAP snapshot does not match the primary benchmark artifact")
+        sections.remove("shap")
+    return sorted(sections)
+
+
 def run():
     metrics = _load_json("metrics.json")
     if metrics is None:
@@ -151,6 +172,9 @@ def run():
     ablation = _load_csv("ablation.csv")
     if ablation:
         out["ablation"] = ablation
+
+    if out.get("benchmark_protocol_version", 1) >= 2:
+        out["unverified_sections"] = _unverified_sections(metrics, out)
 
     payload = json.dumps(out, indent=2, allow_nan=False)
     _validate_tasks(out)

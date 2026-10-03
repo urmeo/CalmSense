@@ -78,7 +78,7 @@ const CalibrationPanel: React.FC = () => {
         <strong>{fmt(within_subject.ece)}</strong> and LOSO ECE is{' '}
         <strong>{fmt(loso_matched.ece)}</strong>: a gap of{' '}
         <strong>{signed(cal.calibration_optimism_gap_ece)}</strong>.
-        Separately, full-window LOSO ECE falls from <strong>{fmt(loso.ece)}</strong> to{' '}
+        Separately, full-window LOSO ECE changes from <strong>{fmt(loso.ece)}</strong> to{' '}
         <strong>{fmt(recalibrated_isotonic.ece)}</strong> with training-subject isotonic recalibration.
       </div>
 

@@ -12,7 +12,7 @@ import {
 import { Activity, Brain, Layers, Award } from 'lucide-react';
 import results from '../data';
 import Panel from '../components/Panel';
-import { requiresFreshBenchmark, formatPercent as pct, matchedGap } from '../lib/benchmarks';
+import { formatPercent as pct, matchedGap } from '../lib/benchmarks';
 
 const r = results;
 
@@ -83,7 +83,7 @@ const OptimismGapChart: React.FC = () => {
   return (
     <Panel title="Optimism gap">
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-        {hasMatched ? `Subject-mixed validation adds ${gap?.toFixed(1)} points on matched non-overlapping windows` : 'Matched-window comparison is unavailable for the selected benchmark model.'}
+        {hasMatched ? `Pooled subject-mixed minus LOSO accuracy: ${gap?.toFixed(1)} points on matched non-overlapping windows` : 'Matched-window comparison is unavailable for the selected benchmark model.'}
       </p>
       {hasMatched && <ResponsiveContainer width="100%" height={250}>
         <BarChart data={data}>
@@ -166,16 +166,10 @@ const Dashboard: React.FC = () => {
         </p>
       </div>
 
-      {requiresFreshBenchmark(r) && (
-        <p role="note" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
-          Saved benchmark snapshots use the earlier pipeline. The corrected code requires a fresh benchmark.
-        </p>
-      )}
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard title="Binary LOSO accuracy" value={pct(b.loso_accuracy)} icon={<Activity className="w-6 h-6 text-blue-600" />} color="blue" />
         <MetricCard title="3-class LOSO accuracy" value={pct(m.loso_accuracy)} icon={<Brain className="w-6 h-6 text-green-600" />} color="green" />
-        <MetricCard title="Features" value={b.n_features} icon={<Layers className="w-6 h-6 text-purple-600" />} color="purple" />
+        <MetricCard title="Saved features" value={b.n_features} icon={<Layers className="w-6 h-6 text-purple-600" />} color="purple" />
         <MetricCard title="Highest observed accuracy" value={b.best_model} icon={<Award className="w-6 h-6 text-orange-600" />} color="orange" />
       </div>
 

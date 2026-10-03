@@ -41,7 +41,7 @@ def _package_versions() -> dict:
 
 
 def _dataset_fingerprint() -> dict:
-    """Stable fingerprint of the WESAD subjects used, from their committed SHA-256 checksums.
+    """Fingerprint the full reference manifest, independently of the benchmark cohort.
 
     Hashes the checksum manifest (not the raw data), so it is reproducible without the
     ~2 GB download present.
@@ -49,7 +49,7 @@ def _dataset_fingerprint() -> dict:
     manifest = json.dumps(WESAD_SHA256, sort_keys=True).encode()
     return {
         "dataset": "WESAD",
-        "n_subjects": len(WESAD_SHA256),
+        "n_reference_subjects": len(WESAD_SHA256),
         "checksum_manifest_sha256": hashlib.sha256(manifest).hexdigest(),
     }
 

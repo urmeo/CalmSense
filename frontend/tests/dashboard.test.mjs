@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readDarkMode, saveDarkMode } from '../src/lib/preferences.ts';
 import { zoomRange, relayoutRange } from '../src/lib/viewport.ts';
-import { requiresFreshBenchmark, formatPercent, matchedGap } from '../src/lib/benchmarks.ts';
+import { requiresFreshBenchmark, benchmarkStatus, formatPercent, matchedGap } from '../src/lib/benchmarks.ts';
 import { readSignalRecording, recordingDuration, conditionSegments } from '../src/lib/signals.ts';
 import { containNavigationFocus } from '../src/lib/navigation.ts';
 
@@ -42,6 +42,29 @@ test('historical exports stay marked until a corrected benchmark is recorded', (
   for (const version of [NaN, Infinity, 2.1, -1]) {
     assert.equal(requiresFreshBenchmark({ benchmark_protocol_version: version }), true);
   }
+});
+
+test('primary protocol status does not certify unrelated ancillary snapshots', () => {
+  assert.deepEqual(benchmarkStatus({}), {
+    historical: true,
+    primary: 'Primary benchmark snapshots use the earlier pipeline. The corrected code requires a fresh benchmark.',
+    ancillary: null,
+  });
+  assert.deepEqual(benchmarkStatus({ benchmark_protocol_version: 2 }), {
+    historical: false, primary: 'Primary benchmark: protocol v2.', ancillary: null,
+  });
+  const mixed = benchmarkStatus({
+    benchmark_protocol_version: 2,
+    unverified_sections: ['calibration', 'cross_dataset', 'wrist', 'shap', 'calibration'],
+  });
+  assert.equal(mixed.primary, 'Primary benchmark: protocol v2.');
+  assert.equal(mixed.ancillary,
+    'Additional snapshots lack verified linkage to this benchmark: calibration, transfer, wrist comparison, SHAP.');
+  assert.equal(benchmarkStatus({ benchmark_protocol_version: 1, unverified_sections: ['calibration'] }).historical, true);
+  const olderExport = benchmarkStatus({ benchmark_protocol_version: 2, calibration: {}, wrist: {}, shap: [], cross_dataset: null });
+  assert.equal(olderExport.ancillary,
+    'Additional snapshots lack verified linkage to this benchmark: SHAP, wrist comparison, calibration.');
+  assert.equal(benchmarkStatus({ benchmark_protocol_version: 2, calibration: {}, unverified_sections: [] }).ancillary, null);
 });
 
 test('missing or nonfinite comparison metrics remain unavailable rather than zero', () => {

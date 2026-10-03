@@ -111,6 +111,34 @@ def sha256_file(path: Union[str, Path]) -> str:
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
+def replace_verified_pair(new_primary, new_sidecar, primary, sidecar) -> None:
+    """Publish a prepared pair; restore prior files if the sidecar replacement fails.
+
+    A simultaneous rollback failure or process termination cannot be made atomic across two files.
+    """
+    from shutil import copy2
+    from tempfile import TemporaryDirectory
+
+    primary, sidecar = Path(primary), Path(sidecar)
+    with TemporaryDirectory(dir=primary.parent) as directory:
+        backups = []
+        for index, destination in enumerate((primary, sidecar)):
+            backup = Path(directory) / str(index)
+            if destination.exists():
+                copy2(destination, backup)
+            backups.append((destination, backup))
+        Path(new_primary).replace(primary)
+        try:
+            Path(new_sidecar).replace(sidecar)
+        except OSError:
+            for destination, backup in backups:
+                if backup.exists():
+                    backup.replace(destination)
+                else:
+                    destination.unlink(missing_ok=True)
+            raise
+
+
 def save_verified_joblib(bundle, path: Union[str, Path]) -> None:
     """Write a joblib bundle and the SHA-256 sidecar used to verify its bytes."""
     from tempfile import TemporaryDirectory
@@ -126,8 +154,7 @@ def save_verified_joblib(bundle, path: Union[str, Path]) -> None:
         joblib.dump(bundle, temporary)
         digest = sha256_file(temporary)
         checksum.write_text(f"{digest}  {path.name}\n")
-        temporary.replace(path)
-        checksum.replace(path.with_name(path.name + ".sha256"))
+        replace_verified_pair(temporary, checksum, path, path.with_name(path.name + ".sha256"))
 
 
 def load_verified_joblib(path: Union[str, Path]):
@@ -171,15 +198,20 @@ def paired_effect_size(a, b) -> dict:
         raise ValueError("Paired effect size requires at least three aligned 1D pairs")
     if not np.isfinite(a).all() or not np.isfinite(b).all():
         raise ValueError("Paired observations must be finite")
-    diff = a - b
+    with np.errstate(over="ignore", invalid="ignore"):
+        diff = a - b
     n = len(diff)
-    sd = diff.std(ddof=1)
-    if not np.isfinite(diff).all() or not np.isfinite(sd):
+    if not np.isfinite(diff).all():
         raise ValueError("Paired differences exceed the supported numerical range")
-    if sd <= np.finfo(float).eps * max(1.0, float(np.abs(diff).max())):
-        effect = 0.0 if np.all(diff == 0) else None
-        return {"cohens_d": effect, "hedges_g": effect, "n": int(n)}
-    d = float(diff.mean() / sd)
+    magnitude = float(np.abs(diff).max())
+    if magnitude == 0:
+        return {"cohens_d": 0.0, "hedges_g": 0.0, "n": int(n)}
+    # Scaling cancels from d_z and avoids squared-difference underflow or overflow.
+    scaled = diff / magnitude
+    sd = scaled.std(ddof=1)
+    if sd <= np.finfo(float).eps:
+        return {"cohens_d": None, "hedges_g": None, "n": int(n)}
+    d = float(scaled.mean() / sd)
     # Paired differences estimate their SD with n-1 degrees of freedom.
     df = n - 1
     correction = exp(lgamma(df / 2) - 0.5 * log(df / 2) - lgamma((df - 1) / 2))

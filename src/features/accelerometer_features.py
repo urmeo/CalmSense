@@ -85,7 +85,7 @@ class AccelerometerFeatureExtractor(LoggerMixin):
 
     def get_feature_descriptions(self) -> Dict[str, str]:
         return {
-            "ACC_magnitude": "Mean vector magnitude (g or m/s²)",
+            "ACC_magnitude": "Mean vector magnitude (input units)",
             "ACC_std": "Magnitude standard deviation",
             "ACC_zero_crossings": "Zero-crossing rate (Hz)",
             "ACC_energy": "Mean squared magnitude (energy)",

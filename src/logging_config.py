@@ -40,24 +40,29 @@ def setup_logging(
         foreign_pre_chain=_shared_processors,
     )
 
+    handlers: list[logging.Handler] = []
+    try:
+        if console:
+            handlers.append(logging.StreamHandler(sys.stdout))
+        if log_file:
+            log_file.parent.mkdir(parents=True, exist_ok=True)
+            handlers.append(logging.FileHandler(log_file))
+        for handler in handlers:
+            handler.setFormatter(formatter)
+    except Exception:
+        for handler in handlers:
+            handler.close()
+        raise
+
+    # Keep the working destination until every replacement handler is ready.
     project_logger = logging.getLogger("calmsense")
     for existing in project_logger.handlers[:]:
         project_logger.removeHandler(existing)
         existing.close()
     project_logger.setLevel(log_level)
     project_logger.propagate = False
-
-    if console:
-        handler = logging.StreamHandler(sys.stdout)
-        handler.setFormatter(formatter)
+    for handler in handlers:
         project_logger.addHandler(handler)
-
-    if log_file:
-        log_file = Path(log_file)
-        log_file.parent.mkdir(parents=True, exist_ok=True)
-        fh = logging.FileHandler(log_file)
-        fh.setFormatter(formatter)
-        project_logger.addHandler(fh)
 
     _logging_configured = True
     _configured_settings = settings

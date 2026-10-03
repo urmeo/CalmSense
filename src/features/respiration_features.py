@@ -185,7 +185,7 @@ class RespirationFeatureExtractor(LoggerMixin):
     def get_feature_descriptions(self) -> Dict[str, str]:
         return {
             "RESP_rate": "Breathing rate (breaths/min)",
-            "RESP_amplitude": "Mean breath amplitude",
+            "RESP_amplitude": "Mean breath amplitude, or signal standard deviation fallback",
             "RESP_variability": "CV of breath intervals (dimensionless)",
             "RESP_inhale_exhale_ratio": "Inspiration/Expiration time ratio",
             "RESP_apnea_index": "Long-interval or low-variance window proxy (%)",

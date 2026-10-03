@@ -42,3 +42,38 @@ def test_logging_reconfigures_destinations_without_resetting_host(tmp_path, monk
 def test_invalid_logging_level_is_rejected():
     with pytest.raises(ValueError, match="Unknown logging level"):
         logging_config.setup_logging(level="invalid", log_file=None)
+
+
+def test_failed_reconfiguration_keeps_the_working_logger(tmp_path, monkeypatch):
+    project = logging.getLogger("calmsense")
+    saved = (project.handlers[:], project.level, project.propagate)
+    project.handlers = []
+    monkeypatch.setattr(logging_config, "_logging_configured", False)
+    monkeypatch.setattr(logging_config, "_configured_settings", None)
+    destination = tmp_path / "working.log"
+    blocker = tmp_path / "file-not-directory"
+    blocker.write_text("keep")
+    try:
+        logging_config.setup_logging(log_file=destination, console=False)
+        handler = project.handlers[0]
+        settings = logging_config._configured_settings
+        logger = logging_config.get_logger("src.test")
+        logger.info("before")
+        with pytest.raises(OSError):
+            logging_config.setup_logging(level="DEBUG", log_file=blocker / "new.log")
+        assert project.handlers == [handler]
+        assert project.level == logging.INFO
+        assert logging_config._configured_settings == settings
+        assert handler.stream is not None
+        logger.info("after failure")
+        logging_config.setup_logging(log_file=destination, console=False)
+        logger.info("after retry")
+        assert [json.loads(line)["event"] for line in destination.read_text().splitlines()] == [
+            "before",
+            "after failure",
+            "after retry",
+        ]
+    finally:
+        for handler in project.handlers:
+            handler.close()
+        project.handlers, project.level, project.propagate = saved

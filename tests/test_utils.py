@@ -70,6 +70,14 @@ def test_constant_nonzero_difference_has_undefined_effect_size():
     assert es == {"cohens_d": None, "hedges_g": None, "n": 3}
 
 
+@pytest.mark.parametrize("scale", [1e-200, 1e-17, 1.0, 1e150])
+def test_paired_effect_size_is_unit_invariant_without_variance_underflow(scale):
+    expected = paired_effect_size([1.0, 2.0, 3.0], [0.0] * 3)
+    scaled = paired_effect_size([scale, 2 * scale, 3 * scale], [0.0] * 3)
+    assert scaled["cohens_d"] == pytest.approx(expected["cohens_d"])
+    assert scaled["hedges_g"] == pytest.approx(expected["hedges_g"])
+
+
 def test_file_sha256_streams_without_read_bytes(tmp_path, monkeypatch):
     from pathlib import Path
 
@@ -141,6 +149,32 @@ def test_failed_model_serialization_keeps_existing_verified_model(tmp_path, monk
     assert path.read_bytes() == original_bytes
     assert checksum.read_bytes() == original_checksum
     assert load_verified_joblib(path) == {"version": 1}
+
+
+@pytest.mark.parametrize("existing", [False, True])
+def test_failed_model_sidecar_publication_restores_previous_pair(tmp_path, monkeypatch, existing):
+    path = tmp_path / "model.joblib"
+    sidecar = path.with_name(path.name + ".sha256")
+    before = None
+    if existing:
+        save_verified_joblib({"version": 1}, path)
+        before = path.read_bytes(), sidecar.read_bytes()
+    replace = Path.replace
+
+    def fail_sidecar(source, destination):
+        if source.name == sidecar.name:
+            raise OSError("sidecar publication failed")
+        return replace(source, destination)
+
+    monkeypatch.setattr(Path, "replace", fail_sidecar)
+    with pytest.raises(OSError, match="sidecar publication failed"):
+        save_verified_joblib({"version": 2}, path)
+    if existing:
+        assert (path.read_bytes(), sidecar.read_bytes()) == before
+        assert load_verified_joblib(path) == {"version": 1}
+    else:
+        assert not path.exists() and not sidecar.exists()
+    assert set(tmp_path.iterdir()) == ({path, sidecar} if existing else set())
 
 
 @pytest.mark.parametrize("contents", ["", "not a hash", "0" * 63])

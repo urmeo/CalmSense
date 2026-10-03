@@ -133,7 +133,38 @@ class CNN1DClassifier(LoggerMixin):
         for train, validation in splitter.split(indices, y, groups):
             if np.array_equal(np.unique(y[train]), classes):
                 return train, validation
-        raise ValueError("Could not find a subject validation split retaining every training class")
+
+        # Rare classes can make random attempts miss a valid group-disjoint split.
+        subjects, group_index = np.unique(groups, return_inverse=True)
+        n_train = len(subjects) - int(np.ceil(self.val_fraction * len(subjects)))
+        class_index = np.searchsorted(classes, y)
+        masks = [
+            sum(1 << int(c) for c in np.unique(class_index[group_index == g]))
+            for g in range(len(subjects))
+        ]
+        order = np.random.RandomState(self.random_state).permutation(len(subjects))
+        covers: dict[int, tuple[int, ...]] = {0: ()}
+        target = (1 << len(classes)) - 1
+        for g in order:
+            for covered, selected in list(covers.items()):
+                if len(selected) >= n_train:
+                    continue
+                next_mask = covered | masks[g]
+                candidate = (*selected, int(g))
+                if next_mask not in covers or len(candidate) < len(covers[next_mask]):
+                    covers[next_mask] = candidate
+            if target in covers:
+                break
+        if target not in covers:
+            raise ValueError(
+                "No subject validation split can retain every training class at this fraction"
+            )
+        training_groups = list(covers[target])
+        training_groups += [int(g) for g in order if g not in training_groups][
+            : n_train - len(training_groups)
+        ]
+        training = np.isin(group_index, training_groups)
+        return indices[training], indices[~training]
 
     def fit(self, X: np.ndarray, y: np.ndarray, groups=None) -> "CNN1DClassifier":
         """Fit on windows; subject groups make the early-stopping split disjoint."""

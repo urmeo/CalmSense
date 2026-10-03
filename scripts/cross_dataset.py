@@ -33,11 +33,12 @@ from src.portable import (
     OVERLAP,
     PORTABLE_FEATURE_COLUMNS,
     PORTABLE_SCHEMA_VERSION,
+    PORTABLE_SIGNAL_UNITS,
     PURITY,
     WINDOW_SEC,
     wesad_portable,
 )
-from src.utils import provenance, sha256_file, write_json
+from src.utils import provenance, replace_verified_pair, sha256_file, write_json
 
 META = ["subject", "label"]
 
@@ -55,6 +56,8 @@ def _cache_schema(dataset):
         "dataset": dataset,
         "slope_units": "per_second",
         "finite_sample_timestamps": "original_sample_positions",
+        "signal_units": PORTABLE_SIGNAL_UNITS[dataset],
+        "hr_window_boundary": "include_timestamps_in_[start,end)",
         "sampling_rates_hz": rates,
         "window_seconds": WINDOW_SEC,
         "overlap": OVERLAP,
@@ -69,7 +72,9 @@ def _cache_schema(dataset):
                 "src/data/loader.py" if dataset == "wesad" else "src/datasets/non_eeg.py",
             )
         },
-        "extraction_packages": {name: version(name) for name in ("numpy", "neurokit2", "wfdb")},
+        "extraction_packages": {
+            name: version(name) for name in ("numpy", "scipy", "neurokit2", "wfdb")
+        },
     }
 
 
@@ -119,7 +124,7 @@ def _load_or_build_cache(dataset, builder, source_provenance=None, *, rebuild=Fa
         frame = builder()
         _validate_frame(frame)
         source = source_provenance() if callable(source_provenance) else source_provenance or {}
-        # Prepare both files before replacing a usable cache; checksums detect interrupted swaps.
+        # Prepare both files and retain the previous pair until publication succeeds.
         with TemporaryDirectory(dir=PROCESSED_DATA_DIR) as temporary:
             new_cache = Path(temporary) / cache.name
             new_sidecar = Path(temporary) / sidecar.name
@@ -130,8 +135,7 @@ def _load_or_build_cache(dataset, builder, source_provenance=None, *, rebuild=Fa
                 "source_provenance": source,
             }
             new_sidecar.write_text(json.dumps(metadata, indent=2) + "\n")
-            new_cache.replace(cache)
-            new_sidecar.replace(sidecar)
+            replace_verified_pair(new_cache, new_sidecar, cache, sidecar)
     _validate_frame(frame)
     return frame, metadata
 
@@ -234,11 +238,13 @@ def run(*, rebuild=False):
             "portable_schema_version": PORTABLE_SCHEMA_VERSION,
             "slope_units": "per_second",
             "finite_sample_timestamps": "original_sample_positions",
+            "signal_units": PORTABLE_SIGNAL_UNITS,
+            "hr_window_boundary": "include_timestamps_in_[start,end)",
             "window_seconds": WINDOW_SEC,
             "overlap": OVERLAP,
             "packages": {
                 name: version(name)
-                for name in ("numpy", "pandas", "scikit-learn", "neurokit2", "wfdb")
+                for name in ("numpy", "scipy", "pandas", "scikit-learn", "neurokit2", "wfdb")
             },
         },
         "datasets": {

@@ -29,7 +29,14 @@ from src.config import DEMO_DIR, FIGURES_DIR, MODELS_DIR, RESULTS_DIR, SEED
 from src.dataset import WindowedDataset, load_cached
 from src.features.feature_pipeline import FEATURE_SCHEMA_VERSION
 from src.models.ml.classifiers import get_classifier
-from src.utils import atomic_write_text, provenance, save_verified_joblib, set_seed, write_json
+from src.utils import (
+    atomic_write_text,
+    provenance,
+    save_verified_joblib,
+    set_seed,
+    sha256_file,
+    write_json,
+)
 
 TASKS = {
     "binary": {"keep": [1, 2], "names": ["baseline", "stress"]},
@@ -435,18 +442,36 @@ def run():
                 key=lambda kv: kv[1]["accuracy_mean"],
             )[0]
             importance = shap_analysis(X, y, feature_cols, figures_dir)
-            atomic_write_text(results_dir / "shap_top_features.csv", importance.to_csv(index=False))
+            shap_path = results_dir / "shap_top_features.csv"
+            atomic_write_text(shap_path, importance.to_csv(index=False))
+            shap_record = {
+                "model": "XGBoost",
+                "scope": "full_data_binary_fit",
+                "path": shap_path.name,
+                "sha256": sha256_file(shap_path),
+            }
             final = build_pipeline(top_clf)
             final.fit(X, y, **_fit_params(final, y))
+            model_path = models_dir / "stress_classifier.joblib"
             save_verified_joblib(
                 {
                     "pipeline": final,
+                    "model_name": CLF_NAMES[top_clf],
                     "features": feature_cols,
                     "classes": cfg["names"],
                     "feature_schema_version": FEATURE_SCHEMA_VERSION,
                 },
-                models_dir / "stress_classifier.joblib",
+                model_path,
             )
+            summary[task]["inference_model"] = CLF_NAMES[top_clf]
+            summary["artifacts"] = {
+                "shap": shap_record,
+                "inference_model": {
+                    "model": CLF_NAMES[top_clf],
+                    "path": model_path.name,
+                    "sha256": sha256_file(model_path),
+                },
+            }
             print(f"  Saved inference model ({CLF_NAMES[top_clf]}) + SHAP.")
 
     summary["provenance"] = provenance()

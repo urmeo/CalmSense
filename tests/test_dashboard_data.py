@@ -260,6 +260,8 @@ def test_environment_snapshot_fingerprints_results_and_excludes_itself(tmp_path,
     stamp_provenance.run()
     snapshot = json.loads((tmp_path / "provenance.json").read_text())
     assert snapshot["provenance_kind"] == "environment_snapshot"
+    assert snapshot["data"]["n_reference_subjects"] == 15
+    assert "n_subjects" not in snapshot["data"]
     assert snapshot["result_sha256"] == {
         "metrics.json": hashlib.sha256(b'{"binary": {}}').hexdigest()
     }
@@ -279,3 +281,61 @@ def test_personalization_table_rejects_an_unknown_brier_scale(tmp_path, monkeypa
     monkeypatch.setattr(update_readme_tables, "RESULTS", tmp_path)
     with pytest.raises(ValueError, match="positive-class MSE"):
         update_readme_tables._personalization_table()
+
+
+def test_new_primary_protocol_does_not_certify_saved_ancillary_runs(tmp_path, monkeypatch):
+    loader = build_dashboard_data._load_json
+
+    def current_primary(name):
+        value = loader(name)
+        if name == "metrics.json":
+            value["benchmark_protocol_version"] = 2
+        return value
+
+    output = tmp_path / "results.ts"
+    monkeypatch.setattr(build_dashboard_data, "DASHBOARD_RESULTS", output)
+    monkeypatch.setattr(build_dashboard_data, "_load_json", current_primary)
+    build_dashboard_data.run()
+    assert _read_module(output)["unverified_sections"] == [
+        "ablation",
+        "calibration",
+        "cross_dataset",
+        "personalization",
+        "shap",
+        "stats",
+        "wrist",
+    ]
+
+
+@pytest.mark.parametrize("fault", [None, "checksum", "model", "scope", "path"])
+def test_shap_link_requires_the_recorded_benchmark_artifact(tmp_path, monkeypatch, fault):
+    from src.utils import sha256_file
+
+    loader = build_dashboard_data._load_json
+
+    def current_primary(name):
+        value = loader(name)
+        if name == "metrics.json":
+            artifact = {
+                "model": "XGBoost",
+                "scope": "full_data_binary_fit",
+                "path": "shap_top_features.csv",
+                "sha256": sha256_file(RESULTS_DIR / "shap_top_features.csv"),
+            }
+            if fault:
+                artifact["sha256" if fault == "checksum" else fault] = "incorrect"
+            value["benchmark_protocol_version"] = 2
+            value["artifacts"] = {"shap": artifact}
+        return value
+
+    output = tmp_path / "results.ts"
+    output.write_text("previous snapshot")
+    monkeypatch.setattr(build_dashboard_data, "DASHBOARD_RESULTS", output)
+    monkeypatch.setattr(build_dashboard_data, "_load_json", current_primary)
+    if fault:
+        with pytest.raises(ValueError, match="SHAP snapshot does not match"):
+            build_dashboard_data.run()
+        assert output.read_text() == "previous snapshot"
+    else:
+        build_dashboard_data.run()
+        assert "shap" not in _read_module(output)["unverified_sections"]

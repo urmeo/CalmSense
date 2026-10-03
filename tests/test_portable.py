@@ -77,10 +77,13 @@ def test_sampling_rates_must_be_explicit():
         portable_features([1, 2], [35, 36], [], [])
 
 
-def test_noneeg_windows_align_annotations_sensor_channels_and_hr(tmp_path, monkeypatch):
+@pytest.mark.parametrize("sensor_offset", [0, 1, 7])
+def test_noneeg_windows_align_annotations_sensor_channels_and_hr(
+    tmp_path, monkeypatch, sensor_offset
+):
     monkeypatch.setattr(non_eeg, "DATA_DIR", tmp_path)
     (tmp_path / "Subject1_AccTempEDA.hea").touch()
-    sensor_time = np.arange(180 * 8) / 8
+    sensor_time = np.arange(180 * 8 + sensor_offset) / 8
     sensor = np.column_stack(
         [
             np.zeros((len(sensor_time), 2)),
@@ -89,9 +92,10 @@ def test_noneeg_windows_align_annotations_sensor_channels_and_hr(tmp_path, monke
             3 + 0.25 * sensor_time,
         ]
     )
-    hr = np.column_stack([np.zeros(180), 70 + np.arange(180)])
+    hr = np.column_stack([np.zeros(181), 70 + np.arange(181)])
     annotations = SimpleNamespace(
-        sample=np.array([0, 480, 960]), aux_note=["Relax", "CognitiveStress", "PhysicalStress"]
+        sample=np.array([0, 480, 960]) + sensor_offset,
+        aux_note=["Relax", "CognitiveStress", "PhysicalStress"],
     )
 
     def read(record):
@@ -108,7 +112,10 @@ def test_noneeg_windows_align_annotations_sensor_channels_and_hr(tmp_path, monke
     assert frame["label"].tolist() == [0, 1]
     np.testing.assert_allclose(frame["EDA_slope"], 0.25)
     np.testing.assert_allclose(frame["TEMP_slope"], -0.01)
-    np.testing.assert_allclose(frame["HR_mean"], [99.5, 159.5])
+    first_hr = int(sensor_offset > 0)
+    np.testing.assert_allclose(frame["HR_mean"], [99.5 + first_hr, 159.5 + first_hr])
+    np.testing.assert_allclose(frame["HR_min"], [70 + first_hr, 130 + first_hr])
+    np.testing.assert_allclose(frame["HR_max"], [129 + first_hr, 189 + first_hr])
 
 
 def test_noneeg_rejects_annotations_beyond_available_samples(tmp_path, monkeypatch):

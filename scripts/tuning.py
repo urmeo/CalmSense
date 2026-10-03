@@ -182,6 +182,8 @@ def run(synthetic=False, inner_splits=3):
     write_json(results_dir / "tuning.json", tuned)
     if defaults:
         _plot(tuned, defaults, figures_dir / "tuning.png")
+    else:
+        (figures_dir / "tuning.png").unlink(missing_ok=True)
 
     print(f"\n{'Model':20s} {'default':>8s} {'tuned':>8s}")
     for name, r in tuned.items():

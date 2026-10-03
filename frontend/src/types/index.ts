@@ -52,6 +52,7 @@ export interface TaskResult {
 
 export interface BenchmarkResults {
   benchmark_protocol_version?: number;
+  unverified_sections?: string[];
   binary: TaskResult;
   multiclass: TaskResult;
   shap?: { feature: string; mean_abs_shap: number }[];

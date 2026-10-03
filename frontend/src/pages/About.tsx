@@ -14,7 +14,7 @@ const details = [
   },
   {
     title: 'Features', icon: BookOpen,
-    items: [`${results.binary.n_features} features; 60 s windows, 50% overlap`, 'HRV, EDA, temperature, respiration, motion', 'EDA tonic/phasic decomposition'],
+    items: [`${results.binary.n_features} saved features; 60 s windows, 50% overlap`, 'HRV, EDA, temperature, respiration, motion', 'EDA tonic/phasic decomposition'],
   },
   {
     title: 'Explainability', icon: Shield,
