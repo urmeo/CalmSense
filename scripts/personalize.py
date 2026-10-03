@@ -34,25 +34,38 @@ METHOD = "isotonic"
 
 
 def _stratified_split(y, frac, rng):
+    y = np.asarray(y)
+    if y.ndim != 1 or not len(y) or not 0 < frac < 1:
+        raise ValueError("Enrollment split requires labels and an evaluation fraction in (0, 1)")
     ev, pool = [], []
     for c in np.unique(y):
         idx = np.where(y == c)[0]
         rng.shuffle(idx)
-        n_eval = max(1, int(round(len(idx) * frac)))
+        n_eval = min(max(1, int(round(len(idx) * frac))), max(1, len(idx) - 1))
         ev.extend(idx[:n_eval])
         pool.extend(idx[n_eval:])
-    return np.array(ev), np.array(pool)
+    return np.array(ev, dtype=int), np.array(pool, dtype=int)
 
 
 def _sample_k(y_pool, k, rng):
     """Sample equally by class; rounding and available windows can yield fewer than k."""
-    per = max(1, k // len(np.unique(y_pool)))
+    if isinstance(k, bool) or not isinstance(k, (int, np.integer)) or k < 1:
+        raise ValueError("Enrollment budgets must be positive integers")
+    y_pool = np.asarray(y_pool)
+    if y_pool.ndim != 1:
+        raise ValueError("Enrollment labels must be one-dimensional")
+    classes = np.unique(y_pool)
+    if not len(classes):
+        return np.array([], dtype=int)
+    if k < len(classes):
+        classes = rng.choice(classes, k, replace=False)
+    per = max(1, k // len(classes))
     picks = []
-    for c in np.unique(y_pool):
+    for c in classes:
         idx = np.where(y_pool == c)[0]
         rng.shuffle(idx)
         picks.extend(idx[: min(per, len(idx))])
-    return np.array(picks)
+    return np.array(picks, dtype=int)
 
 
 def _global_calibrator(factory, Xtr, ytr, gtr, method):
@@ -73,6 +86,11 @@ def _metrics(y, p_pos):
 
 
 def compute(X, y, groups, model="rf", k_values=K_VALUES):
+    k_values = list(k_values)
+    if not k_values or len(set(k_values)) != len(k_values):
+        raise ValueError("Provide at least one distinct positive enrollment budget")
+    for k in k_values:
+        _sample_k(np.array([], dtype=int), k, np.random.RandomState(SEED))
     factory = lambda: build_pipeline(model)  # noqa: E731
     logo = LeaveOneGroupOut()
     rng = np.random.RandomState(SEED)
@@ -109,6 +127,11 @@ def compute(X, y, groups, model="rf", k_values=K_VALUES):
                 continue
             calib = _fit_calibrator(raw[pool][pick], y_s[pool][pick], METHOD)
             acc[k].append(_metrics(y_ev, _apply_calibrator(calib, raw_ev, METHOD)))
+
+    if not acc["uncalibrated"]:
+        raise ValueError(
+            "Personalization requires a target subject with both baseline and stress windows"
+        )
 
     def mean(rows):
         arr = np.array(rows)

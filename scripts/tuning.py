@@ -48,6 +48,16 @@ GRIDS = {
 
 
 def tune_model(key, X, y, groups, inner_splits=3):
+    if key not in GRIDS:
+        raise ValueError(f"No tuning grid for classifier: {key}")
+    if (
+        isinstance(inner_splits, bool)
+        or not isinstance(inner_splits, (int, np.integer))
+        or inner_splits < 2
+    ):
+        raise ValueError("Nested tuning requires at least two inner subject splits")
+    if len(np.unique(groups)) < 3:
+        raise ValueError("Nested tuning requires at least three subjects")
     logo = LeaveOneGroupOut()
     rows, chosen = [], []
     for train_idx, test_idx in logo.split(X, y, groups):
@@ -59,14 +69,19 @@ def tune_model(key, X, y, groups, inner_splits=3):
             GRIDS[key],
             cv=GroupKFold(n_splits=k),
             scoring="balanced_accuracy",
+            error_score="raise",
         )
         search.fit(X[train_idx], y[train_idx], groups=gtr)
+        if not np.isfinite(search.cv_results_["mean_test_score"]).all():
+            raise ValueError("Nested tuning produced a nonfinite validation score")
         pred = search.predict(X[test_idx])
         rows.append(
             {
                 "subject": groups[test_idx][0],
                 "accuracy": accuracy_score(y[test_idx], pred),
-                "f1_macro": f1_score(y[test_idx], pred, average="macro"),
+                "f1_macro": f1_score(
+                    y[test_idx], pred, labels=np.unique(y), average="macro", zero_division=0
+                ),
                 "balanced_accuracy": balanced_accuracy_score(y[test_idx], pred),
             }
         )
@@ -101,10 +116,12 @@ def _defaults(results_dir=None):
 
 
 def _plot(tuned, defaults, path):
-    names = [name for name in tuned if name != "provenance"]
+    names = [name for name in tuned if name != "provenance" and name in defaults]
+    if not names:
+        return
     x = np.arange(len(names))
     plt.figure(figsize=(7, 4))
-    plt.bar(x - 0.2, [defaults.get(n, 0) for n in names], 0.4, label="default", color="#95a5a6")
+    plt.bar(x - 0.2, [defaults[n] for n in names], 0.4, label="default", color="#95a5a6")
     plt.bar(
         x + 0.2, [tuned[n]["accuracy_mean"] for n in names], 0.4, label="tuned", color="#3498db"
     )

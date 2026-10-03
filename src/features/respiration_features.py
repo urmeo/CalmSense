@@ -4,21 +4,21 @@ import numpy as np
 
 from ..config import FEATURE_PARAMS
 from ..logging_config import LoggerMixin
+from ..preprocessing.filters import _positive_number
 
 
 class RespirationFeatureExtractor(LoggerMixin):
     def __init__(self, sampling_rate: float = 700.0):
-        self.sampling_rate = sampling_rate
+        self.sampling_rate = _positive_number(sampling_rate, "sampling_rate")
         self.logger.debug(f"RespirationFeatureExtractor initialized, fs={sampling_rate} Hz")
 
     def _validate_signal(self, signal: np.ndarray) -> Optional[np.ndarray]:
         if signal is None:
             return None
 
-        signal = np.asarray(signal).flatten()
-        signal = signal[np.isfinite(signal)]
+        signal = np.asarray(signal, dtype=float).flatten()
 
-        if len(signal) < 100:
+        if len(signal) < 100 or not np.isfinite(signal).all():
             self.logger.warning("Respiratory signal too short")
             return None
 
@@ -41,8 +41,10 @@ class RespirationFeatureExtractor(LoggerMixin):
 
         try:
             if breath_intervals is not None and len(breath_intervals) > 0:
-                breath_intervals = np.asarray(breath_intervals)
-                breath_intervals = breath_intervals[np.isfinite(breath_intervals)]
+                breath_intervals = np.asarray(breath_intervals, dtype=float).flatten()
+                breath_intervals = breath_intervals[
+                    np.isfinite(breath_intervals) & (breath_intervals > 0)
+                ]
 
                 if len(breath_intervals) > 0:
                     mean_interval = np.mean(breath_intervals)
@@ -57,8 +59,20 @@ class RespirationFeatureExtractor(LoggerMixin):
                 features["RESP_rate"] = self._estimate_breathing_rate(resp)
 
             if breath_peaks is not None and breath_troughs is not None:
-                breath_peaks = np.asarray(breath_peaks).flatten()
-                breath_troughs = np.asarray(breath_troughs).flatten()
+                breath_peaks = np.asarray(breath_peaks, dtype=float).flatten()
+                breath_troughs = np.asarray(breath_troughs, dtype=float).flatten()
+                breath_peaks = np.unique(
+                    breath_peaks[
+                        np.isfinite(breath_peaks) & (breath_peaks >= 0) & (breath_peaks < len(resp))
+                    ]
+                )
+                breath_troughs = np.unique(
+                    breath_troughs[
+                        np.isfinite(breath_troughs)
+                        & (breath_troughs >= 0)
+                        & (breath_troughs < len(resp))
+                    ]
+                )
 
                 amplitudes = []
                 for peak_idx in breath_peaks:
@@ -99,6 +113,8 @@ class RespirationFeatureExtractor(LoggerMixin):
     def _estimate_breathing_rate(self, resp: np.ndarray) -> float:
         from scipy import signal as scipy_signal
 
+        if np.std(resp) <= FEATURE_PARAMS.EPSILON:
+            return np.nan
         nperseg = min(int(30 * self.sampling_rate), len(resp) // 2)
         if nperseg < 64:
             return np.nan
@@ -161,13 +177,13 @@ class RespirationFeatureExtractor(LoggerMixin):
                 end = start + window_samples
                 window_var = np.var(resp[start:end])
 
-                if window_var < 0.1 * np.var(resp):
+                if window_var <= max(FEATURE_PARAMS.EPSILON, 0.1 * np.var(resp)):
                     low_variance_count += 1
 
             return float(100.0 * low_variance_count / n_windows) if n_windows > 0 else 0.0
 
         breath_intervals = np.asarray(breath_intervals)
-        breath_intervals = breath_intervals[np.isfinite(breath_intervals)]
+        breath_intervals = breath_intervals[np.isfinite(breath_intervals) & (breath_intervals > 0)]
 
         if len(breath_intervals) == 0:
             return 0.0
@@ -184,5 +200,5 @@ class RespirationFeatureExtractor(LoggerMixin):
             "RESP_amplitude": "Mean breath amplitude",
             "RESP_variability": "CV of breath intervals (dimensionless)",
             "RESP_inhale_exhale_ratio": "Inspiration/Expiration time ratio",
-            "RESP_apnea_index": "Percentage of apneic periods (%)",
+            "RESP_apnea_index": "Long-interval or low-variance window proxy (%)",
         }

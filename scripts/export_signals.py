@@ -20,10 +20,17 @@ DASHBOARD_SIGNALS = OUTPUT_DIR / "dashboard" / "signals.ts"
 
 
 def _slice(signal, labels, label, want):
-    idx = np.where(labels == label)[0]
-    if len(idx) < want:
+    if len(signal) != len(labels):
+        raise ValueError("Signal and label lengths differ")
+    idx = np.flatnonzero(labels == label)
+    if len(idx) == 0:
         return None
-    start = idx[len(idx) // 2 - want // 2]
+    # A label can occur in separate blocks; never bridge intervening conditions.
+    runs = np.split(idx, np.flatnonzero(np.diff(idx) > 1) + 1)
+    run = max(runs, key=len)
+    if len(run) < want:
+        return None
+    start = int(run[0]) + (len(run) - want) // 2
     return signal[start : start + want]
 
 
@@ -42,6 +49,8 @@ def run():
         eda = chest["EDA"].flatten()
         temp = chest["Temp"].flatten()
         acc = np.asarray(chest["ACC"])
+        if acc.shape != (len(labels), 3):
+            raise ValueError(f"{sid}: chest ACC must align with labels and contain three axes")
 
         chans = {"ecg": [], "eda": [], "temp": [], "accX": [], "accY": [], "accZ": []}
         conditions = []
@@ -61,6 +70,8 @@ def run():
             conditions.extend([name] * out_n)
 
         n = len(conditions)
+        if n == 0:
+            raise ValueError(f"{sid}: no condition contains a complete {SECONDS}s clip")
         data[sid] = {
             "time": np.round(np.arange(n) / OUT_FS, 3).tolist(),
             **chans,

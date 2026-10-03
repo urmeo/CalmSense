@@ -42,7 +42,7 @@ const ExplainabilityDashboard: React.FC = () => {
                 <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2">
                   <div
                     className="bg-indigo-500 h-2 rounded-full"
-                    style={{ width: `${(item.value / maxImportance) * 100}%` }}
+                    style={{ width: `${maxImportance > 0 ? (item.value / maxImportance) * 100 : 0}%` }}
                   />
                 </div>
               </div>

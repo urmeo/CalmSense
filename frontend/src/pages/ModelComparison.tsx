@@ -16,7 +16,7 @@ import SummaryCard from '../components/SummaryCard';
 
 type Task = 'binary' | 'multiclass';
 
-const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
+const pct = (v: number | null | undefined) => typeof v === 'number' && Number.isFinite(v) ? `${(v * 100).toFixed(1)}%` : 'Unavailable';
 
 const ModelComparison: React.FC = () => {
   const [task, setTask] = useState<Task>('binary');
@@ -26,7 +26,8 @@ const ModelComparison: React.FC = () => {
   );
   const best = models[0];
   const losoMatched = data.loso_matched_accuracy;
-  const gap = (data.within_subject_accuracy - losoMatched) * 100;
+  const gap = typeof data.within_subject_accuracy === 'number' && typeof losoMatched === 'number'
+    ? (data.within_subject_accuracy - losoMatched) * 100 : undefined;
   const shap = (results as any).shap || [];
 
   const barData = models.map((m: any) => ({
@@ -65,16 +66,16 @@ const ModelComparison: React.FC = () => {
         <SummaryCard
           icon={<AlertTriangle className="w-6 h-6 text-orange-500" />}
           label="Matched optimism gap"
-          value={`+${gap.toFixed(1)} pts`}
+          value={gap === undefined ? 'Unavailable' : `${gap >= 0 ? '+' : ''}${gap.toFixed(1)} pts`}
         />
       </div>
 
-      <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-4 text-sm text-orange-800 dark:text-orange-200">
-        On the same non-overlapping windows, {best.model} scores{' '}
+      {gap !== undefined && <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-4 text-sm text-orange-800 dark:text-orange-200">
+        On the same non-overlapping windows, {data.best_model} scores{' '}
         <strong>{pct(data.within_subject_accuracy)}</strong> under subject-mixed 5-fold validation
         versus <strong>{pct(losoMatched)}</strong> under LOSO. The gap is{' '}
         <strong>{gap.toFixed(1)} percentage points</strong>.
-      </div>
+      </div>}
 
       {task === 'binary' && (results as any).cross_dataset && (results as any).wrist && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

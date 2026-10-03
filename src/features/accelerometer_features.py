@@ -4,18 +4,19 @@ import numpy as np
 from scipy import signal as scipy_signal
 
 from ..logging_config import LoggerMixin
+from ..preprocessing.filters import _positive_number
 
 
 class AccelerometerFeatureExtractor(LoggerMixin):
     def __init__(self, sampling_rate: float = 32.0):
-        self.sampling_rate = sampling_rate
+        self.sampling_rate = _positive_number(sampling_rate, "sampling_rate")
         self.logger.debug(f"AccelerometerFeatureExtractor initialized, fs={sampling_rate} Hz")
 
     def _validate_signal(self, signal: np.ndarray) -> Optional[np.ndarray]:
         if signal is None:
             return None
 
-        signal = np.asarray(signal).flatten()
+        signal = np.asarray(signal, dtype=float).flatten()
         signal = signal[np.isfinite(signal)]
 
         if len(signal) < 10:
@@ -27,6 +28,7 @@ class AccelerometerFeatureExtractor(LoggerMixin):
     def compute_magnitude(
         self, acc_x: np.ndarray, acc_y: np.ndarray, acc_z: np.ndarray
     ) -> np.ndarray:
+        acc_x, acc_y, acc_z = (np.asarray(axis, dtype=float) for axis in (acc_x, acc_y, acc_z))
         return np.sqrt(acc_x**2 + acc_y**2 + acc_z**2)
 
     def extract_all(
@@ -39,14 +41,16 @@ class AccelerometerFeatureExtractor(LoggerMixin):
         ax = np.asarray(acc_x).flatten()
         ay = np.asarray(acc_y).flatten()
         az = np.asarray(acc_z).flatten()
+        if not ax.size == ay.size == az.size:
+            raise ValueError("Accelerometer axes must have equal lengths")
         n = min(ax.size, ay.size, az.size)
-        good = np.isfinite(ax[:n]) & np.isfinite(ay[:n]) & np.isfinite(az[:n])
-        magnitude = self.compute_magnitude(ax[:n][good], ay[:n][good], az[:n][good])
+        magnitude = self.compute_magnitude(ax[:n], ay[:n], az[:n])
         return self.extract_from_magnitude(magnitude)
 
     def extract_from_magnitude(self, magnitude: np.ndarray) -> Dict[str, float]:
         features = dict.fromkeys(self.get_feature_descriptions(), np.nan)
 
+        original = np.asarray(magnitude, dtype=float).flatten()
         validated = self._validate_signal(magnitude)
         if validated is None:
             return features
@@ -56,9 +60,10 @@ class AccelerometerFeatureExtractor(LoggerMixin):
             features["ACC_magnitude"] = float(np.mean(magnitude))
             features["ACC_std"] = float(np.std(magnitude))
 
-            mag_centered = magnitude - np.mean(magnitude)
-            zero_crossings = np.sum(np.diff(np.sign(mag_centered)) != 0)
-            duration = len(magnitude) / self.sampling_rate
+            mag_centered = original - np.mean(magnitude)
+            pairs_finite = np.isfinite(original[:-1]) & np.isfinite(original[1:])
+            zero_crossings = np.count_nonzero(np.diff(np.signbit(mag_centered)) & pairs_finite)
+            duration = len(original) / self.sampling_rate
             features["ACC_zero_crossings"] = (
                 float(zero_crossings / duration) if duration > 0 else 0.0
             )
@@ -68,7 +73,7 @@ class AccelerometerFeatureExtractor(LoggerMixin):
                 float(np.sum(magnitude**2) / n_samples) if n_samples > 0 else 0.0
             )
 
-            if len(magnitude) >= 64:
+            if len(magnitude) >= 64 and np.isfinite(original).all() and np.std(magnitude) > 1e-10:
                 # Fine resolution so the 0.1-10 Hz movement band has frequency bins
                 nperseg = int(min(len(magnitude), max(256, self.sampling_rate * 4)))
                 freqs, psd = scipy_signal.welch(

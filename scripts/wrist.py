@@ -28,17 +28,28 @@ META = ["subject_id", "window_id", "label", "label_name"]
 
 def prepare_binary(df):
     sub = df[df["label"].isin([1, 2])].reset_index(drop=True)
+    if sub.empty or sub["subject_id"].isna().any():
+        raise ValueError(
+            "Wrist evaluation requires baseline/stress windows with subject identifiers"
+        )
     feature_cols = [c for c in sub.columns if c not in META]
     X = sub[feature_cols].to_numpy(dtype=float)
     X[~np.isfinite(X)] = np.nan
     keep = ~np.isnan(X).all(axis=0)
     X = X[:, keep]
+    if not X.shape[1]:
+        raise ValueError("Wrist evaluation contains no finite feature values")
     y = sub["label"].map({1: 0, 2: 1}).to_numpy()
     groups = sub["subject_id"].to_numpy()
     return X, y, groups
 
 
 def run():
+    chest_path = RESULTS_DIR / "metrics.json"
+    if not chest_path.exists():
+        raise SystemExit("No chest benchmark results. Run scripts/run_experiment.py first.")
+    with open(chest_path) as f:
+        chest = json.load(f)["binary"]
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     df = load_wrist()
     if df is None:
@@ -62,8 +73,6 @@ def run():
         )
 
     best = max(rows, key=lambda r: r["accuracy_mean"])
-    with open(RESULTS_DIR / "metrics.json") as f:
-        chest = json.load(f)["binary"]
     chest_best = max(chest["models"], key=lambda r: r["accuracy_mean"])
     # Hold the classifier family fixed when comparing chest and wrist feature sets.
     chest_rf = next(m["accuracy_mean"] for m in chest["models"] if m["model"] == "Random Forest")

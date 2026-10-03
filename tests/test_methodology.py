@@ -47,8 +47,9 @@ def test_cnn_loso_reports_window_weighted_accuracy(monkeypatch):
         def __init__(self, in_channels, random_state):
             self.training_ids = set()
 
-        def fit(self, X, labels):
+        def fit(self, X, labels, groups=None):
             self.training_ids = set(X[:, 0, 1])
+            assert len(groups) == len(labels)
             train_sizes.append(len(labels))
 
         def predict(self, X):
@@ -150,3 +151,173 @@ def test_scaler_imputer_fit_per_fold_never_on_held_out_subject():
     # statistics genuinely change when a different subject is held out
     assert not np.allclose(fold_scaler_means["S0"], fold_scaler_means["S1"], atol=1.0)
     assert not np.allclose(fold_scaler_means["S1"], fold_scaler_means["S2"], atol=1.0)
+
+
+def test_loso_macro_f1_uses_the_full_task_class_set():
+    from sklearn.dummy import DummyClassifier
+    from sklearn.pipeline import Pipeline
+
+    groups = np.repeat(["S0", "S1", "S2"], 4)
+    y = np.array([0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1])
+    factory = lambda: Pipeline([("clf", DummyClassifier(strategy="constant", constant=0))])  # noqa: E731
+    result = loso_evaluate(factory, np.zeros((12, 1)), y, groups)
+    s0 = result["per_subject"].set_index("subject").loc["S0"]
+    assert s0["accuracy"] == 1
+    assert s0["f1_macro"] == pytest.approx(0.5)
+
+
+def test_recalibration_predictions_hold_out_outer_and_inner_subjects():
+    from scripts.calibration import loso_recalibrated_proba
+
+    groups = np.repeat(np.arange(4), 6)
+    X = np.column_stack([groups, np.arange(24)])
+    y = np.tile([0, 1], 12)
+    predictions = []
+
+    class RecordingEstimator:
+        classes_ = np.array([0, 1])
+
+        def __init__(self):
+            self.named_steps = {"clf": self}
+
+        def fit(self, values, labels):
+            self.trained_subjects = set(values[:, 0])
+            return self
+
+        def predict_proba(self, values):
+            held_subjects = set(values[:, 0])
+            assert self.trained_subjects.isdisjoint(held_subjects)
+            predictions.append((self.trained_subjects, held_subjects))
+            return np.tile([0.4, 0.6], (len(values), 1))
+
+    true, proba = loso_recalibrated_proba(RecordingEstimator, X, y, groups, method="sigmoid")
+    np.testing.assert_array_equal(true, y)
+    assert len(predictions) == 16  # Four outer predictions and three inner predictions per fold.
+    assert proba.shape == (24, 2) and np.isfinite(proba).all()
+
+
+def test_threshold_pass_balances_xgboost_on_training_labels(monkeypatch):
+    from sklearn.utils.class_weight import compute_sample_weight
+
+    from scripts import threshold_metrics
+
+    fitted = []
+
+    class XGBClassifier:
+        classes_ = np.array([0, 1])
+
+        def __init__(self):
+            self.named_steps = {"clf": self}
+
+        def fit(self, values, labels, **kwargs):
+            np.testing.assert_array_equal(
+                kwargs["clf__sample_weight"], compute_sample_weight("balanced", labels)
+            )
+            fitted.append(len(labels))
+
+        def predict_proba(self, values):
+            return np.tile([0.3, 0.7], (len(values), 1))
+
+    monkeypatch.setattr(threshold_metrics, "build_pipeline", lambda key: XGBClassifier())
+    true, proba = threshold_metrics.loso_pos_proba(
+        "xgb", np.zeros((12, 1)), np.tile([0, 0, 0, 1], 3), np.repeat(["S0", "S1", "S2"], 4)
+    )
+    assert fitted == [8, 8, 8]
+    assert len(true) == len(proba) == 12
+
+
+def test_constant_predictions_select_a_finite_operating_point():
+    import json
+
+    from scripts.threshold_metrics import operating_point
+
+    point = operating_point([0, 1, 0, 1], [0.5, 0.5, 0.5, 0.5])
+    assert point["threshold"] == 0.5
+    assert point["ppv"] == 0.5 and point["npv"] is None
+    json.dumps(point, allow_nan=False)
+
+
+def test_all_tied_model_statistics_remain_finite():
+    from scripts.stats import _friedman, bootstrap_ci, holm_bonferroni
+
+    scores = [np.array([0.6, 0.8, 0.9])] * 4
+    assert _friedman(scores) == (0.0, 1.0)
+    assert bootstrap_ci(np.ones(3), n=10) == (1.0, 1.0)
+    assert holm_bonferroni([("a", 0.01), ("b", 0.04), ("c", 0.03)]) == {
+        "a": 0.03,
+        "c": 0.06,
+        "b": 0.06,
+    }
+
+
+@pytest.mark.parametrize("scores", [[], [0.1, 0.2], [0.1, 0.2, np.nan]])
+def test_subject_bootstrap_rejects_insufficient_or_nonfinite_data(scores):
+    from scripts.stats import bootstrap_ci
+
+    with pytest.raises(ValueError, match="three finite"):
+        bootstrap_ci(scores)
+
+
+def test_experiment_exports_zero_gap_and_feature_schema(tmp_path, monkeypatch):
+    import json
+
+    import pandas as pd
+
+    from scripts import run_experiment
+
+    y = np.tile([0, 1], 6)
+    frame = pd.DataFrame(
+        {
+            "subject_id": np.repeat(["S0", "S1", "S2"], 4),
+            "window_id": np.tile(np.arange(4), 3),
+            "label": y + 1,
+            "label_name": np.where(y, "stress", "baseline"),
+            "HRV_test": y,
+        }
+    )
+    raw = np.zeros((12, 1, 64))
+    saved_models = []
+
+    class InverseEstimator:
+        def __init__(self):
+            self.named_steps = {"clf": self}
+
+        def fit(self, X, labels):
+            return self
+
+        def predict(self, X):
+            return 1 - X[:, 0].astype(int)
+
+    monkeypatch.setattr(run_experiment, "load_cached", lambda: (frame, raw))
+    monkeypatch.setattr(run_experiment, "build_pipeline", lambda key: InverseEstimator())
+    monkeypatch.setattr(run_experiment, "CLASSIFIERS", ["rf"])
+    monkeypatch.setattr(run_experiment, "TASKS", {"binary": run_experiment.TASKS["binary"]})
+    for name in ("RESULTS_DIR", "FIGURES_DIR", "MODELS_DIR"):
+        monkeypatch.setattr(run_experiment, name, tmp_path / name.lower())
+    for name in (
+        "plot_model_comparison",
+        "plot_confusion",
+        "plot_per_subject",
+        "plot_embedding",
+        "plot_gap",
+    ):
+        monkeypatch.setattr(run_experiment, name, lambda *args: None)
+    monkeypatch.setattr(
+        run_experiment,
+        "shap_analysis",
+        lambda *args: pd.DataFrame({"feature": ["HRV_test"], "mean_abs_shap": [0.1]}),
+    )
+    monkeypatch.setattr(
+        run_experiment, "save_verified_joblib", lambda model, path: saved_models.append(model)
+    )
+    monkeypatch.setattr(run_experiment.sys, "argv", ["run_experiment.py", "--no-cnn"])
+
+    run_experiment.run()
+
+    result = json.loads((run_experiment.RESULTS_DIR / "metrics.json").read_text())
+    assert result["binary"]["loso_matched_accuracy"] == 0
+    assert result["binary"]["within_subject_accuracy"] == 0
+    assert result["binary"]["optimism_gap_pts"] == 0
+    assert saved_models[0]["feature_schema_version"] == result["binary"]["feature_schema_version"]
+    assert result["methodology"]["cnn_validation"] is None
+    assert result["benchmark_protocol_version"] == 2

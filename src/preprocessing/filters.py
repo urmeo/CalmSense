@@ -7,6 +7,49 @@ from ..config import FILTER_PARAMS, FS
 from ..logging_config import LoggerMixin
 
 
+def _positive_number(value, name: str) -> float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as error:
+        raise ValueError(f"{name} must be finite and positive") from error
+    if isinstance(value, (bool, np.bool_)) or not np.isfinite(number) or number <= 0:
+        raise ValueError(f"{name} must be finite and positive")
+    return number
+
+
+def _positive_integer(value, name: str) -> int:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)) or value < 1:
+        raise ValueError(f"{name} must be a positive integer")
+    return int(value)
+
+
+def _window_parameters(window_sec, overlap, purity, fs):
+    window_sec = _positive_number(window_sec, "window_sec")
+    fs = _positive_number(fs, "sampling_rate")
+    original_overlap, original_purity = overlap, purity
+    try:
+        overlap, purity = float(overlap), float(purity)
+    except (TypeError, ValueError) as error:
+        raise ValueError("overlap and purity must be numeric") from error
+    if (
+        not np.isfinite(overlap)
+        or isinstance(original_overlap, (bool, np.bool_))
+        or not 0 <= overlap < 1
+    ):
+        raise ValueError("overlap must be finite and in [0, 1)")
+    if (
+        not np.isfinite(purity)
+        or isinstance(original_purity, (bool, np.bool_))
+        or not 0 < purity <= 1
+    ):
+        raise ValueError("purity must be finite and in (0, 1]")
+    window_samples = int(window_sec * fs)
+    step = int(window_samples * (1 - overlap))
+    if window_samples < 1 or step < 1:
+        raise ValueError("Window size and stride must each span at least one sample")
+    return fs, window_samples, step
+
+
 class SignalProcessor(LoggerMixin):
     """Butterworth filtering for the slow chest modalities (temperature, respiration).
 
@@ -15,7 +58,7 @@ class SignalProcessor(LoggerMixin):
     """
 
     def __init__(self, fs: float = FS.CHEST):
-        self.fs = fs
+        self.fs = _positive_number(fs, "fs")
         self.logger.debug(f"SignalProcessor initialized with fs={fs} Hz")
 
     def butterworth_filter(
@@ -25,20 +68,24 @@ class SignalProcessor(LoggerMixin):
         order: int = 4,
         btype: str = "low",
     ) -> np.ndarray:
+        data = np.asarray(data, dtype=float).flatten()
+        order = _positive_integer(order, "order")
         nyq = 0.5 * self.fs
 
         normalized_cutoff: Union[float, Tuple[float, float]]
         if isinstance(cutoff, tuple):
             normalized_cutoff = (cutoff[0] / nyq, cutoff[1] / nyq)
-            if normalized_cutoff[0] >= 1.0 or normalized_cutoff[1] >= 1.0:
+            if not 0 < normalized_cutoff[0] < normalized_cutoff[1] < 1.0:
                 raise ValueError(f"Cutoff frequencies {cutoff} exceed Nyquist frequency {nyq} Hz")
         else:
             normalized_cutoff = cutoff / nyq
-            if normalized_cutoff >= 1.0:
+            if not np.isfinite(normalized_cutoff) or not 0 < normalized_cutoff < 1.0:
                 raise ValueError(f"Cutoff frequency {cutoff} exceeds Nyquist frequency {nyq} Hz")
 
         if len(data) == 0:
             return data
+        if not np.isfinite(data).all():
+            raise ValueError("Filter input must contain only finite samples")
 
         # Very low normalized cutoffs make high-order IIR filters unstable;
         # drop the order and use second-order sections for numerical stability.

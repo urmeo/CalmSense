@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Link, Routes, Route } from 'react-router-dom';
 
 import Dashboard from './pages/Dashboard';
 import ModelComparison from './pages/ModelComparison';
@@ -8,6 +8,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import results from '../../outputs/dashboard/results';
+import { readDarkMode, saveDarkMode } from './lib/preferences';
 
 const SignalExplorer = lazy(() => import('./pages/SignalExplorer'));
 const ExplainabilityDashboard = lazy(() => import('./pages/ExplainabilityDashboard'));
@@ -18,13 +19,10 @@ const hasCalibration = Boolean((results as any).calibration);
 
 const App: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('darkMode');
-    return saved ? JSON.parse(saved) : false;
-  });
+  const [darkMode, setDarkMode] = useState(readDarkMode);
 
   useEffect(() => {
-    localStorage.setItem('darkMode', JSON.stringify(darkMode));
+    saveDarkMode(darkMode);
     if (darkMode) {
       document.documentElement.classList.add('dark');
     } else {
@@ -32,7 +30,16 @@ const App: React.FC = () => {
     }
   }, [darkMode]);
 
-  const toggleDarkMode = () => setDarkMode(!darkMode);
+  const toggleDarkMode = () => setDarkMode((current) => !current);
+
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSidebarOpen(false);
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [sidebarOpen]);
 
   return (
     <Router basename={import.meta.env.BASE_URL}>
@@ -47,19 +54,25 @@ const App: React.FC = () => {
           />
 
           <div className="flex-1 flex flex-col overflow-hidden">
-            <Header onMenuClick={() => setSidebarOpen(true)} />
+            <Header sidebarOpen={sidebarOpen} onMenuClick={() => setSidebarOpen(true)} />
 
             <main className="flex-1 overflow-y-auto p-4 lg:p-6">
               <Suspense fallback={<p role="status" className="text-gray-600 dark:text-gray-300">Loading charts…</p>}>
                 <Routes>
-                  <Route path="/" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
-                  <Route path="/signals" element={<ErrorBoundary><SignalExplorer /></ErrorBoundary>} />
-                  <Route path="/explain" element={<ErrorBoundary><ExplainabilityDashboard /></ErrorBoundary>} />
-                  <Route path="/models" element={<ErrorBoundary><ModelComparison /></ErrorBoundary>} />
+                  <Route path="/" element={<ErrorBoundary key="dashboard"><Dashboard /></ErrorBoundary>} />
+                  <Route path="/signals" element={<ErrorBoundary key="signals"><SignalExplorer /></ErrorBoundary>} />
+                  <Route path="/explain" element={<ErrorBoundary key="explain"><ExplainabilityDashboard /></ErrorBoundary>} />
+                  <Route path="/models" element={<ErrorBoundary key="models"><ModelComparison /></ErrorBoundary>} />
                   {hasCalibration && (
-                    <Route path="/calibration" element={<ErrorBoundary><CalibrationPanel /></ErrorBoundary>} />
+                    <Route path="/calibration" element={<ErrorBoundary key="calibration"><CalibrationPanel /></ErrorBoundary>} />
                   )}
-                  <Route path="/about" element={<ErrorBoundary><About /></ErrorBoundary>} />
+                  <Route path="/about" element={<ErrorBoundary key="about"><About /></ErrorBoundary>} />
+                  <Route path="*" element={(
+                    <div className="space-y-3 text-gray-900 dark:text-white">
+                      <h1 className="text-2xl font-bold">Page not found</h1>
+                      <Link to="/" className="text-blue-600 dark:text-blue-400 underline">Return to dashboard</Link>
+                    </div>
+                  )} />
                 </Routes>
               </Suspense>
             </main>

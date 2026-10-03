@@ -6,13 +6,13 @@ stress (cognitive + emotional) vs relaxation, excluding the motion-heavy physica
 """
 
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
 
 from ..config import EXTERNAL_DATA_DIR
-from ..portable import OVERLAP, WINDOW_SEC, portable_features
+from ..portable import OVERLAP, PORTABLE_FEATURE_COLUMNS, WINDOW_SEC, portable_features
 
 DATA_DIR = (
     EXTERNAL_DATA_DIR / "noneeg" / "non-eeg-dataset-for-assessment-of-neurological-status-1.0.0"
@@ -30,15 +30,28 @@ def _segments(record: str):
     import wfdb
 
     ann = wfdb.rdann(record, "atr")
+    if (
+        len(ann.sample) != len(ann.aux_note)
+        or np.any(np.asarray(ann.sample) < 0)
+        or np.any(np.diff(ann.sample) <= 0)
+    ):
+        raise ValueError("Non-EEG annotations require aligned notes and increasing sample indices")
     bounds = list(ann.sample) + [None]
     for i, note in enumerate(ann.aux_note):
-        yield int(ann.sample[i]), bounds[i + 1], note
+        yield int(ann.sample[i]), bounds[i + 1], note.strip("\x00 \t\r\n")
 
 
 def build(subjects: Optional[list] = None) -> pd.DataFrame:
     import wfdb
 
-    subjects = subjects or [f"Subject{i}" for i in range(1, 21)]
+    valid_subjects = [f"Subject{i}" for i in range(1, 21)]
+    subjects = valid_subjects if subjects is None else subjects
+    if (
+        not subjects
+        or len(set(subjects)) != len(subjects)
+        or not set(subjects) <= set(valid_subjects)
+    ):
+        raise ValueError("subjects must contain distinct Non-EEG IDs from Subject1 to Subject20")
     win = int(WINDOW_SEC * ACC_FS)
     step = int(win * (1 - OVERLAP))
     rows = []
@@ -52,6 +65,13 @@ def build(subjects: Optional[list] = None) -> pd.DataFrame:
         hr_record = wfdb.rdrecord(hr_rec)
         if sensor_record.fs != ACC_FS or hr_record.fs != HR_FS:
             raise ValueError(f"Unexpected Non-EEG sampling rates for {sid}")
+        if (
+            sensor_record.p_signal.ndim != 2
+            or sensor_record.p_signal.shape[1] != 5
+            or hr_record.p_signal.ndim != 2
+            or hr_record.p_signal.shape[1] < 2
+        ):
+            raise ValueError(f"Unexpected Non-EEG channel shapes for {sid}")
         sig = sensor_record.p_signal  # ax, ay, az, temp, EDA @ 8 Hz
         hr = hr_record.p_signal[:, 1]  # hr @ 1 Hz
         acc_mag = np.sqrt(np.sum(sig[:, 0:3] ** 2, axis=1))
@@ -59,6 +79,8 @@ def build(subjects: Optional[list] = None) -> pd.DataFrame:
 
         for s0, s1, note in _segments(acc_rec):
             s1 = s1 if s1 is not None else len(eda)
+            if not 0 <= s0 < s1 <= len(eda):
+                raise ValueError(f"Non-EEG annotation interval outside the sensor record for {sid}")
             if note in STRESS:
                 label = 1
             elif note in RELAX:
@@ -70,7 +92,11 @@ def build(subjects: Optional[list] = None) -> pd.DataFrame:
                 w1 = w0 + win
                 # The HR record is 1 Hz, so sensor indices must first be converted to seconds.
                 hr_win = hr[w0 // ACC_FS : w1 // ACC_FS]
-                row = portable_features(
+                if len(hr_win) != w1 // ACC_FS - w0 // ACC_FS:
+                    raise ValueError(
+                        f"Non-EEG HR record is shorter than the sensor window for {sid}"
+                    )
+                row: dict[str, Any] = portable_features(
                     eda[w0:w1],
                     temp[w0:w1],
                     acc_mag[w0:w1],
@@ -82,4 +108,4 @@ def build(subjects: Optional[list] = None) -> pd.DataFrame:
                 row["label"] = label
                 rows.append(row)
 
-    return pd.DataFrame(rows)
+    return pd.DataFrame(rows, columns=[*PORTABLE_FEATURE_COLUMNS, "subject", "label"])

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import Plot from '../components/Plot';
 import { ZoomIn, ZoomOut, RefreshCw } from 'lucide-react';
 import realSignals from '../../../outputs/dashboard/signals';
+import { zoomRange } from '../lib/viewport';
 
 // Real WESAD chest signals (baseline -> stress -> amusement), downsampled for display
 const subjects = Object.keys(realSignals);
@@ -36,9 +37,10 @@ const SignalExplorer: React.FC = () => {
   const [selectedSubject, setSelectedSubject] = useState(subjects[0]);
   const [visibleSignals, setVisibleSignals] = useState({ ecg: true, eda: true, temp: true, acc: false });
   const signalData = useMemo(() => (realSignals as any)[selectedSubject], [selectedSubject]);
-  const duration = signalData.time[signalData.time.length - 1];
-  const [xRange, setXRange] = useState<[number, number]>([0, Math.round(duration)]);
-  useEffect(() => setXRange([0, Math.round(duration)]), [selectedSubject, duration]);
+  const time: number[] = signalData.time;
+  const duration = time[time.length - 1] + (time[1] - time[0]);
+  const [xRange, setXRange] = useState<[number, number]>([0, duration]);
+  useEffect(() => setXRange([0, duration]), [selectedSubject, duration]);
 
   // Contiguous condition segments straight from the labelled samples
   const segments = useMemo(() => {
@@ -48,28 +50,19 @@ const SignalExplorer: React.FC = () => {
     let start = 0;
     for (let i = 1; i <= conds.length; i++) {
       if (i === conds.length || conds[i] !== conds[start]) {
-        segs.push({ name: conds[start], x0: time[start], x1: time[Math.min(i, time.length - 1)] });
+        segs.push({ name: conds[start], x0: time[start], x1: i < time.length ? time[i] : duration });
         start = i;
       }
     }
     return segs;
-  }, [signalData]);
+  }, [signalData, duration]);
 
   const toggleSignal = (signal: keyof typeof visibleSignals) =>
     setVisibleSignals((prev) => ({ ...prev, [signal]: !prev[signal] }));
 
-  const handleZoomIn = () => {
-    const range = xRange[1] - xRange[0];
-    const center = (xRange[0] + xRange[1]) / 2;
-    setXRange([center - range / 4, center + range / 4]);
-  };
-  const handleZoomOut = () => {
-    const range = xRange[1] - xRange[0];
-    const center = (xRange[0] + xRange[1]) / 2;
-    const newRange = Math.min(range * 2, duration);
-    setXRange([Math.max(0, center - newRange / 2), Math.min(duration, center + newRange / 2)]);
-  };
-  const handleReset = () => setXRange([0, Math.round(duration)]);
+  const handleZoomIn = () => setXRange((range) => zoomRange(range, duration, 0.5));
+  const handleZoomOut = () => setXRange((range) => zoomRange(range, duration, 2));
+  const handleReset = () => setXRange([0, duration]);
 
   const visiblePanels = PANELS.filter((p) => (visibleSignals as any)[p.key]);
 
@@ -181,13 +174,13 @@ const SignalExplorer: React.FC = () => {
             ))}
           </div>
           <div className="flex items-center space-x-2 ml-auto">
-            <button onClick={handleZoomIn} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600" title="Zoom In">
+            <button onClick={handleZoomIn} aria-label="Zoom in" className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600" title="Zoom In">
               <ZoomIn className="w-5 h-5 text-gray-600 dark:text-gray-300" />
             </button>
-            <button onClick={handleZoomOut} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600" title="Zoom Out">
+            <button onClick={handleZoomOut} aria-label="Zoom out" className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600" title="Zoom Out">
               <ZoomOut className="w-5 h-5 text-gray-600 dark:text-gray-300" />
             </button>
-            <button onClick={handleReset} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600" title="Reset View">
+            <button onClick={handleReset} aria-label="Reset signal view" className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600" title="Reset View">
               <RefreshCw className="w-5 h-5 text-gray-600 dark:text-gray-300" />
             </button>
           </div>
@@ -195,17 +188,24 @@ const SignalExplorer: React.FC = () => {
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-        <Plot
+        {visiblePanels.length === 0 ? (
+          <p role="status" className="text-gray-600 dark:text-gray-300">Select a signal to display.</p>
+        ) : <Plot
           data={buildTraces()}
           layout={layout}
           config={{ responsive: true, showSendToCloud: false, displayModeBar: true, modeBarButtonsToRemove: ['lasso2d', 'select2d'] }}
           style={{ width: '100%' }}
           onRelayout={(e: any) => {
-            if (e['xaxis.range[0]'] !== undefined) {
-              setXRange([e['xaxis.range[0]'], e['xaxis.range[1]']]);
+            if (e['xaxis.autorange']) {
+              handleReset();
+              return;
+            }
+            const range = e['xaxis.range'] ?? [e['xaxis.range[0]'], e['xaxis.range[1]']];
+            if (range.every((value: unknown) => typeof value === 'number' && Number.isFinite(value)) && range[1] > range[0]) {
+              setXRange([range[0], range[1]]);
             }
           }}
-        />
+        />}
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">

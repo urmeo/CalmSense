@@ -2,6 +2,8 @@ import pickle
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
+import numpy as np
+
 from ..config import FS, LABEL_NAMES, VALID_SUBJECTS, WESAD_DIR
 from ..logging_config import LoggerMixin
 
@@ -26,7 +28,7 @@ class WESADLoader(LoggerMixin):
         self.logger.info(f"WESADLoader initialized: {len(self.subjects)} subjects available")
 
     def _validate_path(self) -> None:
-        if not self.data_path.exists():
+        if not self.data_path.is_dir():
             self.logger.error(f"WESAD data path not found: {self.data_path}")
             raise FileNotFoundError(
                 f"WESAD data path not found: {self.data_path}\n"
@@ -39,7 +41,7 @@ class WESADLoader(LoggerMixin):
         subjects = []
         for subj_id in self.VALID_SUBJECTS:
             pkl_path = self.data_path / subj_id / f"{subj_id}.pkl"
-            if pkl_path.exists():
+            if pkl_path.is_file():
                 subjects.append(subj_id)
 
         if not subjects:
@@ -68,8 +70,46 @@ class WESADLoader(LoggerMixin):
             self.logger.error(f"Failed to load {subject_id}: {e}")
             raise
 
-        chest_signals = data["signal"]["chest"]
-        wrist_signals = data["signal"]["wrist"]
+        try:
+            chest_signals = data["signal"]["chest"]
+            wrist_signals = data["signal"]["wrist"]
+            labels = np.asarray(data["label"])
+        except (KeyError, TypeError) as error:
+            raise ValueError(f"Invalid WESAD structure for {subject_id}") from error
+        if (
+            labels.ndim != 1
+            or not len(labels)
+            or not np.issubdtype(labels.dtype, np.number)
+            or not np.isfinite(labels).all()
+        ):
+            raise ValueError(f"{subject_id}: labels must be a nonempty finite numeric vector")
+        duration = len(labels) / self.CHEST_FS
+        wrist_rates = {
+            "ACC": self.WRIST_ACC_FS,
+            "BVP": self.WRIST_BVP_FS,
+            "EDA": self.WRIST_EDA_FS,
+            "TEMP": self.WRIST_TEMP_FS,
+        }
+        for device, channels in (("chest", chest_signals), ("wrist", wrist_signals)):
+            if not isinstance(channels, dict) or not channels:
+                raise ValueError(f"{subject_id}: missing {device} channel dictionary")
+            for name, values in channels.items():
+                values = np.asarray(values)
+                expected_axes = 3 if name.upper() == "ACC" else 1
+                if (
+                    values.ndim not in (1, 2)
+                    or (values.ndim == 1 and expected_axes != 1)
+                    or (values.ndim == 2 and values.shape[1] != expected_axes)
+                    or not np.issubdtype(values.dtype, np.number)
+                ):
+                    raise ValueError(f"{subject_id}: invalid {device}/{name} signal shape or dtype")
+                rate = self.CHEST_FS if device == "chest" else wrist_rates.get(name.upper())
+                if rate is None:
+                    raise ValueError(f"{subject_id}: unknown wrist channel {name}")
+                if abs(len(values) - duration * rate) > 1.01:
+                    raise ValueError(
+                        f"{subject_id}: {device}/{name} duration does not match labels"
+                    )
 
         if signals is not None:
             signals_upper = {s.upper() for s in signals}
@@ -81,7 +121,7 @@ class WESADLoader(LoggerMixin):
             "subject": subject_id,
             "chest": chest_signals,
             "wrist": wrist_signals,
-            "label": data["label"],
+            "label": labels,
         }
 
         self.logger.info(

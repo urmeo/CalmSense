@@ -28,6 +28,7 @@ from sklearn.utils.class_weight import compute_sample_weight
 
 from src.config import DEMO_DIR, FIGURES_DIR, MODELS_DIR, RESULTS_DIR, SEED
 from src.dataset import WindowedDataset, load_cached
+from src.features.feature_pipeline import FEATURE_SCHEMA_VERSION
 from src.models.ml.classifiers import get_classifier
 from src.utils import provenance, save_verified_joblib, set_seed
 
@@ -37,6 +38,7 @@ TASKS = {
 }
 
 CLASSIFIERS = ["lr", "rf", "xgb", "lgbm"]
+BENCHMARK_PROTOCOL_VERSION = 2
 CLF_NAMES = {
     "lr": "Logistic Regression",
     "rf": "Random Forest",
@@ -83,7 +85,9 @@ def loso_evaluate(pipeline_factory, X, y, groups):
                 "subject": groups[test_idx][0],
                 "n": len(test_idx),
                 "accuracy": accuracy_score(y[test_idx], pred),
-                "f1_macro": f1_score(y[test_idx], pred, average="macro"),
+                "f1_macro": f1_score(
+                    y[test_idx], pred, labels=classes, average="macro", zero_division=0
+                ),
             }
         )
 
@@ -115,7 +119,7 @@ def cnn_loso(x_raw, y, groups):
     for fold, (train_idx, test_idx) in enumerate(logo.split(x_raw, y, groups), 1):
         print(f"    1D-CNN fold {fold}/{n_folds}", flush=True)
         model = CNN1DClassifier(in_channels=x_raw.shape[1], random_state=SEED)
-        model.fit(x_raw[train_idx], y[train_idx])
+        model.fit(x_raw[train_idx], y[train_idx], groups=groups[train_idx])
         pred = model.predict(x_raw[test_idx])
         pooled_true.extend(y[test_idx])
         pooled_pred.extend(pred)
@@ -124,7 +128,9 @@ def cnn_loso(x_raw, y, groups):
                 "subject": groups[test_idx][0],
                 "n": len(test_idx),
                 "accuracy": accuracy_score(y[test_idx], pred),
-                "f1_macro": f1_score(y[test_idx], pred, average="macro"),
+                "f1_macro": f1_score(
+                    y[test_idx], pred, labels=np.unique(y), average="macro", zero_division=0
+                ),
             }
         )
 
@@ -172,7 +178,9 @@ def kfold_accuracy(pipeline_factory, X, y, groups) -> float:
 
 
 def plot_confusion(result, names, title, path):
-    cm = confusion_matrix(result["y_true"], result["y_pred"], normalize="true")
+    cm = confusion_matrix(
+        result["y_true"], result["y_pred"], labels=result["classes"], normalize="true"
+    )
     plt.figure(figsize=(5, 4))
     sns.heatmap(cm, annot=True, fmt=".2f", cmap="Blues", xticklabels=names, yticklabels=names)
     plt.xlabel("Predicted")
@@ -280,16 +288,26 @@ def shap_analysis(X, y, feature_names, fig_dir):
 
 
 def prepare_task(features_df, x_raw, keep):
+    if len(x_raw) != len(features_df) or len(set(keep)) != len(keep) or not keep:
+        raise ValueError(
+            "Task labels must be distinct and raw windows must align with feature rows"
+        )
     mask = features_df["label"].isin(keep).to_numpy()
     sub = features_df[mask].reset_index(drop=True)
+    if sub.empty:
+        raise ValueError("No feature windows match the task labels")
     meta = ["subject_id", "window_id", "label", "label_name"]
     feature_cols = [c for c in sub.columns if c not in meta]
+    if not feature_cols or sub["subject_id"].isna().any():
+        raise ValueError("Task windows require features and nonmissing subject identifiers")
     X = sub[feature_cols].to_numpy(dtype=float)
     X[~np.isfinite(X)] = np.nan
     # Omit columns with no observed values; median imputation remains inside each fold.
     keep_cols = ~np.isnan(X).all(axis=0)
     X = X[:, keep_cols]
     feature_cols = [c for c, k in zip(feature_cols, keep_cols) if k]
+    if not feature_cols:
+        raise ValueError("Task contains no finite feature values")
     # 0-indexed labels in `keep` order
     remap = {label: i for i, label in enumerate(keep)}
     y = sub["label"].map(remap).to_numpy()
@@ -396,6 +414,7 @@ def run():
         summary[task] = {
             "n_windows": int(len(y)),
             "n_features": int(X.shape[1]),
+            "feature_schema_version": FEATURE_SCHEMA_VERSION,
             "classes": cfg["names"],
             "models": rows,
             "best_model": best_key,
@@ -404,7 +423,9 @@ def run():
             "loso_matched_accuracy": loso_matched,
             "within_subject_accuracy": kf_acc,
             "optimism_gap_pts": (
-                round((kf_acc - loso_matched) * 100, 1) if kf_acc and loso_matched else None
+                round((kf_acc - loso_matched) * 100, 1)
+                if kf_acc is not None and loso_matched is not None
+                else None
             ),
             "per_subject": best[1]["per_subject"].to_dict("records"),
         }
@@ -420,12 +441,24 @@ def run():
             final = build_pipeline(top_clf)
             final.fit(X, y, **_fit_params(final, y))
             save_verified_joblib(
-                {"pipeline": final, "features": feature_cols, "classes": cfg["names"]},
+                {
+                    "pipeline": final,
+                    "features": feature_cols,
+                    "classes": cfg["names"],
+                    "feature_schema_version": FEATURE_SCHEMA_VERSION,
+                },
                 models_dir / "stress_classifier.joblib",
             )
             print(f"  Saved inference model ({CLF_NAMES[top_clf]}) + SHAP.")
 
     summary["provenance"] = provenance()
+    summary["benchmark_protocol_version"] = BENCHMARK_PROTOCOL_VERSION
+    summary["methodology"] = {
+        "feature_schema_version": FEATURE_SCHEMA_VERSION,
+        "cnn_validation": None if args.no_cnn else "training_subject_holdout",
+        "cnn_normalization": None if args.no_cnn else "inner_training_windows_only",
+        "f1_classes": "full_task_class_set",
+    }
     with open(results_dir / "metrics.json", "w") as f:
         json.dump(summary, f, indent=2)
 

@@ -121,3 +121,76 @@ def test_gap_significance_detects_consistent_gap():
     assert abs(sig["mean_brier_gap"] - 0.10) < 1e-9
     assert sig["ci95"][0] > 0  # gap is consistently positive
     assert sig["wilcoxon_p"] < 0.05
+
+
+@pytest.mark.parametrize(
+    "y, proba",
+    [
+        ([], []),
+        ([0, 1], [0.2]),
+        ([0], [np.nan]),
+        ([1], [1.1]),
+        ([2], [0.3]),
+        ([0.5], [0.5]),
+        ([0], [[0.2, 0.2]]),
+        ([0], [[1.0]]),
+        ([[0]], [0.1]),
+    ],
+)
+def test_calibration_rejects_invalid_probability_contract(y, proba):
+    for metric in (brier_score, expected_calibration_error, reliability_curve):
+        with pytest.raises(ValueError):
+            metric(y, proba)
+
+
+@pytest.mark.parametrize("bins", [0, -1, 2.5, True])
+def test_calibration_requires_positive_integer_bin_count(bins):
+    with pytest.raises(ValueError, match="n_bins"):
+        expected_calibration_error([0, 1], [0.2, 0.8], bins)
+
+
+def test_binary_reliability_ties_match_two_column_predictions():
+    y = [0, 0, 1]
+    p = np.array([0.5, 0.5, 0.5])
+    assert reliability_curve(y, p) == reliability_curve(y, np.column_stack([1 - p, p]))
+
+
+@pytest.mark.parametrize("thresholds", [[-0.1], [1.1], [np.nan], [[0.5]]])
+def test_net_benefit_rejects_invalid_thresholds(thresholds):
+    with pytest.raises(ValueError, match="Thresholds"):
+        net_benefit([0, 1], [0.1, 0.9], np.array(thresholds))
+
+
+def test_single_class_loso_probabilities_keep_baseline_stress_columns():
+    from sklearn.dummy import DummyClassifier
+    from sklearn.pipeline import Pipeline
+
+    from scripts.calibration import loso_proba
+
+    X = np.zeros((4, 1))
+    y = np.array([0, 0, 1, 1])
+    groups = np.array(["S0", "S0", "S1", "S1"])
+    factory = lambda: Pipeline([("clf", DummyClassifier())])  # noqa: E731
+    true, proba, subjects = loso_proba(factory, X, y, groups)
+    np.testing.assert_array_equal(true, y)
+    np.testing.assert_array_equal(subjects, groups)
+    np.testing.assert_array_equal(proba, [[0, 1], [0, 1], [1, 0], [1, 0]])
+
+
+@pytest.mark.parametrize("label", [0, 1])
+def test_sigmoid_single_class_calibrator_returns_class_constant(label):
+    from scripts.calibration import _apply_calibrator, _fit_calibrator
+
+    model = _fit_calibrator(np.array([0.2, 0.4, 0.8]), np.full(3, label), "sigmoid")
+    np.testing.assert_array_equal(
+        _apply_calibrator(model, np.array([0.1, 0.9]), "sigmoid"), [label, label]
+    )
+
+
+def test_gap_significance_rejects_missing_or_unpaired_subject_scores():
+    from scripts.calibration import gap_significance
+
+    with pytest.raises(ValueError, match="three subjects"):
+        gap_significance({}, {})
+    with pytest.raises(ValueError, match="three subjects"):
+        gap_significance({"S0": 0.1, "S1": 0.2, "S2": 0.3}, {"S0": 0.1, "S1": 0.2, "S3": 0.3})

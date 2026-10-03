@@ -35,6 +35,47 @@ def test_sample_k_balances_classes():
     assert counts[0] == counts[1] == 3
 
 
+def test_sampling_empty_pool_and_budget_one_does_not_exceed_budget():
+    empty = _sample_k(np.array([], dtype=int), 5, np.random.RandomState(0))
+    assert empty.dtype.kind == "i" and not len(empty)
+    pick = _sample_k(np.array([0, 0, 1, 1]), 1, np.random.RandomState(0))
+    assert len(pick) == 1
+
+
+@pytest.mark.parametrize("budget", [0, -1, 1.5, True])
+def test_sampling_rejects_invalid_budget(budget):
+    with pytest.raises(ValueError, match="positive integers"):
+        _sample_k(np.array([0, 1]), budget, np.random.RandomState(0))
+
+
+def test_tiny_personalization_pool_falls_back_without_crashing(monkeypatch):
+    from sklearn.dummy import DummyClassifier
+    from sklearn.pipeline import Pipeline
+
+    monkeypatch.setattr(
+        personalize, "build_pipeline", lambda model: Pipeline([("clf", DummyClassifier())])
+    )
+    # Each target has only two non-overlapping windows: one per class, both needed for evaluation.
+    y = np.tile([0, 0, 1, 1], 3)
+    groups = np.repeat(["S0", "S1", "S2"], 4)
+    result = personalize.compute(np.zeros((12, 1)), y, groups, k_values=[5])
+    assert result["n_subjects"] == 3
+    assert result["fewshot"]["5"] == result["uncalibrated"]
+
+
+def test_personalization_rejects_no_eligible_targets(monkeypatch):
+    from sklearn.dummy import DummyClassifier
+    from sklearn.pipeline import Pipeline
+
+    monkeypatch.setattr(
+        personalize, "build_pipeline", lambda model: Pipeline([("clf", DummyClassifier())])
+    )
+    with pytest.raises(ValueError, match="target subject"):
+        personalize.compute(
+            np.zeros((6, 1)), np.zeros(6, dtype=int), np.repeat(["S0", "S1", "S2"], 2)
+        )
+
+
 @pytest.mark.parametrize("synthetic", [False, True])
 def test_personalization_output_paths_protect_benchmark(tmp_path, monkeypatch, synthetic):
     results_dir = tmp_path / "outputs" / "results"

@@ -121,13 +121,12 @@ const About: React.FC = () => {
   WESAD signals
       │   per-channel filtering · R-peak detection · EDA decomposition
       ▼
-  Feature extraction:  58 HRV / EDA / TEMP / RESP / motion features
-      │
+  60 s windows
+      ├─ 58 features → LR / RF / XGBoost / LightGBM LOSO
+      └─ raw signals → 1D-CNN LOSO
       ▼
-  Leakage-free LOSO benchmark
-      │   Logistic Regression · Random Forest · XGBoost · LightGBM · 1D-CNN
-      ▼
-  SHAP interpretation  +  calibration & decision-curve analysis
+  Experiment results
+      │   full-data XGBoost SHAP · RF calibration & decision curves
       │
       ▼
   dashboard data export  ──▶  React dashboard (static, no backend)`}
@@ -206,7 +205,7 @@ const About: React.FC = () => {
       </div>
 
       <div className="text-center text-gray-500 dark:text-gray-500 text-sm">
-        <p>© 2026 CalmSense Project. Licensed under MIT License.</p>
+        <p>© 2025 Urme Bose. Licensed under MIT License.</p>
         <p className="mt-1">Built with React, TypeScript, Tailwind CSS, and PyTorch.</p>
       </div>
     </div>

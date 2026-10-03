@@ -37,11 +37,13 @@ From the repository root:
 
 ```bash
 python scripts/download_data.py --verify-wesad
+python scripts/download_data.py --verify-noneeg
 (cd outputs/models && shasum -a 256 -c stress_classifier.joblib.sha256)
 ```
 
 **A checksum detects changed bytes; it does not establish trust or make a pickle safe.**
 WESAD hashes are repository reference values, not publisher-issued checksums.
+Non-EEG checks all 100 required record files against the accompanying publisher manifest.
 If verification fails, stop and obtain a trusted copy; do not replace the expected hash to bypass it.
 
 ## Dashboard and downloads
@@ -50,7 +52,8 @@ The dashboard displays precomputed results. It has no application backend, model
 or file uploads. Browser code, dependencies, and external resources remain part of its attack surface.
 
 The downloader rejects archive path traversal and archives declaring more than **10 GiB**
-uncompressed. These checks do not authenticate downloaded content.
+uncompressed. Downloads require HTTPS, a 30-second socket timeout, and complete declared content length.
+These checks do not authenticate downloaded content.
 
 ## Security checks
 

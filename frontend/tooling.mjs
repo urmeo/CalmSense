@@ -12,7 +12,7 @@ const root = dirname(fileURLToPath(import.meta.url));
 const nodeDirectory = dirname(process.execPath);
 const command = process.argv[2];
 const args = process.argv.slice(3);
-const usage = 'Usage: node tooling.mjs prepare|install|dev|build|preview|audit|update [arguments]';
+const usage = 'Usage: node tooling.mjs prepare|install|test|dev|build|preview|audit|update [arguments]';
 
 function writeIfChanged(path, content) {
   if (!existsSync(path) || readFileSync(path, 'utf8') !== content) {
@@ -75,13 +75,13 @@ function runNpm(npmArgs) {
 }
 
 try {
-  if (!['prepare', 'install', 'dev', 'build', 'preview', 'audit', 'update'].includes(command)) {
+  if (!['prepare', 'install', 'test', 'dev', 'build', 'preview', 'audit', 'update'].includes(command)) {
     throw new Error(usage);
   }
   if (command === 'prepare' && args.length) throw new Error(usage);
   prepare(command !== 'update');
   if (command === 'install') runNpm(['ci', ...args]);
-  if (['dev', 'build', 'preview'].includes(command)) runNpm(['run', command, ...(args.length ? ['--', ...args] : [])]);
+  if (['test', 'dev', 'build', 'preview'].includes(command)) runNpm(['run', command, ...(args.length ? ['--', ...args] : [])]);
   if (command === 'audit') runNpm(['audit', '--audit-level=moderate', ...args]);
   if (command === 'update') {
     // Explicit maintenance only: retain npm's exact resolved versions and integrity hashes.

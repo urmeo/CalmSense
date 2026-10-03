@@ -8,7 +8,7 @@ import structlog
 from .config import LOG_FILE, LOG_LEVEL
 
 _logging_configured = False
-_configured_level: Optional[str] = None
+_configured_settings: Optional[tuple[str, Optional[Path], bool]] = None
 
 _shared_processors: list[Any] = [
     structlog.contextvars.merge_contextvars,
@@ -23,20 +23,16 @@ _shared_processors: list[Any] = [
 def setup_logging(
     level: str = LOG_LEVEL, log_file: Optional[Path] = LOG_FILE, console: bool = True
 ) -> None:
-    global _logging_configured, _configured_level
+    global _logging_configured, _configured_settings
 
-    if _logging_configured and level == _configured_level:
+    level = level.upper()
+    log_level = logging.getLevelNamesMapping().get(level)
+    if log_level is None:
+        raise ValueError(f"Unknown logging level: {level}")
+    log_file = Path(log_file).resolve() if log_file is not None else None
+    settings = (level, log_file, console)
+    if _logging_configured and settings == _configured_settings:
         return
-
-    log_level = getattr(logging, level.upper())
-
-    # Configure structlog
-    structlog.configure(
-        processors=_shared_processors + [structlog.stdlib.ProcessorFormatter.wrap_for_formatter],
-        logger_factory=structlog.stdlib.LoggerFactory(),
-        wrapper_class=structlog.stdlib.BoundLogger,
-        cache_logger_on_first_use=True,
-    )
 
     # JSON formatter
     formatter = structlog.stdlib.ProcessorFormatter(
@@ -44,24 +40,27 @@ def setup_logging(
         foreign_pre_chain=_shared_processors,
     )
 
-    root = logging.getLogger()
-    root.handlers.clear()
-    root.setLevel(log_level)
+    project_logger = logging.getLogger("calmsense")
+    for existing in project_logger.handlers[:]:
+        project_logger.removeHandler(existing)
+        existing.close()
+    project_logger.setLevel(log_level)
+    project_logger.propagate = False
 
     if console:
         handler = logging.StreamHandler(sys.stdout)
         handler.setFormatter(formatter)
-        root.addHandler(handler)
+        project_logger.addHandler(handler)
 
     if log_file:
         log_file = Path(log_file)
         log_file.parent.mkdir(parents=True, exist_ok=True)
         fh = logging.FileHandler(log_file)
         fh.setFormatter(formatter)
-        root.addHandler(fh)
+        project_logger.addHandler(fh)
 
     _logging_configured = True
-    _configured_level = level
+    _configured_settings = settings
 
 
 def get_logger(name: str):
@@ -69,11 +68,17 @@ def get_logger(name: str):
         setup_logging()
 
     if name.startswith("src."):
-        name = name.replace("src.", "calmsense.")
-    elif not name.startswith("calmsense"):
+        name = "calmsense." + name[4:]
+    elif name != "calmsense" and not name.startswith("calmsense."):
         name = f"calmsense.{name}"
 
-    return structlog.get_logger(name)
+    # Configure only this logger; preserve the host application's logging setup.
+    return structlog.wrap_logger(
+        logging.getLogger(name),
+        processors=_shared_processors + [structlog.stdlib.ProcessorFormatter.wrap_for_formatter],
+        wrapper_class=structlog.stdlib.BoundLogger,
+        cache_logger_on_first_use=True,
+    )
 
 
 class LoggerMixin:

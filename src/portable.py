@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Union
 import numpy as np
 import pandas as pd
 
-from .config import FS, VALID_SUBJECTS
+from .config import FS
 from .data.loader import WESADLoader
 
 WINDOW_SEC = 60.0
@@ -31,7 +31,7 @@ PORTABLE_FEATURE_COLUMNS = [
 def _stats(
     x: np.ndarray, prefix: str, keys: List[str], sampling_rate: float = 1.0
 ) -> Dict[str, float]:
-    if isinstance(sampling_rate, bool):
+    if isinstance(sampling_rate, (bool, np.bool_)):
         raise ValueError("sampling_rate must be finite and positive")
     try:
         sampling_rate = float(sampling_rate)
@@ -48,16 +48,16 @@ def _stats(
     if len(x) < 2:
         return out
     funcs = {
-        "mean": np.mean(x),
-        "std": np.std(x),
-        "min": np.min(x),
-        "max": np.max(x),
-        "range": np.ptp(x),
-        "slope": np.polyfit(t, x, 1)[0],
-        "energy": np.mean(x**2),
+        "mean": lambda: np.mean(x),
+        "std": lambda: np.std(x),
+        "min": lambda: np.min(x),
+        "max": lambda: np.max(x),
+        "range": lambda: np.ptp(x),
+        "slope": lambda: np.polyfit(t, x, 1)[0],
+        "energy": lambda: np.mean(x**2),
     }
     for k in keys:
-        out[f"{prefix}_{k}"] = float(funcs[k])
+        out[f"{prefix}_{k}"] = float(funcs[k]())
     return out
 
 
@@ -75,6 +75,8 @@ def portable_features(eda, temp, acc_mag, hr, *, eda_fs: float, temp_fs: float) 
 
 
 def _window_label(labels: np.ndarray, keep: set) -> Optional[int]:
+    if not len(labels):
+        return None
     values, counts = np.unique(labels, return_counts=True)
     dominant = values[counts.argmax()]
     if dominant not in keep:
@@ -91,7 +93,9 @@ def wesad_portable(
     import neurokit2 as nk
 
     loader = WESADLoader(data_path=data_path)
-    subjects = subjects or loader.subjects or VALID_SUBJECTS
+    subjects = loader.subjects if subjects is None else subjects
+    if not subjects or len(set(subjects)) != len(subjects):
+        raise ValueError("subjects must be a nonempty list without duplicates")
     step = WINDOW_SEC * (1 - OVERLAP)
     rows = []
 
@@ -105,7 +109,9 @@ def wesad_portable(
         acc_mag = np.sqrt(np.sum(np.asarray(wrist["ACC"]) ** 2, axis=1))
 
         peaks = np.asarray(
-            nk.ppg_findpeaks(nk.ppg_clean(bvp, sampling_rate=64), sampling_rate=64)["PPG_Peaks"]
+            nk.ppg_findpeaks(
+                nk.ppg_clean(bvp, sampling_rate=FS.WRIST_BVP), sampling_rate=FS.WRIST_BVP
+            )["PPG_Peaks"]
         )
         beat_hr = 60.0 / (np.diff(peaks) / FS.WRIST_BVP)
         # Assign each interbeat HR value to the later peak's time in seconds.
@@ -136,4 +142,4 @@ def wesad_portable(
                 rows.append(row)
             t += step
 
-    return pd.DataFrame(rows)
+    return pd.DataFrame(rows, columns=[*PORTABLE_FEATURE_COLUMNS, "subject", "label"])

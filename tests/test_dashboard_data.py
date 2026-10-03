@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from scripts import build_dashboard_data, export_signals
+from scripts import build_dashboard_data, export_signals, stamp_provenance, update_readme_tables
 from src.calibration import BINARY_BRIER_DEFINITION
 from src.config import RESULTS_DIR
 
@@ -108,3 +108,76 @@ def test_signal_export_creates_output_folder_and_preserves_aligned_samples(tmp_p
         "accZ": 50,
     }.items():
         assert data[name] == (samples + offset).tolist()
+
+
+def test_signal_clips_do_not_span_separate_condition_blocks():
+    labels = np.array([1, 1, 2, 1, 1])
+    assert export_signals._slice(np.arange(5), labels, label=1, want=3) is None
+    labels = np.array([0, 1, 1, 1, 1, 1, 0])
+    clip = export_signals._slice(np.arange(7), labels, label=1, want=3)
+    assert clip.tolist() == [2, 3, 4]
+    assert np.all(labels[clip] == 1)
+
+
+def test_signal_clips_reject_misaligned_samples():
+    with pytest.raises(ValueError, match="lengths differ"):
+        export_signals._slice(np.arange(4), np.ones(5), label=1, want=3)
+
+
+def test_export_rejects_partial_benchmark_without_replacing_snapshot(tmp_path, monkeypatch):
+    output = tmp_path / "results.ts"
+    output.write_text("existing snapshot", encoding="utf-8")
+    monkeypatch.setattr(build_dashboard_data, "DASHBOARD_RESULTS", output)
+    monkeypatch.setattr(
+        build_dashboard_data, "_load_json", lambda name: {} if name == "metrics.json" else None
+    )
+    monkeypatch.setattr(build_dashboard_data, "_load_csv", lambda name: None)
+    with pytest.raises(ValueError, match="non-empty model comparison"):
+        build_dashboard_data.run()
+    assert output.read_text(encoding="utf-8") == "existing snapshot"
+
+
+def test_export_copies_protocol_metadata_from_the_benchmark_run(tmp_path, monkeypatch):
+    load_json = build_dashboard_data._load_json
+
+    def current_run(name):
+        value = load_json(name)
+        if name == "metrics.json":
+            value["benchmark_protocol_version"] = 2
+        return value
+
+    output = tmp_path / "results.ts"
+    monkeypatch.setattr(build_dashboard_data, "DASHBOARD_RESULTS", output)
+    monkeypatch.setattr(build_dashboard_data, "_load_json", current_run)
+    build_dashboard_data.run()
+    assert _read_module(output)["benchmark_protocol_version"] == 2
+
+
+def test_environment_snapshot_fingerprints_results_and_excludes_itself(tmp_path, monkeypatch):
+    import hashlib
+
+    (tmp_path / "metrics.json").write_bytes(b'{"binary": {}}')
+    (tmp_path / "provenance.json").write_text("old snapshot", encoding="utf-8")
+    monkeypatch.setattr(stamp_provenance, "RESULTS_DIR", tmp_path)
+    stamp_provenance.run()
+    snapshot = json.loads((tmp_path / "provenance.json").read_text())
+    assert snapshot["provenance_kind"] == "environment_snapshot"
+    assert snapshot["result_sha256"] == {
+        "metrics.json": hashlib.sha256(b'{"binary": {}}').hexdigest()
+    }
+    assert (tmp_path / "metrics.json").read_bytes() == b'{"binary": {}}'
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), -float("inf")])
+def test_readme_metrics_reject_nonfinite_values(value):
+    with pytest.raises(ValueError, match="README metrics must be finite"):
+        update_readme_tables._f(value)
+
+
+def test_personalization_table_rejects_an_unknown_brier_scale(tmp_path, monkeypatch):
+    (tmp_path / "personalization.json").write_text(
+        json.dumps({"brier_definition": "unknown_scale"}), encoding="utf-8"
+    )
+    monkeypatch.setattr(update_readme_tables, "RESULTS", tmp_path)
+    with pytest.raises(ValueError, match="positive-class MSE"):
+        update_readme_tables._personalization_table()

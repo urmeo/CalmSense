@@ -24,10 +24,20 @@ from src.utils import paired_effect_size, provenance
 
 def per_subject_acc(res) -> dict:
     df = res["per_subject"]
+    if df.empty or df["subject"].isna().any() or df["subject"].duplicated().any():
+        raise ValueError("Statistics require one nonmissing score per subject")
+    values = df["accuracy"].to_numpy(dtype=float)
+    if not np.isfinite(values).all() or np.any((values < 0) | (values > 1)):
+        raise ValueError("Subject accuracy scores must be finite values between zero and one")
     return dict(zip(df["subject"], df["accuracy"]))
 
 
 def bootstrap_ci(values, n=10000, seed=SEED):
+    values = np.asarray(values, dtype=float)
+    if values.ndim != 1 or len(values) < 3 or not np.isfinite(values).all():
+        raise ValueError("Subject bootstrap requires at least three finite scores")
+    if isinstance(n, bool) or not isinstance(n, (int, np.integer)) or n < 1:
+        raise ValueError("Bootstrap repetitions must be a positive integer")
     rng = np.random.RandomState(seed)
     means = [rng.choice(values, len(values), replace=True).mean() for _ in range(n)]
     return float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))
@@ -35,6 +45,12 @@ def bootstrap_ci(values, n=10000, seed=SEED):
 
 def holm_bonferroni(pairs):
     """Holm-Bonferroni step-down correction over a list of (key, raw_p)."""
+    if len({key for key, _ in pairs}) != len(pairs) or any(
+        not np.isfinite(p) or not 0 <= p <= 1 for _, p in pairs
+    ):
+        raise ValueError(
+            "Holm correction requires distinct comparisons and finite p-values in [0, 1]"
+        )
     ordered = sorted(pairs, key=lambda kv: kv[1])
     m = len(ordered)
     corrected, running = {}, 0.0
@@ -42,6 +58,19 @@ def holm_bonferroni(pairs):
         running = max(running, min((m - rank) * p, 1.0))
         corrected[key] = running
     return corrected
+
+
+def _friedman(vecs):
+    scores = np.asarray(vecs, dtype=float)
+    if scores.ndim != 2 or min(scores.shape) < 3 or not np.isfinite(scores).all():
+        raise ValueError(
+            "Friedman comparison requires at least three models and three finite paired subjects"
+        )
+    # With every model tied for every subject, scipy divides by a zero tie correction.
+    if np.all(scores == scores[0]):
+        return 0.0, 1.0
+    chi2, p_value = friedmanchisquare(*scores)
+    return float(chi2), float(p_value)
 
 
 def run():
@@ -55,16 +84,19 @@ def run():
     for key in CLASSIFIERS:
         scores[key] = per_subject_acc(loso_evaluate(lambda k=key: build_pipeline(k), X, y, groups))
 
-    subjects = sorted(set.intersection(*[set(scores[k]) for k in CLASSIFIERS]))
+    subject_sets = [set(scores[k]) for k in CLASSIFIERS]
+    if any(subjects != subject_sets[0] for subjects in subject_sets[1:]):
+        raise ValueError("Model statistics require identical held-out subject sets")
+    subjects = sorted(subject_sets[0])
     vecs = {k: np.array([scores[k][s] for s in subjects]) for k in CLASSIFIERS}
 
     # Omnibus: are the models different at all?
-    chi2, omnibus_p = friedmanchisquare(*[vecs[k] for k in CLASSIFIERS])
+    chi2, omnibus_p = _friedman([vecs[k] for k in CLASSIFIERS])
 
     # All pairwise Wilcoxon with Holm correction (no winner pre-selection)
     raw = {}
     for a, b in combinations(CLASSIFIERS, 2):
-        if np.allclose(vecs[a], vecs[b]):
+        if np.array_equal(vecs[a], vecs[b]):
             raw[(a, b)] = 1.0
         else:
             raw[(a, b)] = float(wilcoxon(vecs[a], vecs[b]).pvalue)

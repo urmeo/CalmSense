@@ -4,18 +4,19 @@ import numpy as np
 from scipy import stats
 
 from ..logging_config import LoggerMixin
+from ..preprocessing.filters import _positive_number
 
 
 class TemperatureFeatureExtractor(LoggerMixin):
     def __init__(self, sampling_rate: float = 4.0):
-        self.sampling_rate = sampling_rate
+        self.sampling_rate = _positive_number(sampling_rate, "sampling_rate")
         self.logger.debug(f"TemperatureFeatureExtractor initialized, fs={sampling_rate} Hz")
 
     def _validate_signal(self, signal: np.ndarray) -> Optional[np.ndarray]:
         if signal is None:
             return None
 
-        signal = np.asarray(signal).flatten()
+        signal = np.asarray(signal, dtype=float).flatten()
         signal = signal[np.isfinite(signal)]
 
         if len(signal) < 10:
@@ -32,6 +33,7 @@ class TemperatureFeatureExtractor(LoggerMixin):
     def extract_all(self, temp: np.ndarray) -> Dict[str, float]:
         features = dict.fromkeys(self.get_feature_descriptions(), np.nan)
 
+        original = np.asarray(temp, dtype=float).flatten()
         validated = self._validate_signal(temp)
         if validated is None:
             self.logger.warning("Invalid temperature signal, returning NaN features")
@@ -44,7 +46,7 @@ class TemperatureFeatureExtractor(LoggerMixin):
             features["TEMP_min"] = float(np.min(temp))
             features["TEMP_max"] = float(np.max(temp))
 
-            x = np.arange(len(temp)) / self.sampling_rate
+            x = np.arange(len(original))[np.isfinite(original)] / self.sampling_rate
             if len(x) > 1:
                 slope, _, _, _, _ = stats.linregress(x, temp)
                 features["TEMP_slope"] = float(slope)

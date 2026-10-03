@@ -5,11 +5,13 @@ import argparse
 import sys
 import zipfile
 from pathlib import Path
-from urllib.request import urlopen, urlretrieve
+from urllib.parse import urlsplit
+from urllib.request import urlopen
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.config import EXTERNAL_DATA_DIR, RAW_DATA_DIR
+from src.utils import sha256_file
 
 NONEEG_URL = (
     "https://physionet.org/static/published-projects/noneeg/"
@@ -18,6 +20,13 @@ NONEEG_URL = (
 NONEEG_DIR = EXTERNAL_DATA_DIR / "noneeg"
 WESAD_URL = "https://uni-siegen.sciebo.de/s/HGdUkoNlW1Ub0Gx/download"
 MAX_UNCOMPRESSED = 10 * 1024**3  # zip-bomb guard
+DOWNLOAD_TIMEOUT = 30
+NONEEG_FILES = tuple(
+    f"Subject{subject}_{record}.{extension}"
+    for subject in range(1, 21)
+    for record, extensions in (("AccTempEDA", ("hea", "dat", "atr")), ("SpO2HR", ("hea", "dat")))
+    for extension in extensions
+)
 
 # SHA-256 of the official WESAD S*.pkl files (verification instructions in README.md).
 WESAD_SHA256 = {
@@ -41,8 +50,6 @@ WESAD_SHA256 = {
 
 def verify_wesad() -> None:
     """Check each downloaded WESAD S*.pkl against its known SHA-256; fail loudly on mismatch."""
-    import hashlib
-
     root = RAW_DATA_DIR / "WESAD"
     problems = []
     for sid, expected in WESAD_SHA256.items():
@@ -50,7 +57,7 @@ def verify_wesad() -> None:
         if not path.exists():
             problems.append(f"{sid}: missing")
             continue
-        got = hashlib.sha256(path.read_bytes()).hexdigest()
+        got = sha256_file(path)
         if got != expected:
             problems.append(f"{sid}: checksum mismatch")
     if problems:
@@ -69,12 +76,24 @@ def _progress(block, block_size, total):
 
 
 def _download(url, dest):
-    if not url.startswith("https://"):
+    if urlsplit(url).scheme != "https":
         raise ValueError(f"refusing non-HTTPS download: {url}")
+    dest = Path(dest)
+    dest.parent.mkdir(parents=True, exist_ok=True)
     part = dest.with_suffix(dest.suffix + ".part")
     print(f"Downloading {url}")
     try:
-        urlretrieve(url, part, _progress)
+        with urlopen(url, timeout=DOWNLOAD_TIMEOUT) as response, part.open("wb") as stream:
+            if urlsplit(response.geturl()).scheme != "https":
+                raise ValueError("refusing a redirect to a non-HTTPS download")
+            total = int(response.headers.get("Content-Length", 0))
+            downloaded = 0
+            while block := response.read(1024 * 1024):
+                stream.write(block)
+                downloaded += len(block)
+                _progress(downloaded, 1, total)
+            if total > 0 and downloaded != total:
+                raise RuntimeError("incomplete dataset download; retry the command")
         part.replace(dest)  # only a complete download lands on the final path
     finally:
         part.unlink(missing_ok=True)
@@ -99,19 +118,54 @@ def _safe_extract(zip_path, dest, max_bytes=MAX_UNCOMPRESSED):
 def download_noneeg() -> None:
     target = NONEEG_DIR / "non-eeg-dataset-for-assessment-of-neurological-status-1.0.0"
     if target.exists():
+        verify_noneeg(target)
         print(f"Non-EEG already present at {target}")
         return
     NONEEG_DIR.mkdir(parents=True, exist_ok=True)
     zip_path = NONEEG_DIR / "noneeg.zip"
     _download(NONEEG_URL, zip_path)
     _safe_extract(zip_path, NONEEG_DIR)
+    verify_noneeg(target)
     zip_path.unlink()
     print(f"Non-EEG ready at {target}")
+
+
+def verify_noneeg(target=None) -> None:
+    """Check required WFDB files against the publisher's accompanying manifest."""
+    import re
+
+    target = (
+        Path(target)
+        if target is not None
+        else NONEEG_DIR / "non-eeg-dataset-for-assessment-of-neurological-status-1.0.0"
+    )
+    manifest = target / "SHA256SUMS.txt"
+    if not manifest.is_file():
+        raise SystemExit(
+            "Non-EEG integrity check failed: missing SHA256SUMS.txt; re-download the dataset"
+        )
+    references = {}
+    for line in manifest.read_text().splitlines():
+        parts = line.split(maxsplit=1)
+        if len(parts) != 2 or not re.fullmatch(r"[0-9a-fA-F]{64}", parts[0]):
+            raise SystemExit("Non-EEG integrity check failed: invalid SHA256SUMS.txt")
+        references[parts[1].lstrip("*")] = parts[0].lower()
+    problems = []
+    for name in NONEEG_FILES:
+        path = target / name
+        if not path.is_file() or name not in references:
+            problems.append(f"{name}: missing file or checksum")
+        elif sha256_file(path) != references[name]:
+            problems.append(f"{name}: checksum mismatch")
+    if problems:
+        raise SystemExit("Non-EEG integrity check failed:\n  " + "\n  ".join(problems))
+    print(f"Non-EEG integrity OK: {len(NONEEG_FILES)} required files verified.")
 
 
 def download_wesad() -> None:
     target = RAW_DATA_DIR / "WESAD"
     if (target / "S2" / "S2.pkl").exists():
+        verify_wesad()
         print(f"WESAD already present at {target}")
         return
     RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -127,7 +181,7 @@ def download_wesad() -> None:
 def _check(url) -> None:
     if not url.startswith("https://"):
         raise ValueError(f"refusing non-HTTPS request: {url}")
-    with urlopen(url) as r:
+    with urlopen(url, timeout=DOWNLOAD_TIMEOUT) as r:
         size = r.headers.get("Content-Length")
         print(f"{r.status}  {url}  ({int(size) // (1024 * 1024) if size else '?'} MB)")
 
@@ -142,10 +196,15 @@ if __name__ == "__main__":
     parser.add_argument(
         "--verify-wesad", action="store_true", help="check downloaded WESAD .pkl SHA-256 and exit"
     )
+    parser.add_argument(
+        "--verify-noneeg", action="store_true", help="check Non-EEG SHA-256 manifest and exit"
+    )
     args = parser.parse_args()
 
     if args.verify_wesad:
         verify_wesad()
+    elif args.verify_noneeg:
+        verify_noneeg()
     elif args.check:
         _check(NONEEG_URL)
         _check(WESAD_URL)

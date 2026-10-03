@@ -2,6 +2,7 @@
 
 import json
 
+import numpy as np
 import pytest
 
 from scripts import tuning
@@ -76,3 +77,37 @@ def test_synthetic_tuning_isolates_outputs_and_reads_only_demo_defaults(
     else:
         assert plotted_defaults == [{model: demo_accuracy}]
         assert demo_figure.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+
+
+def test_nested_tuning_fails_on_invalid_candidate_instead_of_selecting_around_it(monkeypatch):
+    monkeypatch.setitem(tuning.GRIDS, "lr", {"clf__C": [-1.0, 1.0]})
+    groups = np.repeat(["S0", "S1", "S2", "S3"], 6)
+    y = np.tile([0, 1], 12)
+    X = np.random.RandomState(0).randn(24, 2)
+    with pytest.raises(ValueError, match="C"):
+        tuning.tune_model("lr", X, y, groups, inner_splits=2)
+
+
+@pytest.mark.parametrize("inner_splits, groups", [(1, ["S0", "S1", "S2"]), (2, ["S0", "S1"])])
+def test_nested_tuning_requires_valid_subject_counts(inner_splits, groups):
+    with pytest.raises(ValueError, match="requires"):
+        tuning.tune_model(
+            "lr", np.zeros((len(groups), 1)), np.zeros(len(groups)), np.array(groups), inner_splits
+        )
+
+
+def test_tuning_plot_does_not_show_missing_default_as_zero(tmp_path, monkeypatch):
+    bars = []
+    original = tuning.plt.bar
+
+    def bar(x, values, *args, **kwargs):
+        bars.append(list(values))
+        return original(x, values, *args, **kwargs)
+
+    monkeypatch.setattr(tuning.plt, "bar", bar)
+    tuning._plot(
+        {"Random Forest": {"accuracy_mean": 0.8}, "LightGBM": {"accuracy_mean": 0.7}},
+        {"Random Forest": 0.9},
+        tmp_path / "plot.png",
+    )
+    assert bars == [[0.9], [0.8]]

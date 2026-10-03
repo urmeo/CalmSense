@@ -49,12 +49,3 @@ __all__ = [
     "WESADLoader",
     "SignalProcessor",
 ]
-
-
-def _initialize():
-    import warnings
-
-    warnings.filterwarnings("ignore", category=FutureWarning)
-
-
-_initialize()

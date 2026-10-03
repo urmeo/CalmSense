@@ -4,18 +4,19 @@ import numpy as np
 from scipy import stats
 
 from ..logging_config import LoggerMixin
+from ..preprocessing.filters import _positive_number
 
 
 class EDAFeatureExtractor(LoggerMixin):
     def __init__(self, sampling_rate: float = 4.0):
-        self.sampling_rate = sampling_rate
+        self.sampling_rate = _positive_number(sampling_rate, "sampling_rate")
         self.logger.debug(f"EDAFeatureExtractor initialized, fs={sampling_rate} Hz")
 
     def _validate_signal(self, signal: Optional[np.ndarray]) -> Optional[np.ndarray]:
         if signal is None:
             return None
 
-        signal = np.asarray(signal).flatten()
+        signal = np.asarray(signal, dtype=float).flatten()
         signal = signal[np.isfinite(signal)]
 
         if len(signal) < 10:
@@ -32,6 +33,7 @@ class EDAFeatureExtractor(LoggerMixin):
     def extract_tonic_features(self, scl: Optional[np.ndarray]) -> Dict[str, float]:
         features = self._empty_features("SCL_")
 
+        original = np.asarray(scl, dtype=float).flatten()
         validated = self._validate_signal(scl)
         if validated is None:
             return features
@@ -43,7 +45,8 @@ class EDAFeatureExtractor(LoggerMixin):
             features["SCL_min"] = float(np.min(scl))
             features["SCL_max"] = float(np.max(scl))
 
-            x = np.arange(len(scl)) / self.sampling_rate
+            # Missing samples leave time gaps rather than compressing the slope's time axis.
+            x = np.arange(len(original))[np.isfinite(original)] / self.sampling_rate
             if len(x) > 1:
                 slope, _, _, _, _ = stats.linregress(x, scl)
                 features["SCL_slope"] = float(slope)
@@ -111,7 +114,8 @@ class EDAFeatureExtractor(LoggerMixin):
         try:
             features["EDA_mean"] = float(np.mean(eda))
             features["EDA_range"] = float(np.ptp(eda))
-            features["EDA_kurtosis"] = float(stats.kurtosis(eda))
+            if np.std(eda) > 0:
+                features["EDA_kurtosis"] = float(stats.kurtosis(eda))
         except Exception as e:
             self.logger.warning(f"Statistical feature extraction failed: {e}")
 
@@ -125,14 +129,17 @@ class EDAFeatureExtractor(LoggerMixin):
     ) -> Dict[str, float]:
         tonic = eda_decomposed.get("tonic") if eda_decomposed else None
         features = self.extract_tonic_features(tonic)
-        signal_duration = len(tonic) / self.sampling_rate if tonic is not None else 60.0
+        duration_source = tonic if tonic is not None else raw_eda
+        signal_duration = (
+            len(duration_source) / self.sampling_rate if duration_source is not None else 60.0
+        )
         features.update(self.extract_phasic_features(scr_peaks, signal_duration))
 
         if raw_eda is None and eda_decomposed:
             tonic = eda_decomposed.get("tonic")
             phasic = eda_decomposed.get("phasic")
             if tonic is not None and phasic is not None:
-                raw_eda = tonic + phasic
+                raw_eda = np.asarray(tonic, dtype=float) + np.asarray(phasic, dtype=float)
 
         features.update(self.extract_statistical_features(raw_eda))
 
@@ -160,7 +167,7 @@ class EDAFeatureExtractor(LoggerMixin):
             "SCR_amplitude_max": "Maximum SCR amplitude (µS)",
             "SCR_rise_time_mean": "Mean SCR rise time (s)",
             "SCR_recovery_time_mean": "Mean SCR half-recovery time (s)",
-            "SCR_AUC": "Total area under SCR curves (µS·s)",
+            "SCR_AUC": "Triangular SCR area estimate (µS·s)",
             "EDA_mean": "Overall EDA mean (µS)",
             "EDA_range": "EDA dynamic range (µS)",
             "EDA_kurtosis": "EDA distribution kurtosis",

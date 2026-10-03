@@ -2,63 +2,61 @@ from typing import Dict, Tuple
 
 import numpy as np
 from scipy import stats
+from scipy.spatial.distance import cdist
 
 from ..config import FEATURE_PARAMS
+from ..preprocessing.filters import _positive_integer, _positive_number
 from .hrv_base import BaseHRVExtractor
 
 
 class HRVNonlinearExtractor(BaseHRVExtractor):
     def __init__(self, min_rr_count: int = 50):
-        self.min_rr_count = min_rr_count
+        self.min_rr_count = _positive_integer(min_rr_count, "min_rr_count")
         self.logger.debug(f"HRVNonlinearExtractor initialized, min_rr={min_rr_count}")
 
     def compute_sample_entropy(self, rr: np.ndarray, m: int = 2, r: float = 0.2) -> float:
+        rr = np.asarray(rr, dtype=float).flatten()
+        m = _positive_integer(m, "m")
+        r = _positive_number(r, "r")
         n = len(rr)
-        if n < m + 2:
+        if n < m + 2 or not np.isfinite(rr).all():
             return np.nan
 
         r_val = r * np.std(rr)
 
-        def _count_matches(template_len: int) -> int:
-            count = 0
-            for i in range(n - template_len):
-                for j in range(i + 1, n - template_len):
-                    dist = np.max(np.abs(rr[i : i + template_len] - rr[j : j + template_len]))
-                    if dist < r_val:
-                        count += 1
-            return count
-
-        b = _count_matches(m)
-        a = _count_matches(m + 1)
+        # Both counts use the same template starts, each with an available next sample.
+        patterns = np.lib.stride_tricks.sliding_window_view(rr, m + 1)
+        b = np.count_nonzero(
+            np.triu(cdist(patterns[:, :m], patterns[:, :m], "chebyshev") <= r_val, 1)
+        )
+        a = np.count_nonzero(np.triu(cdist(patterns, patterns, "chebyshev") <= r_val, 1))
 
         if b == 0:
             return np.nan
-
-        return float(-np.log((a + FEATURE_PARAMS.EPSILON) / (b + FEATURE_PARAMS.EPSILON)))
+        if a == 0:
+            return np.inf
+        return float(-np.log(a / b))
 
     def compute_approximate_entropy(self, rr: np.ndarray, m: int = 2, r: float = 0.2) -> float:
+        rr = np.asarray(rr, dtype=float).flatten()
+        m = _positive_integer(m, "m")
+        r = _positive_number(r, "r")
         n = len(rr)
-        if n < m + 2:
+        if n < m + 2 or not np.isfinite(rr).all():
             return np.nan
 
         r_val = r * np.std(rr)
 
         def _phi(template_len: int) -> float:
-            patterns = np.array([rr[i : i + template_len] for i in range(n - template_len + 1)])
+            patterns = np.lib.stride_tricks.sliding_window_view(rr, template_len)
             n_patterns = len(patterns)
 
             if n_patterns == 0:
                 return 0.0
 
-            counts = np.zeros(n_patterns)
-            for i in range(n_patterns):
-                for j in range(n_patterns):
-                    dist = np.max(np.abs(patterns[i] - patterns[j]))
-                    if dist <= r_val:
-                        counts[i] += 1
-
-            probs = counts / n_patterns
-            return float(np.mean(np.log(probs + FEATURE_PARAMS.EPSILON)))
+            # ApEn includes self-matches, so every probability is positive.
+            counts = np.count_nonzero(cdist(patterns, patterns, "chebyshev") <= r_val, axis=1)
+            return float(np.mean(np.log(counts / n_patterns)))
 
         phi_m = _phi(m)
         phi_m1 = _phi(m + 1)
@@ -68,8 +66,13 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
     def compute_dfa(
         self, rr: np.ndarray, scale_min: int = 4, scale_max: int = 64
     ) -> Tuple[float, float]:
+        scale_min = _positive_integer(scale_min, "scale_min")
+        scale_max = _positive_integer(scale_max, "scale_max")
+        if scale_min >= scale_max:
+            raise ValueError("scale_min must be below scale_max")
+        rr = np.asarray(rr, dtype=float).flatten()
         n = len(rr)
-        if n < scale_max:
+        if n < scale_max or not np.isfinite(rr).all() or np.std(rr) == 0:
             return np.nan, np.nan
 
         rr_mean = np.mean(rr)
@@ -131,6 +134,7 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
         return alpha1, alpha2
 
     def compute_poincare(self, rr: np.ndarray) -> Dict[str, float]:
+        rr = np.asarray(rr, dtype=float).flatten()
         if len(rr) < 3:
             return {
                 "SD1": np.nan,
@@ -146,10 +150,9 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
         diff = rr_n1 - rr_n
 
         sd1 = float(np.std(diff, ddof=1) / np.sqrt(2))
-        sdnn = np.std(rr, ddof=1)
-
-        sd2_squared = 2 * sdnn**2 - sd1**2
-        sd2 = float(np.sqrt(max(sd2_squared, 0)))
+        # Measure the paired points along the identity line; the full-series SDNN
+        # identity is only approximate for a finite or trending RR series.
+        sd2 = float(np.std((rr_n + rr_n1) / np.sqrt(2), ddof=1))
 
         if sd2 > FEATURE_PARAMS.EPSILON:
             sd1_sd2_ratio = float(sd1 / sd2)
@@ -162,9 +165,9 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
         else:
             csi = np.nan
 
-        # CVI = log10(SD1 * SD2) (vagal index)
+        # Toichi's ellipse dimensions are 4*SD1 and 4*SD2.
         if sd1 > 0 and sd2 > 0:
-            cvi = float(np.log10(sd1 * sd2))
+            cvi = float(np.log10(16 * sd1 * sd2))
         else:
             cvi = np.nan
 
@@ -184,22 +187,32 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
         radius: float = 0.2,
         min_line_length: int = 2,
     ) -> float:
+        embedding_dim = _positive_integer(embedding_dim, "embedding_dim")
+        time_delay = _positive_integer(time_delay, "time_delay")
+        min_line_length = _positive_integer(min_line_length, "min_line_length")
+        radius = _positive_number(radius, "radius")
+        rr = np.asarray(rr, dtype=float).flatten()
         n = len(rr)
-        if n < embedding_dim + time_delay * embedding_dim:
+        n_vectors = n - (embedding_dim - 1) * time_delay
+        if n_vectors < 2 or not np.isfinite(rr).all():
             return np.nan
 
-        dist_matrix = np.abs(rr[:, np.newaxis] - rr[np.newaxis, :])
+        starts = np.arange(n_vectors)[:, None]
+        offsets = np.arange(embedding_dim) * time_delay
+        embedded = rr[starts + offsets]
+        dist_matrix = cdist(embedded, embedded, "chebyshev")
         threshold = radius * np.max(dist_matrix)
-        recurrence_matrix = (dist_matrix < threshold).astype(int)
+        recurrence_matrix = (dist_matrix <= threshold).astype(int)
+        np.fill_diagonal(recurrence_matrix, 0)
 
-        total_recurrence = np.sum(recurrence_matrix) - n
+        total_recurrence = np.sum(recurrence_matrix)
 
         if total_recurrence == 0:
             return 0.0
 
         diagonal_points = 0
 
-        for k in range(1, n):
+        for k in range(1, n_vectors):
             diag = np.diag(recurrence_matrix, k)
             runs = np.diff(np.concatenate([[0], diag, [0]]))
             run_starts = np.where(runs == 1)[0]
@@ -213,7 +226,7 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
         diagonal_points *= 2  # both sides of diagonal
 
         det = diagonal_points / total_recurrence
-        return float(min(det, 1.0))
+        return float(det)
 
     def extract_all(self, rr_intervals: np.ndarray) -> Dict[str, float]:
         features = dict.fromkeys(self.get_feature_descriptions(), np.nan)
@@ -258,6 +271,6 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
             "SD2": "Poincaré plot length - long-term variability (ms)",
             "SD1_SD2_ratio": "SD1/SD2 ratio",
             "CSI": "Cardiac Sympathetic Index (SD2/SD1)",
-            "CVI": "Cardiac Vagal Index (log10(SD1*SD2))",
-            "RQA_DET": "Recurrence quantification determinism (0-1)",
+            "CVI": "Cardiac Vagal Index (log10(16*SD1*SD2))",
+            "RQA_DET": "Embedded recurrence determinism (m=10, delay=1; 0-1)",
         }

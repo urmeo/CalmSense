@@ -16,6 +16,8 @@ from .hrv_time_domain import HRVTimeDomainExtractor
 from .respiration_features import RespirationFeatureExtractor
 from .temperature_features import TemperatureFeatureExtractor
 
+FEATURE_SCHEMA_VERSION = 2
+
 
 class FeatureExtractionPipeline(LoggerMixin):
     """Turn one preprocessed window into a flat, prefixed feature dict.
@@ -51,6 +53,8 @@ class FeatureExtractionPipeline(LoggerMixin):
                     f"Unknown feature_config keys: {sorted(unknown)}. "
                     f"Valid keys: {sorted(self.DEFAULT_CONFIG)}"
                 )
+            if any(not isinstance(value, bool) for value in feature_config.values()):
+                raise ValueError("feature_config values must be booleans")
         self.feature_config = {**self.DEFAULT_CONFIG, **(feature_config or {})}
 
         self.extractors: Dict[str, Any] = {
@@ -167,6 +171,10 @@ class FeatureExtractionPipeline(LoggerMixin):
 
                 all_features.append(features)
 
+        if not all_features:
+            return pd.DataFrame(
+                columns=["subject_id", "window_id", "label", *self.get_feature_names()]
+            )
         features_df = pd.DataFrame(all_features)
 
         metadata_cols = ["subject_id", "window_id", "label"]
@@ -181,23 +189,9 @@ class FeatureExtractionPipeline(LoggerMixin):
         return features_df
 
     def get_feature_names(self) -> List[str]:
-        if self._feature_names is not None:
-            return self._feature_names
-
-        dummy_data = {
-            "rr_intervals": np.array([800, 810, 795] * 20),
-            "eda_tonic": np.ones(100) * 5,
-            "eda_phasic": np.zeros(100),
-            "scr_peaks": [],
-            "temperature": np.ones(100) * 35,
-            "respiration": np.sin(np.linspace(0, 10, 1000)),
-            "accelerometer": {"magnitude": np.ones(100)},
-        }
-
-        features = self.extract_window_features(dummy_data)
-        self._feature_names = list(features.keys())
-
-        return self._feature_names
+        if self._feature_names is None:
+            self._feature_names = list(self.get_feature_descriptions())
+        return self._feature_names.copy()
 
     def get_feature_count(self) -> int:
         return len(self.get_feature_names())

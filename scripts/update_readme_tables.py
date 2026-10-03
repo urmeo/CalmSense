@@ -5,13 +5,14 @@ reflects the committed JSON. This updates documentation only; it does not fit mo
 """
 
 import json
+import math
 import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.calibration import normalize_binary_calibration
+from src.calibration import BINARY_BRIER_DEFINITION, normalize_binary_calibration
 from src.config import RESULTS_DIR
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -20,6 +21,8 @@ RESULTS = RESULTS_DIR
 
 
 def _f(x: float) -> str:
+    if not math.isfinite(x):
+        raise ValueError("README metrics must be finite")
     return f"{x:.3f}"
 
 
@@ -51,6 +54,8 @@ def _calibration_table() -> str:
 def _personalization_table() -> str:
     with open(RESULTS / "personalization.json") as fh:
         d = json.load(fh)
+    if d.get("brier_definition", BINARY_BRIER_DEFINITION) != BINARY_BRIER_DEFINITION:
+        raise ValueError("Personalization Brier values must use positive-class MSE")
     head = "| Recalibration / requested enrollment budget | ECE | Brier |\n| --- | :-: | :-: |"
     rows = [("None (LOSO)", d["uncalibrated"]), ("Global (training subjects)", d["global"])]
     # k values are whatever personalize.py used (K_VALUES), not hard-coded

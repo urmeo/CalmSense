@@ -36,18 +36,19 @@ const Sidebar: React.FC<{
     <>
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
           onClick={onClose}
         />
       )}
 
       <aside
+        id="navigation-sidebar"
         className={`
           fixed top-0 left-0 z-30 h-full w-64
           bg-primary-700 dark:bg-gray-900
           transform transition-transform duration-300 ease-in-out
           lg:translate-x-0 lg:static
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+          ${isOpen ? 'translate-x-0 visible' : '-translate-x-full invisible lg:visible'}
         `}
       >
         <div className="flex items-center justify-between p-4 border-b border-primary-600 dark:border-gray-700">
@@ -64,7 +65,7 @@ const Sidebar: React.FC<{
           </button>
         </div>
 
-        <nav className="p-4 space-y-2">
+        <nav aria-label="Main navigation" className="p-4 space-y-2">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             const Icon = item.icon;
@@ -73,6 +74,7 @@ const Sidebar: React.FC<{
               <Link
                 key={item.path}
                 to={item.path}
+                aria-current={isActive ? 'page' : undefined}
                 onClick={onClose}
                 className={`
                   flex items-center space-x-3 px-4 py-3 rounded-lg

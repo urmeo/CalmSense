@@ -3,8 +3,10 @@ export default {
   "name": "calmsense-dashboard",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "build": "tsc && vite build",
     "preview": "vite preview"
   },

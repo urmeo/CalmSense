@@ -1,7 +1,7 @@
-"""Write experiment provenance under the configured results output directory.
+"""Record the current environment and result hashes beside experiment outputs.
 
-Closes the reproducibility loop for an auditor: which commit, which seed, which package
-versions, which dataset. Run after the experiment scripts (or standalone any time).
+This snapshot does not prove which code or environment produced existing results.
+Run immediately after experiments to record the environment used for that run.
 """
 
 import hashlib
@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from scripts.download_data import WESAD_SHA256
 from src.config import RESULTS_DIR, SEED
-from src.utils import provenance
+from src.utils import provenance, sha256_file
 
 # Versions that move the numbers if they change; the model pickle is coupled to scikit-learn.
 KEY_PACKAGES = [
@@ -57,10 +57,16 @@ def _dataset_fingerprint() -> dict:
 def run():
     prov = {
         **provenance(),
+        "provenance_kind": "environment_snapshot",
         "seed": SEED,
         "python": sys.version.split()[0],
         "packages": _package_versions(),
         "data": _dataset_fingerprint(),
+        "result_sha256": {
+            str(path.relative_to(RESULTS_DIR)): sha256_file(path)
+            for path in sorted(RESULTS_DIR.rglob("*"))
+            if path.is_file() and path != RESULTS_DIR / "provenance.json"
+        },
     }
     path = RESULTS_DIR / "provenance.json"
     path.parent.mkdir(parents=True, exist_ok=True)

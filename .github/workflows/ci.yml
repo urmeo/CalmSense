@@ -105,6 +105,8 @@ jobs:
           cache-dependency-path: frontend/config/package-lock.mjs
       - name: Install dependencies
         run: node tooling.mjs install
+      - name: Dashboard regression tests
+        run: node tooling.mjs test
       - name: Audit frontend dependencies
         run: node tooling.mjs audit
       - name: Build

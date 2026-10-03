@@ -6,20 +6,22 @@ from typing import List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from .config import FS, PROCESSED_DATA_DIR
+from .config import FS, PROCESSED_DATA_DIR, VALID_SUBJECTS
 from .data.loader import WESADLoader
 from .dataset import CONDITION_LABELS, window_label
-from .features.feature_pipeline import FeatureExtractionPipeline
+from .features.feature_pipeline import FEATURE_SCHEMA_VERSION, FeatureExtractionPipeline
 from .logging_config import LoggerMixin
 from .preprocessing.ecg_processor import ECGProcessor
 from .preprocessing.eda_processor import EDAProcessor
+from .preprocessing.filters import _window_parameters
 
 
 class WristDataset(LoggerMixin):
     def __init__(self, window_sec: float = 60.0, overlap: float = 0.5, purity: float = 0.9):
-        self.window_sec = window_sec
-        self.overlap = overlap
-        self.purity = purity
+        _window_parameters(window_sec, overlap, purity, FS.WRIST_EDA)
+        self.window_sec = float(window_sec)
+        self.overlap = float(overlap)
+        self.purity = float(purity)
         self.label_fs = FS.CHEST  # labels sampled at 700 Hz
         self.loader = WESADLoader()
         self.eda = EDAProcessor(sampling_rate=FS.WRIST_EDA)
@@ -85,6 +87,7 @@ class WristDataset(LoggerMixin):
                         "temperature": temp[e0:e1],
                         "accelerometer": {"magnitude": acc_mag[a0:a1]},
                         "subject_id": subject_id,
+                        "window_id": int(t * self.label_fs),
                         "label": lab,
                     }
                 )
@@ -95,13 +98,22 @@ class WristDataset(LoggerMixin):
         return windows, ys
 
     def build(self, subjects: Optional[List[str]] = None, cache: bool = True) -> pd.DataFrame:
-        subjects = subjects or self.loader.subjects
+        subjects = self.loader.subjects if subjects is None else subjects
+        if not subjects or len(set(subjects)) != len(subjects):
+            raise ValueError("subjects must be a nonempty list without duplicates")
         all_windows = []
         for s in subjects:
             windows, _ = self._process_subject(s)
             all_windows.extend(windows)
         df = self.features.extract_all_features(all_windows, show_progress=False)
         df["label_name"] = df["label"].map(CONDITION_LABELS)
+        df.attrs["feature_schema_version"] = FEATURE_SCHEMA_VERSION
+        df.attrs["dataset_parameters"] = {
+            "window_sec": self.window_sec,
+            "overlap": self.overlap,
+            "purity": self.purity,
+            "subjects": sorted(subjects),
+        }
         if cache:
             PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
             df.to_parquet(PROCESSED_DATA_DIR / "features_wrist.parquet", index=False)
@@ -111,4 +123,29 @@ class WristDataset(LoggerMixin):
 
 def load_wrist() -> Optional[pd.DataFrame]:
     path = Path(PROCESSED_DATA_DIR) / "features_wrist.parquet"
-    return pd.read_parquet(path) if path.exists() else None
+    if not path.exists():
+        return None
+    frame = pd.read_parquet(path)
+    parameters = {
+        "window_sec": 60.0,
+        "overlap": 0.5,
+        "purity": 0.9,
+        "subjects": sorted(VALID_SUBJECTS),
+    }
+    if (
+        frame.attrs.get("feature_schema_version") != FEATURE_SCHEMA_VERSION
+        or frame.attrs.get("dataset_parameters") != parameters
+    ):
+        return None
+    columns = [
+        column
+        for column in frame
+        if column not in {"subject_id", "window_id", "label", "label_name"}
+    ]
+    if columns != FeatureExtractionPipeline().get_feature_names() or not {
+        "subject_id",
+        "window_id",
+        "label",
+    } <= set(frame.columns):
+        raise ValueError("Cached wrist feature columns do not match the current schema")
+    return frame

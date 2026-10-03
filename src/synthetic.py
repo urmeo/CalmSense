@@ -12,6 +12,9 @@ from typing import Dict, Tuple
 
 import numpy as np
 
+from .config import VALID_SUBJECTS
+from .preprocessing.filters import _positive_integer
+
 CHEST_FS = 700
 WRIST = {"BVP": 64, "EDA": 4, "TEMP": 4, "ACC": 32}
 
@@ -130,11 +133,14 @@ def _subject(seed: int, block_sec: int) -> Dict:
 
 
 def write_dataset(out_dir: Path, n_subjects: int = 4, block_sec: int = 120, seed: int = 0) -> Path:
-    """Write S2..S(n+1) pickles in WESAD layout under out_dir/WESAD."""
+    """Write valid WESAD subject IDs as generated pickles under out_dir/WESAD."""
+    n_subjects = _positive_integer(n_subjects, "n_subjects")
+    block_sec = _positive_integer(block_sec, "block_sec")
+    if n_subjects > len(VALID_SUBJECTS):
+        raise ValueError(f"n_subjects must not exceed {len(VALID_SUBJECTS)} WESAD IDs")
     root = Path(out_dir) / "WESAD"
-    for i in range(n_subjects):
-        sid = f"S{i + 2}"
-        data = _subject(seed + i * 100, int(block_sec))
+    for i, sid in enumerate(VALID_SUBJECTS[:n_subjects]):
+        data = _subject(seed + i * 100, block_sec)
         subj_dir = root / sid
         subj_dir.mkdir(parents=True, exist_ok=True)
         with open(subj_dir / f"{sid}.pkl", "wb") as f:
@@ -146,6 +152,8 @@ def features(
     n_subjects: int = 4, block_sec: int = 120, seed: int = 0, cache: bool = False
 ) -> Tuple:
     """Build a small feature matrix from freshly generated synthetic subjects."""
+    if cache:
+        raise ValueError("Synthetic features cannot replace real-data caches; use cache=False")
     import shutil
     import tempfile
 

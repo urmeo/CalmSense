@@ -58,6 +58,8 @@ def run():
     rows = []
     for name, prefixes in SUBSETS.items():
         cols = [i for i, c in enumerate(feature_cols) if _group_of(c) in prefixes]
+        if not cols:
+            raise ValueError(f"No feature columns available for ablation subset: {name}")
         res = loso_evaluate(lambda: build_pipeline("rf"), X[:, cols], y, groups)
         rows.append(
             {

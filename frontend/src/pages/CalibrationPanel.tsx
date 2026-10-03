@@ -9,7 +9,6 @@ const fmt = (v: number) => v.toFixed(3);
 const signed = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(3)}`;
 
 const TRANSPARENT = 'rgba(0,0,0,0)';
-const AXIS_FONT = '#6B7280'; // gray-500: legible on both light and dark cards
 const COLORS = {
   loso: '#3182CE',
   recal: '#38A169',
@@ -111,7 +110,6 @@ const CalibrationPanel: React.FC = () => {
               legend: { x: 0.02, y: 0.98, bgcolor: TRANSPARENT, font: { size: 10 } },
               paper_bgcolor: TRANSPARENT,
               plot_bgcolor: TRANSPARENT,
-              font: { color: AXIS_FONT },
             }}
             config={{ responsive: true, showSendToCloud: false, displayModeBar: false }}
             style={{ width: '100%' }}
@@ -140,7 +138,6 @@ const CalibrationPanel: React.FC = () => {
               yaxis: { title: { text: 'ECE' }, rangemode: 'tozero' },
               paper_bgcolor: TRANSPARENT,
               plot_bgcolor: TRANSPARENT,
-              font: { color: AXIS_FONT },
             }}
             config={{ responsive: true, showSendToCloud: false, displayModeBar: false }}
             style={{ width: '100%' }}
@@ -185,7 +182,6 @@ const CalibrationPanel: React.FC = () => {
             legend: { orientation: 'h', y: -0.2, font: { size: 11 } },
             paper_bgcolor: TRANSPARENT,
             plot_bgcolor: TRANSPARENT,
-            font: { color: AXIS_FONT },
           }}
           config={{ responsive: true, showSendToCloud: false, displayModeBar: false }}
           style={{ width: '100%' }}
@@ -227,9 +223,8 @@ const CalibrationPanel: React.FC = () => {
       <div className="flex items-start gap-2 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm">
         <Info className="w-5 h-5 text-blue-500 mt-0.5 shrink-0" />
         <p className="text-blue-800 dark:text-blue-300">
-          Recalibration uses a calibrator fit only on out-of-fold training probabilities, so the
-          held-out subject is never seen, no leakage. Research demonstration only, not a medical
-          device.
+          Recalibration fits out-of-fold probabilities from the training subjects; the held-out
+          subject is excluded. Research use only; no clinical validation.
         </p>
       </div>
     </div>

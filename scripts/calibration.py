@@ -16,6 +16,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import wilcoxon
+from sklearn.dummy import DummyClassifier
 from sklearn.isotonic import IsotonicRegression
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GroupKFold, LeaveOneGroupOut, StratifiedKFold
@@ -41,7 +42,8 @@ def loso_proba(factory, X, y, groups):
     for train_idx, test_idx in logo.split(X, y, groups):
         pipe = factory()
         pipe.fit(X[train_idx], y[train_idx], **_fit_params(pipe, y[train_idx]))
-        pp.append(pipe.predict_proba(X[test_idx]))
+        p_pos = _pos_proba(pipe, X[test_idx])
+        pp.append(np.column_stack([1.0 - p_pos, p_pos]))
         yt.append(y[test_idx])
         gg.append(groups[test_idx])
     return np.concatenate(yt), np.concatenate(pp), np.concatenate(gg)
@@ -57,7 +59,8 @@ def within_subject_proba(factory, X, y, groups):
     for train_idx, test_idx in skf.split(Xk, yk):
         pipe = factory()
         pipe.fit(Xk[train_idx], yk[train_idx], **_fit_params(pipe, yk[train_idx]))
-        pp.append(pipe.predict_proba(Xk[test_idx]))
+        p_pos = _pos_proba(pipe, Xk[test_idx])
+        pp.append(np.column_stack([1.0 - p_pos, p_pos]))
         yt.append(yk[test_idx])
         gg.append(gk[test_idx])
     return np.concatenate(yt), np.concatenate(pp), np.concatenate(gg)
@@ -69,11 +72,17 @@ def _subject_brier(y, proba, g):
 
 def gap_significance(loso, within):
     """Compare subject-paired Brier scores with a two-sided Wilcoxon test."""
-    subjects = sorted(set(loso) & set(within))
+    if len(loso) < 3 or set(loso) != set(within):
+        raise ValueError(
+            "Paired calibration scores require the same set of at least three subjects"
+        )
+    subjects = sorted(loso)
     a = np.array([loso[s] for s in subjects])
     b = np.array([within[s] for s in subjects])
     gap = a - b
-    pval = 1.0 if np.allclose(a, b) else float(wilcoxon(a, b).pvalue)
+    if not np.isfinite(gap).all():
+        raise ValueError("Paired calibration scores must be finite")
+    pval = 1.0 if np.all(gap == 0) else float(wilcoxon(a, b).pvalue)
     rng = np.random.RandomState(SEED)
     # Resample subject-level differences, preserving each LOSO/within-subject pair.
     means = [rng.choice(gap, len(gap), replace=True).mean() for _ in range(10000)]
@@ -88,21 +97,34 @@ def gap_significance(loso, within):
 
 
 def _fit_calibrator(raw, y, method):
+    if method not in {"isotonic", "sigmoid"}:
+        raise ValueError(f"Unknown calibration method: {method}")
+    raw = np.asarray(raw, dtype=float)
+    y = np.asarray(y)
+    # Validate the calibration targets as binary probabilities and labels.
+    cal.brier_score(y, raw)
     if method == "isotonic":
         return IsotonicRegression(out_of_bounds="clip").fit(raw, y)
+    if len(np.unique(y)) == 1:
+        return DummyClassifier(strategy="constant", constant=y[0]).fit(raw.reshape(-1, 1), y)
     return LogisticRegression().fit(raw.reshape(-1, 1), y)
 
 
 def _apply_calibrator(model, raw, method):
+    if method not in {"isotonic", "sigmoid"}:
+        raise ValueError(f"Unknown calibration method: {method}")
+    raw = np.asarray(raw, dtype=float)
     if method == "isotonic":
         return model.transform(raw)
-    return model.predict_proba(raw.reshape(-1, 1))[:, 1]
+    return _pos_proba(model, raw.reshape(-1, 1))
 
 
 def _pos_proba(estimator, X):
     """P(class==1), robust to single-class folds where proba has one column."""
     proba = estimator.predict_proba(X)
     classes = list(estimator.classes_)
+    if not classes or not set(classes) <= {0, 1}:
+        raise ValueError("Binary calibration requires estimator classes drawn from {0, 1}")
     if 1 in classes:
         return proba[:, classes.index(1)]
     return np.zeros(len(X))

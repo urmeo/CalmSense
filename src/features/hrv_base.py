@@ -1,11 +1,4 @@
-"""Shared scaffolding for the HRV extractors.
-
-The three HRV extractors (time-domain, frequency-domain, nonlinear) all begin
-from the same RR-interval series and reject it the same way: drop non-finite
-values, require a minimum count, and clip to a plausible physiological range.
-That guard lives here so the three stay in lockstep: changing the accepted RR
-range in one place changes it everywhere.
-"""
+"""Shared RR count, finite-value, and physiological-range checks for HRV."""
 
 from typing import Optional
 
@@ -24,7 +17,7 @@ class BaseHRVExtractor(LoggerMixin):
     min_rr_count: int = 10
 
     def _validate_input(self, rr_intervals: np.ndarray) -> Optional[np.ndarray]:
-        rr = np.asarray(rr_intervals).flatten()
+        rr = np.asarray(rr_intervals, dtype=float).flatten()
         rr = rr[np.isfinite(rr)]
 
         if len(rr) < self.min_rr_count:

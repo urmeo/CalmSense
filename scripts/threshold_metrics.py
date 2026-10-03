@@ -15,7 +15,9 @@ import numpy as np
 from sklearn.metrics import average_precision_score, roc_auc_score, roc_curve
 from sklearn.model_selection import LeaveOneGroupOut
 
-from scripts.run_experiment import CLF_NAMES, build_pipeline, load_cached, prepare_task
+from scripts.calibration import _pos_proba
+from scripts.run_experiment import CLF_NAMES, _fit_params, build_pipeline, load_cached, prepare_task
+from src.calibration import brier_score
 from src.config import RESULTS_DIR
 from src.utils import provenance
 
@@ -29,25 +31,30 @@ def loso_pos_proba(key, X, y, groups):
     p1, true = [], []
     for train_idx, test_idx in logo.split(X, y, groups):
         pipe = build_pipeline(key)
-        pipe.fit(X[train_idx], y[train_idx])
-        clf = pipe.named_steps["clf"]
-        pos = list(clf.classes_).index(1)  # column for the positive (stress) class
-        p1.extend(pipe.predict_proba(X[test_idx])[:, pos])
+        pipe.fit(X[train_idx], y[train_idx], **_fit_params(pipe, y[train_idx]))
+        p1.extend(_pos_proba(pipe, X[test_idx]))
         true.extend(y[test_idx])
     return np.asarray(true), np.asarray(p1)
 
 
 def operating_point(y_true, p1):
     """Select Youden-J and describe its rates on the same supplied predictions."""
+    y_true = np.asarray(y_true)
+    p1 = np.asarray(p1, dtype=float)
+    brier_score(y_true, p1)
+    if len(np.unique(y_true)) != 2:
+        raise ValueError("An ROC operating point requires both baseline and stress labels")
     fpr, tpr, thr = roc_curve(y_true, p1)
-    j = int(np.argmax(tpr - fpr))
+    # ROC begins with an infinity sentinel. Select an attainable probability threshold.
+    candidates = np.flatnonzero(np.isfinite(thr))
+    j = int(candidates[np.argmax((tpr - fpr)[candidates])])
     t = float(thr[j])
     pred = (p1 >= t).astype(int)
     tp = int(np.sum((pred == 1) & (y_true == 1)))
     fp = int(np.sum((pred == 1) & (y_true == 0)))
     tn = int(np.sum((pred == 0) & (y_true == 0)))
     fn = int(np.sum((pred == 0) & (y_true == 1)))
-    safe = lambda num, den: float(num / den) if den else float("nan")  # noqa: E731
+    safe = lambda num, den: float(num / den) if den else None  # noqa: E731
     return {
         "rule": "Youden J (max sensitivity + specificity - 1)",
         "threshold": t,
@@ -70,26 +77,27 @@ def run():
         name = CLF_NAMES[key]
         try:
             y_true, p1 = loso_pos_proba(key, X, y, groups)
+            row = {
+                "model": name,
+                "available": True,
+                "auroc": float(roc_auc_score(y_true, p1)),
+                "auprc": float(average_precision_score(y_true, p1)),
+            }
+            if key == POINT_MODEL:
+                row["operating_point"] = operating_point(y_true, p1)
         except Exception as e:  # missing OpenMP for xgb/lgbm, etc.
             out["models"].append({"model": name, "available": False, "reason": str(e)[:80]})
             print(f"  {name:20s} skipped ({str(e)[:40]})")
             continue
-        row = {
-            "model": name,
-            "available": True,
-            "auroc": float(roc_auc_score(y_true, p1)),
-            "auprc": float(average_precision_score(y_true, p1)),
-        }
-        if key == POINT_MODEL:
-            row["operating_point"] = operating_point(y_true, p1)
         out["models"].append(row)
         print(f"  {name:20s} AUROC={row['auroc']:.3f}  AUPRC={row['auprc']:.3f}")
 
     out["provenance"] = provenance()
+    out["methodology"] = {"xgboost_balancing": "training_fold_sample_weights"}
     path = RESULTS_DIR / "threshold_metrics.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
-        json.dump(out, f, indent=2)
+        json.dump(out, f, indent=2, allow_nan=False)
     print(f"\nWrote {path}")
 
 

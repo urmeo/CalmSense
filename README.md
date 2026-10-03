@@ -23,6 +23,8 @@ DL: 1D-CNN · Explainability: SHAP
 
 ## Results
 
+**Saved benchmark from the earlier pipeline.** Corrected code requires a fresh benchmark; see [provenance](#result-provenance).
+
 **15-fold LOSO** · baseline vs stress; three-class adds amusement.
 
 | Model | Binary acc | Binary F1 | AUROC* | AUPRC* | 3-class acc | 3-class F1 |
@@ -157,6 +159,7 @@ it is not causal or held-out evidence.
 The [shipped chest RF](outputs/models/stress_classifier.joblib) is refit on all **869** binary windows;
 LOSO evaluates separate fits. Median imputation → standardization → RF, trained with **scikit-learn 1.6.1**.
 Outputs: baseline/stress label and **uncalibrated stress probability**; recalibration maps are not bundled.
+This model uses the original feature definitions. Refit it before using schema v2 features.
 No pretrained third-party weights. [Checksum verification](SECURITY.md).
 
 Sources: [benchmark](outputs/results/metrics.json) · [statistics](outputs/results/stats.json) ·
@@ -166,6 +169,12 @@ Sources: [benchmark](outputs/results/metrics.json) · [statistics](outputs/resul
 
 [Benchmark metadata](outputs/results/provenance.json) · [Transfer metadata](outputs/results/cross_dataset.json).
 Transfer records raw-file manifests, source-file hashes and a working-tree dirty flag.
+
+Published metrics, figures, and the shipped model are preserved historical snapshots.
+Current extraction **schema v2** corrects HRV spectra, entropy, recurrence, slopes, and filtering;
+benchmark **protocol v2** holds out subjects for CNN validation and weights the XGBoost threshold pass.
+CNN LOSO reserves 3 of 14 training subjects for early stopping; 11 supply gradients and normalization.
+Fresh extraction and model fitting are required to report results from this code.
 
 </details>
 
@@ -192,6 +201,7 @@ Non-EEG: [PhysioNet source](https://physionet.org/content/noneeg/1.0.0/), downlo
 python scripts/download_data.py --wesad  # data/raw/WESAD
 python scripts/download_data.py          # data/external/noneeg
 python scripts/download_data.py --verify-wesad
+python scripts/download_data.py --verify-noneeg
 ```
 
 Manual extraction: `data/raw/WESAD/S2/S2.pkl` through `S17/S17.pkl`, excluding S12.
@@ -200,21 +210,21 @@ wrist ACC **32 Hz**, BVP **64 Hz**, EDA/TEMP **4 Hz**.
 Labels: **1** baseline · **2** stress · **3** amusement; **0, 4 to 7** excluded.
 Binary uses 1/2; three-class uses 1/2/3.
 
-No official version tag/checksums; verification uses all 15 committed SHA-256 references.
+WESAD verification uses all 15 repository SHA-256 references; Non-EEG uses the publisher's manifest.
 Trusted pickles only: [security](SECURITY.md). macOS OpenMP: `brew install libomp`.
 Package environments: [benchmark](outputs/results/provenance.json) · [transfer](outputs/results/cross_dataset.json).
 NeuroKit2 versions can change wrist/transfer results. The synthetic demo provides no scientific evidence.
 
 ### Reproduce experiments
 
-After downloading both datasets, run these scripts in order to regenerate results, local figures,
+After downloading both datasets, run these scripts in order to generate current results, local figures,
 the model and checksum, README tables, and dashboard data:
 
 ```bash
 python scripts/run_experiment.py
 python scripts/ablation.py
 python scripts/wrist.py
-python scripts/cross_dataset.py
+python scripts/cross_dataset.py --rebuild
 python scripts/calibration.py
 python scripts/personalize.py
 python scripts/update_readme_tables.py
@@ -224,6 +234,10 @@ python scripts/threshold_metrics.py
 python scripts/build_dashboard_data.py
 python scripts/stamp_provenance.py
 ```
+
+Legacy chest/wrist caches rebuild automatically. Transfer caches verify extractor hashes and package versions;
+`--rebuild` replaces stale caches. Provenance stamping records the current environment and file hashes;
+it does not prove that this environment produced existing results.
 
 [Result provenance](#result-provenance) ·
 [Dashboard setup](#dashboard-development) · [Architecture](#architecture) · [Contributing](CONTRIBUTING.md).
@@ -235,6 +249,7 @@ Node **24** and npm. From `frontend/`:
 ```bash
 node tooling.mjs install
 node tooling.mjs dev
+node tooling.mjs test     # Dashboard regression checks
 node tooling.mjs build    # TypeScript check and production build
 node tooling.mjs preview
 node tooling.mjs audit
@@ -292,7 +307,7 @@ Synthetic outputs stay in `generated/demo/{results,figures,models}/`; committed 
 | 1. Ingest | WESAD chest/wrist pickles; Non-EEG records for transfer | `src/data/loader.py`, `src/datasets/non_eeg.py` |
 | 2. Preprocess | Butterworth filtering, ECG R-peaks and ectopic correction, EDA tonic/phasic decomposition | `src/preprocessing/{filters,ecg_processor,eda_processor}.py` |
 | 3. Window | 60 s; 50% overlap; ≥90% label purity | `src/dataset.py` (chest), `src/dataset_wrist.py` (wrist), shared `window_label()` |
-| 4. Features | 60-column extraction schema; 58 benchmark features after dropping two all-NaN respiration columns | `src/features/feature_pipeline.py` and modality extractors |
+| 4. Features | 60-column extraction schema; saved benchmark used 58 after dropping two all-NaN respiration columns | `src/features/feature_pipeline.py` and modality extractors |
 | 5. Benchmark | LOSO; training-fold imputation/scaling/balancing; LR/RF/XGBoost/LightGBM and raw-window 1D-CNN | `scripts/run_experiment.py`, `src/models/ml/classifiers.py`, `src/models/dl/cnn_1d.py` |
 | 6. Calibration | ECE/MCE/Brier, decision-curve net benefit, training-subject recalibration, few-shot personalization | `src/calibration.py`, `scripts/{calibration,personalize}.py` |
 | 7. Analysis | Optimism gap, ablation, wrist/chest, transfer, SHAP, statistics, tuning | `scripts/{ablation,wrist,cross_dataset,stats,tuning}.py`, `src/portable.py` |
@@ -404,7 +419,7 @@ Feature models: fold-local imputation/scaling. CNN: raw windows.
 ## Limitations
 
 1. **Cohort:** 15 WESAD lab subjects; wide confidence intervals and no clinical validation.
-2. **Analysis:** Weak CNN baseline. Exploratory ablation, calibration, and personalization analyses have no correction for multiple comparisons.
+2. **Analysis:** 60 s windows limit VLF and long-term DFA estimates. CNN performance is weak; exploratory analyses lack multiplicity correction.
 3. **Transfer:** One WESAD/Non-EEG pair; devices, stressors, and labels differ.
 
 ## Future work

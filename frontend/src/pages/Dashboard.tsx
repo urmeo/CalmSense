@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { Activity, Brain, Layers, Award } from 'lucide-react';
 import results from '../../../outputs/dashboard/results';
+import { requiresFreshBenchmark } from '../lib/benchmarks';
 
 const r = results as any;
 
@@ -39,7 +40,7 @@ const MetricCard: React.FC<{
   </div>
 );
 
-const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
+const pct = (x: number | null | undefined) => typeof x === 'number' && Number.isFinite(x) ? `${(x * 100).toFixed(1)}%` : 'Unavailable';
 
 const FeatureImportanceChart: React.FC = () => {
   const palette = ['#3182CE', '#38A169', '#D69E2E', '#E53E3E', '#805AD5', '#DD6B20', '#319795', '#D53F8C'];
@@ -77,6 +78,7 @@ const OptimismGapChart: React.FC = () => {
   const b = r.binary || {};
   const loso = b.loso_matched_accuracy;
   const within = b.within_subject_accuracy;
+  const hasMatched = typeof loso === 'number' && typeof within === 'number';
   const data = [
     { name: 'LOSO\n(subject-independent)', value: loso, color: '#3182CE' },
     { name: 'Subject-mixed\n(5-fold)', value: within, color: '#E67E22' },
@@ -85,9 +87,9 @@ const OptimismGapChart: React.FC = () => {
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Optimism gap</h3>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-        Subject-mixed validation adds {b.optimism_gap_pts} points on matched non-overlapping windows
+        {hasMatched ? `Subject-mixed validation adds ${b.optimism_gap_pts} points on matched non-overlapping windows` : 'Matched-window comparison is unavailable for the selected benchmark model.'}
       </p>
-      <ResponsiveContainer width="100%" height={250}>
+      {hasMatched && <ResponsiveContainer width="100%" height={250}>
         <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
           <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} />
@@ -99,7 +101,7 @@ const OptimismGapChart: React.FC = () => {
             ))}
           </Bar>
         </BarChart>
-      </ResponsiveContainer>
+      </ResponsiveContainer>}
     </div>
   );
 };
@@ -171,6 +173,12 @@ const Dashboard: React.FC = () => {
           Subject-independent stress detection: real LOSO results
         </p>
       </div>
+
+      {requiresFreshBenchmark(r) && (
+        <p role="note" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+          Saved benchmark snapshots use the earlier pipeline. The corrected code requires a fresh benchmark.
+        </p>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard title="Binary LOSO accuracy" value={pct(b.loso_accuracy)} icon={<Activity className="w-6 h-6 text-blue-600" />} color="blue" />

@@ -5,8 +5,10 @@ from typing import Any, Optional
 import numpy as np
 import torch
 import torch.nn as nn
-from sklearn.model_selection import train_test_split
+from sklearn.exceptions import NotFittedError
+from sklearn.model_selection import GroupShuffleSplit, train_test_split
 from sklearn.utils.class_weight import compute_class_weight
+from sklearn.utils.multiclass import check_classification_targets
 
 from ...logging_config import LoggerMixin
 
@@ -94,30 +96,69 @@ class CNN1DClassifier(LoggerMixin):
     def _standardize(self, x: np.ndarray) -> np.ndarray:
         return (x - self._mean) / self._std
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "CNN1DClassifier":
+    def _validate_windows(self, X: np.ndarray, *, allow_empty: bool = False) -> np.ndarray:
+        X = np.asarray(X, dtype=np.float32)
+        if X.ndim != 3 or X.shape[1] != self.in_channels or X.shape[2] < 61:
+            raise ValueError(
+                "CNN windows require shape (samples, in_channels, at least 61 timesteps)"
+            )
+        if (not len(X) and not allow_empty) or not np.isfinite(X).all():
+            raise ValueError("CNN windows must be nonempty and finite")
+        return X
+
+    def _validation_split(self, y: np.ndarray, groups=None):
+        indices = np.arange(len(y))
+        if groups is None:
+            # Direct callers without subject IDs get a stratified sample holdout.
+            return train_test_split(
+                indices, test_size=self.val_fraction, stratify=y, random_state=self.random_state
+            )
+        groups = np.asarray(groups)
+        if groups.ndim != 1 or len(groups) != len(y) or len(np.unique(groups)) < 2:
+            raise ValueError("CNN subject validation requires at least two training subjects")
+        classes = np.unique(y)
+        splitter = GroupShuffleSplit(
+            n_splits=20, test_size=self.val_fraction, random_state=self.random_state
+        )
+        for train, validation in splitter.split(indices, y, groups):
+            if np.array_equal(np.unique(y[train]), classes):
+                return train, validation
+        raise ValueError("No subject validation split retains every class in CNN training")
+
+    def fit(self, X: np.ndarray, y: np.ndarray, groups=None) -> "CNN1DClassifier":
+        """Fit on windows; subject groups make the early-stopping split disjoint."""
+        for name in ("in_channels", "max_epochs", "batch_size", "patience"):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, (int, np.integer)) or value < 1:
+                raise ValueError(f"{name} must be a positive integer")
+        if not 0 < self.val_fraction < 1 or not np.isfinite(self.lr) or self.lr <= 0:
+            raise ValueError("val_fraction must be in (0, 1) and lr must be finite and positive")
+        if not np.isfinite(self.weight_decay) or self.weight_decay < 0:
+            raise ValueError("weight_decay must be finite and nonnegative")
         torch.manual_seed(self.random_state)
         torch.cuda.manual_seed_all(self.random_state)
         np.random.seed(self.random_state)
 
-        X = np.asarray(X, dtype=np.float32)
+        X = self._validate_windows(X)
         y = np.asarray(y)
+        if y.ndim != 1 or len(y) != len(X):
+            raise ValueError("CNN labels must have one entry per window")
+        check_classification_targets(y)
         self.classes_ = np.unique(y)
+        if len(self.classes_) < 2:
+            raise ValueError("CNN training requires at least two classes")
         y_idx = np.searchsorted(self.classes_, y)
 
-        # fit() receives the outer training fold; held-out LOSO subjects do not set these statistics.
-        self._mean = X.mean(axis=(0, 2), keepdims=True)
-        self._std = X.std(axis=(0, 2), keepdims=True) + 1e-8
-        X = self._standardize(X)
+        train, validation = self._validation_split(y_idx, groups)
+        if len(train) < 2:
+            raise ValueError("CNN fitting requires at least two windows after validation splitting")
+        # The validation and outer test windows do not determine normalization or class weights.
+        self._mean = X[train].mean(axis=(0, 2), keepdims=True)
+        self._std = X[train].std(axis=(0, 2), keepdims=True) + 1e-8
+        x_tr, x_val = self._standardize(X[train]), self._standardize(X[validation])
+        y_tr, y_val = y_idx[train], y_idx[validation]
 
-        x_tr, x_val, y_tr, y_val = train_test_split(
-            X,
-            y_idx,
-            test_size=self.val_fraction,
-            stratify=y_idx,
-            random_state=self.random_state,
-        )
-
-        weights = compute_class_weight("balanced", classes=np.unique(y_idx), y=y_idx)
+        weights = compute_class_weight("balanced", classes=np.arange(len(self.classes_)), y=y_tr)
         criterion = nn.CrossEntropyLoss(
             weight=torch.tensor(weights, dtype=torch.float32, device=self.device)
         )
@@ -146,6 +187,8 @@ class CNN1DClassifier(LoggerMixin):
                 xb, yb = xb.to(self.device), yb.to(self.device)
                 optimizer.zero_grad()
                 loss = criterion(self.model(xb), yb)
+                if not torch.isfinite(loss):
+                    raise ValueError("CNN training produced a nonfinite loss")
                 loss.backward()
                 optimizer.step()
             scheduler.step()
@@ -154,6 +197,8 @@ class CNN1DClassifier(LoggerMixin):
             self.model.eval()
             with torch.no_grad():
                 val_loss = criterion(self.model(x_val_t), y_val_t).item()
+            if not np.isfinite(val_loss):
+                raise ValueError("CNN validation produced a nonfinite loss")
             if val_loss < best_loss - 1e-4:
                 best_loss = val_loss
                 # Clone tensors so later optimizer updates cannot alter the saved checkpoint.
@@ -169,7 +214,12 @@ class CNN1DClassifier(LoggerMixin):
         return self
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
-        X = self._standardize(np.asarray(X, dtype=np.float32))
+        if self.model is None or self.classes_ is None:
+            raise NotFittedError("Fit CNN1DClassifier before predicting")
+        X = self._validate_windows(X, allow_empty=True)
+        if not len(X):
+            return np.empty((0, len(self.classes_)), dtype=np.float32)
+        X = self._standardize(X)
         self.model.eval()
         probs = []
         with torch.no_grad():

@@ -1,11 +1,13 @@
 """Cross-dataset generalization: WESAD <-> PhysioNet Non-EEG on a shared feature space."""
 
+import argparse
 import hashlib
 import json
 import subprocess
 import sys
 from importlib.metadata import version
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -18,7 +20,15 @@ import pandas as pd
 from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score
 
 from scripts.run_experiment import build_pipeline, loso_evaluate
-from src.config import FIGURES_DIR, FS, PROCESSED_DATA_DIR, PROJECT_ROOT, RESULTS_DIR
+from src.config import (
+    FIGURES_DIR,
+    FS,
+    PROCESSED_DATA_DIR,
+    PROJECT_ROOT,
+    RESULTS_DIR,
+    VALID_SUBJECTS,
+    WESAD_DIR,
+)
 from src.datasets import non_eeg
 from src.portable import (
     OVERLAP,
@@ -28,7 +38,7 @@ from src.portable import (
     WINDOW_SEC,
     wesad_portable,
 )
-from src.utils import provenance
+from src.utils import provenance, sha256_file
 
 META = ["subject", "label"]
 
@@ -51,16 +61,34 @@ def _cache_schema(dataset):
         "overlap": OVERLAP,
         "wesad_label_purity": PURITY,
         "feature_columns": PORTABLE_FEATURE_COLUMNS,
+        "extractor_sha256": {
+            path: sha256_file(PROJECT_ROOT / path)
+            for path in (
+                "src/portable.py",
+                "src/config.py",
+                "src/data/loader.py" if dataset == "wesad" else "src/datasets/non_eeg.py",
+            )
+        },
+        "extraction_packages": {name: version(name) for name in ("numpy", "neurokit2", "wfdb")},
     }
 
 
 def _validate_frame(frame):
     expected = PORTABLE_FEATURE_COLUMNS + META
-    if frame.empty or len(frame.columns) != len(expected) or set(frame.columns) != set(expected):
+    if (
+        not isinstance(frame, pd.DataFrame)
+        or frame.empty
+        or len(frame.columns) != len(expected)
+        or set(frame.columns) != set(expected)
+    ):
         raise ValueError(
             "Portable cache requires 18 feature columns, subject, label and nonempty rows"
         )
-    if frame["subject"].isna().any() or not frame["label"].isin([0, 1]).all():
+    if (
+        frame["subject"].isna().any()
+        or frame["subject"].astype(str).str.strip().eq("").any()
+        or not frame["label"].isin([0, 1]).all()
+    ):
         raise ValueError("Portable cache requires nonmissing subjects and binary labels")
     if not all(pd.api.types.is_numeric_dtype(frame[column]) for column in PORTABLE_FEATURE_COLUMNS):
         raise ValueError("Portable features must be numeric")
@@ -68,13 +96,13 @@ def _validate_frame(frame):
         raise ValueError("Portable features may contain NaN, but not infinity")
 
 
-def _load_or_build_cache(dataset, builder, source_provenance=None):
+def _load_or_build_cache(dataset, builder, source_provenance=None, *, rebuild=False):
     """Reuse caches only when their protocol metadata and file checksum match."""
     PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
     cache = PROCESSED_DATA_DIR / f"portable_{dataset}_v{PORTABLE_SCHEMA_VERSION}.parquet"
     sidecar = cache.with_suffix(".json")
     schema = _cache_schema(dataset)
-    if cache.exists():
+    if cache.exists() and not rebuild:
         try:
             metadata = json.loads(sidecar.read_text())
         except (OSError, ValueError) as error:
@@ -84,21 +112,49 @@ def _load_or_build_cache(dataset, builder, source_provenance=None):
         ):
             raise ValueError(f"Portable cache schema mismatch: {cache}; rebuild from raw data")
         # Schema equality checks feature units; the checksum detects modified cached values.
-        if metadata.get("cache_sha256") != hashlib.sha256(cache.read_bytes()).hexdigest():
+        if metadata.get("cache_sha256") != sha256_file(cache):
             raise ValueError(f"Portable cache checksum mismatch: {cache}")
         frame = pd.read_parquet(cache)
     else:
         frame = builder()
         _validate_frame(frame)
-        frame.to_parquet(cache, index=False)
-        metadata = {
-            **schema,
-            "cache_sha256": hashlib.sha256(cache.read_bytes()).hexdigest(),
-            "source_provenance": source_provenance or {},
-        }
-        sidecar.write_text(json.dumps(metadata, indent=2) + "\n")
+        source = source_provenance() if callable(source_provenance) else source_provenance or {}
+        # Prepare both files before replacing a usable cache; checksums detect interrupted swaps.
+        with TemporaryDirectory(dir=PROCESSED_DATA_DIR) as temporary:
+            new_cache = Path(temporary) / cache.name
+            new_sidecar = Path(temporary) / sidecar.name
+            frame.to_parquet(new_cache, index=False)
+            metadata = {
+                **schema,
+                "cache_sha256": sha256_file(new_cache),
+                "source_provenance": source,
+            }
+            new_sidecar.write_text(json.dumps(metadata, indent=2) + "\n")
+            new_cache.replace(cache)
+            new_sidecar.replace(sidecar)
     _validate_frame(frame)
     return frame, metadata
+
+
+def _raw_provenance(dataset):
+    files = (
+        [WESAD_DIR / sid / f"{sid}.pkl" for sid in VALID_SUBJECTS]
+        if dataset == "wesad"
+        else sorted(non_eeg.DATA_DIR.glob("Subject*"))
+    )
+    manifest = {
+        path.relative_to(PROJECT_ROOT).as_posix(): sha256_file(path)
+        for path in files
+        if path.is_file()
+    }
+    return {
+        "feature_source": "raw_reextraction",
+        "raw_file_sha256": manifest,
+        "manifest_sha256": hashlib.sha256(
+            json.dumps(manifest, sort_keys=True).encode()
+        ).hexdigest(),
+        "extraction_context": _generation_context(),
+    }
 
 
 def _generation_context():
@@ -121,16 +177,21 @@ def _generation_context():
     return {
         **provenance(),
         "working_tree_dirty": dirty,
-        "source_file_sha256": {
-            path: hashlib.sha256((PROJECT_ROOT / path).read_bytes()).hexdigest() for path in files
-        },
+        "source_file_sha256": {path: sha256_file(PROJECT_ROOT / path) for path in files},
     }
 
 
 def _xy(df, feature_cols):
+    _validate_frame(df)
+    if (
+        not feature_cols
+        or len(feature_cols) != len(set(feature_cols))
+        or not set(feature_cols).issubset(PORTABLE_FEATURE_COLUMNS)
+    ):
+        raise ValueError("Select distinct portable feature columns, excluding subject and label")
     X = df[feature_cols].to_numpy(dtype=float)
     X[~np.isfinite(X)] = np.nan
-    return X, df["label"].to_numpy(), df["subject"].to_numpy()
+    return X, df["label"].to_numpy(dtype=int), df["subject"].to_numpy()
 
 
 def transfer(train_df, test_df, feature_cols):
@@ -144,7 +205,7 @@ def transfer(train_df, test_df, feature_cols):
     return {
         "accuracy": float(accuracy_score(yte, pred)),
         "balanced_accuracy": float(balanced_accuracy_score(yte, pred)),
-        "f1_macro": float(f1_score(yte, pred, average="macro")),
+        "f1_macro": float(f1_score(yte, pred, labels=[0, 1], average="macro", zero_division=0)),
     }
 
 
@@ -158,18 +219,22 @@ def within(df, feature_cols):
     }
 
 
-def run():
+def run(*, rebuild=False):
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
-    wesad, wesad_cache = _load_or_build_cache("wesad", wesad_portable)
-    noneeg, noneeg_cache = _load_or_build_cache("noneeg", non_eeg.build)
+    wesad, wesad_cache = _load_or_build_cache(
+        "wesad", wesad_portable, lambda: _raw_provenance("wesad"), rebuild=rebuild
+    )
+    noneeg, noneeg_cache = _load_or_build_cache(
+        "noneeg", non_eeg.build, lambda: _raw_provenance("noneeg"), rebuild=rebuild
+    )
 
     feature_cols = sorted((set(wesad.columns) & set(noneeg.columns)) - set(META))
     print(
         f"WESAD: {len(wesad)} windows | Non-EEG: {len(noneeg)} windows | shared features: {len(feature_cols)}"
     )
     print(
-        f"WESAD balance: {np.bincount(wesad['label'])} | Non-EEG balance: {np.bincount(noneeg['label'])}"
+        f"WESAD balance: {np.bincount(wesad['label'].to_numpy(dtype=int))} | Non-EEG balance: {np.bincount(noneeg['label'].to_numpy(dtype=int))}"
     )
 
     out = {
@@ -242,4 +307,8 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--rebuild", action="store_true", help="re-extract portable caches from raw data"
+    )
+    run(rebuild=parser.parse_args().rebuild)

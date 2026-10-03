@@ -6,6 +6,7 @@ from scipy.ndimage import median_filter
 
 from ..config import FILTER_PARAMS, FS
 from ..logging_config import LoggerMixin
+from .filters import _positive_integer, _positive_number
 
 
 class EDAProcessor(LoggerMixin):
@@ -17,7 +18,7 @@ class EDAProcessor(LoggerMixin):
     """
 
     def __init__(self, sampling_rate: float = FS.WRIST_EDA):
-        self.sampling_rate = sampling_rate
+        self.sampling_rate = _positive_number(sampling_rate, "sampling_rate")
         self.logger.info(f"EDAProcessor initialized with fs={sampling_rate} Hz")
 
     def lowpass_filter(
@@ -26,7 +27,13 @@ class EDAProcessor(LoggerMixin):
         cutoff: float = FILTER_PARAMS.EDA_LOWPASS,
         order: int = FILTER_PARAMS.EDA_FILTER_ORDER,
     ) -> np.ndarray:
-        eda = np.asarray(eda).flatten()
+        eda = np.asarray(eda, dtype=float).flatten()
+        cutoff = _positive_number(cutoff, "cutoff")
+        order = _positive_integer(order, "order")
+        if not np.isfinite(eda).all():
+            raise ValueError("EDA filter input must contain only finite samples")
+        if len(eda) == 0:
+            return eda
 
         nyq = 0.5 * self.sampling_rate
         cutoff_norm = cutoff / nyq
@@ -37,8 +44,8 @@ class EDAProcessor(LoggerMixin):
             )
             return eda
 
-        b, a = signal.butter(order, cutoff_norm, btype="low")
-        filtered = signal.filtfilt(b, a, eda)
+        sos = signal.butter(order, cutoff_norm, btype="low", output="sos")
+        filtered = signal.sosfiltfilt(sos, eda)
 
         self.logger.debug(f"Applied low-pass filter: {cutoff} Hz, order={order}")
         return filtered
@@ -46,7 +53,8 @@ class EDAProcessor(LoggerMixin):
     def remove_artifacts(
         self, eda: np.ndarray, median_kernel: int = FILTER_PARAMS.EDA_MEDIAN_SIZE
     ) -> np.ndarray:
-        eda = np.asarray(eda).flatten()
+        eda = np.asarray(eda, dtype=float).flatten()
+        median_kernel = _positive_integer(median_kernel, "median_kernel")
         filtered = median_filter(eda, size=median_kernel)
         self.logger.debug(f"Applied median filter: kernel={median_kernel}")
         return filtered
@@ -64,7 +72,13 @@ class EDAProcessor(LoggerMixin):
         Returns:
             ``(tonic, phasic)`` arrays with the same length as ``eda``.
         """
-        eda = np.asarray(eda).flatten()
+        if method not in {"highpass", "median", "cvxeda"}:
+            raise ValueError("EDA decomposition method must be 'highpass', 'median', or 'cvxeda'")
+        eda = np.asarray(eda, dtype=float).flatten()
+        if not np.isfinite(eda).all():
+            raise ValueError("EDA decomposition input must contain only finite samples")
+        if len(eda) == 0:
+            return eda.copy(), eda.copy()
 
         if method == "cvxeda":
             return self._decompose_cvxeda(eda)
@@ -83,8 +97,8 @@ class EDAProcessor(LoggerMixin):
             self.logger.warning("Cutoff too high for Nyquist, returning original as tonic")
             return eda.copy(), np.zeros_like(eda)
 
-        b, a = signal.butter(2, cutoff_norm, btype="low")
-        tonic = signal.filtfilt(b, a, eda)
+        sos = signal.butter(2, cutoff_norm, btype="low", output="sos")
+        tonic = signal.sosfiltfilt(sos, eda)
         phasic = eda - tonic
 
         self.logger.debug("Decomposed EDA using high-pass method")
@@ -127,13 +141,20 @@ class EDAProcessor(LoggerMixin):
         min_rise_time: float = 0.5,
         max_rise_time: float = 4.0,
     ) -> Tuple[np.ndarray, List[Dict]]:
-        phasic = np.asarray(phasic).flatten()
+        phasic = np.asarray(phasic, dtype=float).flatten()
+        min_amplitude = _positive_number(min_amplitude, "min_amplitude")
+        min_rise_time = _positive_number(min_rise_time, "min_rise_time")
+        max_rise_time = _positive_number(max_rise_time, "max_rise_time")
+        if min_rise_time > max_rise_time:
+            raise ValueError("min_rise_time must not exceed max_rise_time")
+        if not np.isfinite(phasic).all():
+            raise ValueError("SCR input must contain only finite samples")
 
         min_rise_samples = int(min_rise_time * self.sampling_rate)
         max_rise_samples = int(max_rise_time * self.sampling_rate)
         min_distance = max(1, min_rise_samples)
 
-        peaks, properties = signal.find_peaks(
+        peaks, _ = signal.find_peaks(
             phasic,
             height=min_amplitude,
             distance=min_distance,
@@ -143,7 +164,7 @@ class EDAProcessor(LoggerMixin):
         scr_features = []
         valid_peaks = []
 
-        for i, peak_idx in enumerate(peaks):
+        for peak_idx in peaks:
             search_start = max(0, peak_idx - max_rise_samples)
             onset_region = phasic[search_start:peak_idx]
 
@@ -192,4 +213,4 @@ class EDAProcessor(LoggerMixin):
             )
 
         self.logger.debug(f"Detected {len(valid_peaks)} SCR peaks")
-        return np.array(valid_peaks), scr_features
+        return np.array(valid_peaks, dtype=int), scr_features

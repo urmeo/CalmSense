@@ -4,6 +4,7 @@ import numpy as np
 from scipy import signal as scipy_signal
 from scipy.interpolate import interp1d
 
+from ..preprocessing.filters import _positive_integer, _positive_number
 from .hrv_base import BaseHRVExtractor
 
 # numpy>=2 renamed trapz to trapezoid
@@ -27,8 +28,13 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
         self.vlf_band = vlf_band
         self.lf_band = lf_band
         self.hf_band = hf_band
-        self.interpolation_rate = interpolation_rate
-        self.min_rr_count = min_rr_count
+        self.interpolation_rate = _positive_number(interpolation_rate, "interpolation_rate")
+        self.min_rr_count = _positive_integer(min_rr_count, "min_rr_count")
+        for band in (vlf_band, lf_band, hf_band):
+            if len(band) != 2 or not 0 <= band[0] < band[1] < self.interpolation_rate / 2:
+                raise ValueError(
+                    "HRV frequency bands must be ordered below the interpolation Nyquist"
+                )
 
         self.logger.debug(
             f"HRVFrequencyDomainExtractor initialized: "
@@ -43,12 +49,11 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
         t_rr = t_rr[:-1]
 
         duration = t_rr[-1] - t_rr[0]
-        n_samples = int(duration * self.interpolation_rate)
-
-        if n_samples < 10:
+        if duration * self.interpolation_rate < 10:
             return None, None
 
-        t_uniform = np.linspace(t_rr[0], t_rr[-1], n_samples)
+        # Welch's declared sampling rate must match the actual interpolation step.
+        t_uniform = np.arange(t_rr[0], t_rr[-1], 1.0 / self.interpolation_rate)
 
         try:
             interpolator = interp1d(
@@ -64,6 +69,8 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
     def compute_psd(
         self, rr_intervals: np.ndarray, method: str = "welch"
     ) -> Tuple[np.ndarray, np.ndarray]:
+        if method not in {"welch", "lomb"}:
+            raise ValueError("PSD method must be 'welch' or 'lomb'")
         rr = self._validate_input(rr_intervals)
         if rr is None:
             return np.array([]), np.array([])
@@ -100,8 +107,7 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
     def _compute_psd_lomb(self, rr: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         from scipy.signal import lombscargle
 
-        t = np.cumsum(rr) / 1000.0
-        t = t - t[0]
+        t = np.r_[0.0, np.cumsum(rr[:-1]) / 1000.0]
 
         rr_centered = rr - np.mean(rr)
 
@@ -109,11 +115,20 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
         n_freqs = 512
         freqs = np.linspace(0.001, f_max, n_freqs)
 
+        variance = float(np.var(rr_centered))
+        if variance == 0:
+            return freqs, np.zeros_like(freqs)
+
         angular_freqs = 2 * np.pi * freqs
 
         try:
-            psd = lombscargle(t, rr_centered, angular_freqs, normalize=True)
-            psd = psd * (np.var(rr_centered) / (2 * np.sum(psd) * (freqs[1] - freqs[0])))
+            psd = np.maximum(lombscargle(t, rr_centered, angular_freqs, normalize=False), 0.0)
+            area = float(_trapz(psd, freqs))
+            if not np.isfinite(area) or area <= 0:
+                return np.array([]), np.array([])
+            # Match RR variance over this returned frequency grid; this bounded
+            # normalization is a convention rather than Welch's full density.
+            psd *= variance / area
         except Exception as e:
             self.logger.warning(f"Lomb-Scargle failed: {e}")
             return np.array([]), np.array([])
@@ -126,11 +141,13 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
         if len(freqs) == 0 or len(psd) == 0:
             return np.nan
 
-        mask = (freqs >= band[0]) & (freqs < band[1])
-        if not np.any(mask):
+        lo, hi = max(band[0], freqs[0]), min(band[1], freqs[-1])
+        if lo >= hi:
             return 0.0
-
-        return float(_trapz(psd[mask], freqs[mask]))
+        inside = freqs[(freqs > lo) & (freqs < hi)]
+        band_freqs = np.r_[lo, inside, hi]
+        # Include interpolated endpoints so narrow bands do not collapse to zero bins.
+        return float(_trapz(np.interp(band_freqs, freqs, psd), band_freqs))
 
     def compute_vlf_power(self, freqs: np.ndarray, psd: np.ndarray) -> float:
         return self._compute_band_power(freqs, psd, self.vlf_band)
@@ -188,6 +205,9 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
         lf_freqs = freqs[mask]
         lf_psd = psd[mask]
 
+        if not np.isfinite(lf_psd).all() or np.max(lf_psd) <= 0:
+            return np.nan
+
         peak_idx = np.argmax(lf_psd)
         return float(lf_freqs[peak_idx])
 
@@ -230,7 +250,7 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
             "LF_power": f"LF power {self.lf_band} Hz (ms²)",
             "HF_power": f"HF power {self.hf_band} Hz (ms²)",
             "Total_power": "Total power VLF+LF+HF (ms²)",
-            "LF_HF_ratio": "LF/HF ratio (sympathovagal balance)",
+            "LF_HF_ratio": "Ratio of LF to HF spectral power",
             "LFn": "Normalized LF power (%)",
             "HFn": "Normalized HF power (%)",
             "LF_peak_freq": "Peak frequency in LF band (Hz)",
