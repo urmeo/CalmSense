@@ -3,7 +3,7 @@
 Raw wearable signals flow through cleaning, windowing, feature extraction, a leakage-free benchmark,
 and calibration. The static dashboard renders the exported experiment results.
 
-[Model card](MODEL_CARD.md) · [Data provenance](../README.md) · [Results snapshot](../results/README.md)
+[Shipped model](../README.md#shipped-model) · [Data provenance](../README.md) · [Results snapshot](../results/README.md)
 
 ## Repository layout
 

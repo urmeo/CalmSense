@@ -6,7 +6,7 @@ ML: Logistic Regression, Random Forest, XGBoost, LightGBM
 
 DL: 1D-CNN · Explainability: SHAP
 
-[Live demo](https://urmeo.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urmeo/CalmSense/blob/main/notebooks/CalmSense.ipynb) · [Structure](docs/ARCHITECTURE.md) · [Model card](docs/MODEL_CARD.md)
+[Live demo](https://urmeo.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urmeo/CalmSense/blob/main/notebooks/CalmSense.ipynb) · [Structure](docs/ARCHITECTURE.md) · [Shipped model](#shipped-model)
 
 [![CalmSense dashboard](docs/assets/demo.gif)](https://urmeo.github.io/CalmSense/)
 
@@ -34,6 +34,7 @@ DL: 1D-CNN · Explainability: SHAP
 | 1D-CNN | 0.718 | 0.648 | n/a | n/a | 0.626 | 0.543 |
 
 Accuracy / macro-F1: subject means. *AUROC/AUPRC: separate pooled pass; see notes below.
+RF balanced accuracy: **0.903** (pooled default decisions).
 
 **RF 95% CI: [0.860, 0.960]** · no significant difference detected among four feature models (**p = 0.806**).
 
@@ -141,7 +142,7 @@ Confusion matrices instead use default decisions, pooled and row-normalized.
 
 ### Cross-dataset transfer
 
-18 shared features; version 2 slopes per second; balanced accuracy. Within WESAD **0.868**; within Non-EEG **0.699**.
+Separate wrist-feature RF; 18 shared features; version 2 slopes per second; balanced accuracy. Within WESAD **0.868**; within Non-EEG **0.699**.
 Raw-data rerun: 15 WESAD / 20 Non-EEG subjects. [Original transfer snapshot](results/historical/cross_dataset_v1.json) retained.
 Uses NeuroKit2 0.2.12; heart-rate extraction also differs from the historical 0.2.7 environment.
 Transfer is confounded by devices, stressors, and labels. SHAP explains a full-data fit;
@@ -149,8 +150,10 @@ it is not causal or held-out evidence.
 
 ### Shipped model
 
-The [shipped RF](outputs/models/stress_classifier.joblib) is refit on all 869 binary windows;
-LOSO evaluates separate fits. No pretrained third-party weights.
+The [shipped chest RF](outputs/models/stress_classifier.joblib) is refit on all **869** binary windows;
+LOSO evaluates separate fits. Median imputation → standardization → RF, trained with **scikit-learn 1.6.1**.
+Outputs: baseline/stress label and **uncalibrated stress probability**; recalibration maps are not bundled.
+No pretrained third-party weights. [Checksum verification](SECURITY.md).
 
 Sources: [benchmark](results/metrics.json) · [statistics](results/stats.json) ·
 [ablation](results/ablation.csv) · [wrist](results/wrist.json) · [transfer](results/cross_dataset.json).
