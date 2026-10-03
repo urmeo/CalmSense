@@ -9,13 +9,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import numpy as np
 from scipy.signal import resample
 
-from src.config import FS, PROJECT_ROOT
+from src.config import FS, OUTPUT_DIR
 from src.data.loader import WESADLoader
 
 SUBJECTS = ["S2", "S3", "S4"]
 CONDITIONS = {1: "Baseline", 2: "Stress", 3: "Amusement"}
 SECONDS = 40  # per condition
 OUT_FS = 30  # display rate
+DASHBOARD_SIGNALS = OUTPUT_DIR / "dashboard" / "signals.ts"
 
 
 def _slice(signal, labels, label, want):
@@ -67,8 +68,9 @@ def run():
         }
         print(f"{sid}: {n} points ({n / OUT_FS:.0f}s real signal)")
 
-    out = PROJECT_ROOT / "frontend" / "src" / "data" / "signals.ts"
     payload = json.dumps(data, allow_nan=False)
+    out = DASHBOARD_SIGNALS
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(f"const data = {payload};\n\nexport default data;\n", encoding="utf-8")
     print(f"Wrote {out} ({out.stat().st_size // 1024} KB)")
 

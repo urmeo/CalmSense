@@ -11,13 +11,14 @@ src/
 ├── pages/               Six dashboard pages
 ├── components/          Shared charts, cards, and error boundary
 │   └── layout/          Sidebar and header
-├── data/                Exported results and signal snapshots
 ├── types/               Research result types
 ├── index.tsx            React entry point
 └── index.css            Theme and shared styles
 public/                  Icons
 config/                  Package, lock, compiler, and manifest source modules
 tooling.mjs              Install, audit, build, and development commands
+../outputs/dashboard/    Committed results.ts and signals.ts snapshots
+../outputs/generated/site/  Ignored production build
 ```
 
 ## Pages
@@ -49,12 +50,13 @@ After editing dependencies, run `node tooling.mjs update` and review the source 
 
 CI installs the exact locked dependencies, audits moderate or higher vulnerabilities, and builds
 the dashboard. GitHub's automatic dependency discovery does not read the custom manifest.
-The same workflow publishes `dist/` under `/CalmSense/` after every check passes on `main`,
+The same workflow publishes `../outputs/generated/site/` under `/CalmSense/` after every check passes on `main`,
 with a fallback for direct page links. Manual deployment also requires `main` and passing checks.
 
 ## Dashboard data
 
-The dashboard imports `src/data/results.ts` and `src/data/signals.ts`. To update these
+The dashboard imports `outputs/dashboard/results.ts` and `outputs/dashboard/signals.ts`
+from the repository root. To update these
 snapshots after rerunning experiments, run from the repository root:
 
 ```bash

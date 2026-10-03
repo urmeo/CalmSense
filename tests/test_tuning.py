@@ -1,0 +1,78 @@
+"""Synthetic tuning cannot replace real results or compare against real defaults."""
+
+import json
+
+import pytest
+
+from scripts import tuning
+from src import synthetic
+
+
+@pytest.mark.parametrize("demo_accuracy", [None, 0.42])
+def test_synthetic_tuning_isolates_outputs_and_reads_only_demo_defaults(
+    tmp_path, monkeypatch, demo_accuracy
+):
+    output_dir = tmp_path / "outputs"
+    results_dir = output_dir / "results"
+    figures_dir = output_dir / "generated" / "figures"
+    demo_dir = output_dir / "generated" / "demo"
+    results_dir.mkdir(parents=True)
+    figures_dir.mkdir(parents=True)
+    model = "Random Forest"
+    real_metrics = results_dir / "metrics.json"
+    real_metrics.write_text(
+        json.dumps({"binary": {"models": [{"model": model, "accuracy_mean": 0.91}]}})
+    )
+    real_result = results_dir / "tuning.json"
+    real_figure = figures_dir / "tuning.png"
+    real_result.write_bytes(b"existing real tuning result")
+    real_figure.write_bytes(b"existing real tuning plot")
+    originals = {path: path.read_bytes() for path in (real_metrics, real_result, real_figure)}
+    if demo_accuracy is not None:
+        demo_results = demo_dir / "results"
+        demo_results.mkdir(parents=True)
+        (demo_results / "metrics.json").write_text(
+            json.dumps({"binary": {"models": [{"model": model, "accuracy_mean": demo_accuracy}]}})
+        )
+
+    monkeypatch.setattr(tuning, "RESULTS_DIR", results_dir)
+    monkeypatch.setattr(tuning, "FIGURES_DIR", figures_dir)
+    monkeypatch.setattr(tuning, "DEMO_DIR", demo_dir)
+
+    def refuse_real_cache():
+        pytest.fail("Synthetic tuning read the real dataset cache")
+
+    def synthetic_features(**kwargs):
+        assert kwargs["cache"] is False
+        return None, None, None
+
+    monkeypatch.setattr(tuning, "load_cached", refuse_real_cache)
+    monkeypatch.setattr(synthetic, "features", synthetic_features)
+    monkeypatch.setattr(tuning, "prepare_task", lambda *args: (None,) * 5)
+    scores = {model: {"accuracy_mean": 0.72, "best_params": {}}}
+    monkeypatch.setattr(tuning, "compute", lambda *args: scores)
+    provenance = {"git_sha": "test", "generated_at": "test"}
+    monkeypatch.setattr(tuning, "provenance", lambda: provenance)
+    original_plot = tuning._plot
+    plotted_defaults = []
+
+    def plot(tuned, defaults, path):
+        plotted_defaults.append(defaults)
+        original_plot(tuned, defaults, path)
+
+    monkeypatch.setattr(tuning, "_plot", plot)
+
+    tuning.run(synthetic=True)
+
+    assert all(path.read_bytes() == contents for path, contents in originals.items())
+    assert json.loads((demo_dir / "results" / "tuning.json").read_text()) == {
+        model: {"accuracy_mean": 0.72, "best_params": {}},
+        "provenance": provenance,
+    }
+    demo_figure = demo_dir / "figures" / "tuning.png"
+    if demo_accuracy is None:
+        assert plotted_defaults == []
+        assert not demo_figure.exists()
+    else:
+        assert plotted_defaults == [{model: demo_accuracy}]
+        assert demo_figure.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")

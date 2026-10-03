@@ -111,12 +111,12 @@ jobs:
         run: node tooling.mjs build
       - name: SPA fallback
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-        run: cp dist/index.html dist/404.html
+        run: cp ../outputs/generated/site/index.html ../outputs/generated/site/404.html
       - name: Upload Pages artifact
         if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         uses: actions/upload-pages-artifact@v3
         with:
-          path: frontend/dist
+          path: outputs/generated/site
 
   clean-clone:
     name: Clean-clone smoke (pip install -e . -> demo)

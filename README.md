@@ -8,7 +8,7 @@ DL: 1D-CNN · Explainability: SHAP
 
 [Live demo](https://urmeo.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urmeo/CalmSense/blob/main/notebooks/CalmSense.ipynb) · [Structure](#architecture) · [Shipped model](#shipped-model)
 
-[![CalmSense dashboard](docs/assets/demo.gif)](https://urmeo.github.io/CalmSense/)
+[![CalmSense dashboard](outputs/figures/demo.gif)](https://urmeo.github.io/CalmSense/)
 
 ## What this is
 
@@ -58,28 +58,28 @@ Click figures to enlarge.
 
 <table width="100%">
 <tr>
-<td align="center" valign="top" width="50%"><strong>Binary accuracy · LOSO</strong><br><a href="docs/figures/binary_model_comparison.png"><img src="docs/figures/binary_model_comparison.png" width="390" alt="Feature-model binary LOSO accuracy with subject standard deviation error bars"></a><br><sub>RF <b>0.913</b> · four feature models</sub></td>
-<td align="center" valign="top" width="50%"><strong>Three-class accuracy · LOSO</strong><br><a href="docs/figures/multiclass_model_comparison.png"><img src="docs/figures/multiclass_model_comparison.png" width="390" alt="Feature-model three-class LOSO accuracy with subject standard deviation error bars"></a><br><sub>LR <b>0.670</b> · four feature models</sub></td>
+<td align="center" valign="top" width="50%"><strong>Binary accuracy · LOSO</strong><br><a href="outputs/figures/binary_model_comparison.png"><img src="outputs/figures/binary_model_comparison.png" width="390" alt="Feature-model binary LOSO accuracy with subject standard deviation error bars"></a><br><sub>RF <b>0.913</b> · four feature models</sub></td>
+<td align="center" valign="top" width="50%"><strong>Three-class accuracy · LOSO</strong><br><a href="outputs/figures/multiclass_model_comparison.png"><img src="outputs/figures/multiclass_model_comparison.png" width="390" alt="Feature-model three-class LOSO accuracy with subject standard deviation error bars"></a><br><sub>LR <b>0.670</b> · four feature models</sub></td>
 </tr>
 <tr>
-<td align="center" valign="top" width="50%"><strong>Subject leakage</strong><br><a href="docs/figures/binary_optimism_gap.png"><img src="docs/figures/binary_optimism_gap.png" width="390" alt="Binary accuracy on matched non-overlapping windows under LOSO and subject-mixed testing"></a><br><sub><b>0.907 → 0.964</b> · +5.7 pp</sub></td>
-<td align="center" valign="top" width="50%"><strong>Across the 15 subjects</strong><br><a href="docs/figures/binary_per_subject.png"><img src="docs/figures/binary_per_subject.png" width="390" alt="Binary Random Forest LOSO accuracy for each held-out subject"></a><br><sub><b>0.712 to 1.000</b> · RF accuracy</sub></td>
+<td align="center" valign="top" width="50%"><strong>Subject leakage</strong><br><a href="outputs/figures/binary_optimism_gap.png"><img src="outputs/figures/binary_optimism_gap.png" width="390" alt="Binary accuracy on matched non-overlapping windows under LOSO and subject-mixed testing"></a><br><sub><b>0.907 → 0.964</b> · +5.7 pp</sub></td>
+<td align="center" valign="top" width="50%"><strong>Across the 15 subjects</strong><br><a href="outputs/figures/binary_per_subject.png"><img src="outputs/figures/binary_per_subject.png" width="390" alt="Binary Random Forest LOSO accuracy for each held-out subject"></a><br><sub><b>0.712 to 1.000</b> · RF accuracy</sub></td>
 </tr>
 <tr>
-<td align="center" valign="top" width="50%"><strong>Feature ablation</strong><br><a href="docs/figures/ablation.png"><img src="docs/figures/ablation.png" width="390" alt="Random Forest binary LOSO accuracy for feature subsets"></a><br><sub>All <b>0.913</b> · no motion <b>0.901</b></sub></td>
-<td align="center" valign="top" width="50%"><strong>Chest vs wrist</strong><br><a href="docs/figures/chest_vs_wrist.png"><img src="docs/figures/chest_vs_wrist.png" width="390" alt="Same-model Random Forest binary LOSO accuracy for chest and wrist"></a><br><sub>RF: <b>0.913 vs 0.893</b></sub></td>
+<td align="center" valign="top" width="50%"><strong>Feature ablation</strong><br><a href="outputs/figures/ablation.png"><img src="outputs/figures/ablation.png" width="390" alt="Random Forest binary LOSO accuracy for feature subsets"></a><br><sub>All <b>0.913</b> · no motion <b>0.901</b></sub></td>
+<td align="center" valign="top" width="50%"><strong>Chest vs wrist</strong><br><a href="outputs/figures/chest_vs_wrist.png"><img src="outputs/figures/chest_vs_wrist.png" width="390" alt="Same-model Random Forest binary LOSO accuracy for chest and wrist"></a><br><sub>RF: <b>0.913 vs 0.893</b></sub></td>
 </tr>
 <tr>
-<td align="center" valign="top" width="50%"><strong>Cross-dataset transfer</strong><br><a href="docs/figures/cross_dataset.png"><img src="docs/figures/cross_dataset.png" width="390" alt="Within-dataset and cross-dataset balanced accuracy on 18 shared features"></a><br><sub>Balanced accuracy: <b>0.557 / 0.494</b></sub></td>
-<td align="center" valign="top" width="50%"><strong>SHAP explainability</strong><br><a href="docs/figures/shap_beeswarm.png"><img src="docs/figures/shap_beeswarm.png" width="390" alt="Global signed SHAP contributions and feature values for the full-data gradient-boosted model"></a><br><sub>Full-data fit: motion · heart rate · EDA · respiration</sub></td>
+<td align="center" valign="top" width="50%"><strong>Cross-dataset transfer</strong><br><a href="outputs/figures/cross_dataset.png"><img src="outputs/figures/cross_dataset.png" width="390" alt="Within-dataset and cross-dataset balanced accuracy on 18 shared features"></a><br><sub>Balanced accuracy: <b>0.557 / 0.494</b></sub></td>
+<td align="center" valign="top" width="50%"><strong>SHAP explainability</strong><br><a href="outputs/figures/shap_beeswarm.png"><img src="outputs/figures/shap_beeswarm.png" width="390" alt="Global signed SHAP contributions and feature values for the full-data gradient-boosted model"></a><br><sub>Full-data fit: motion · heart rate · EDA · respiration</sub></td>
 </tr>
 <tr>
-<td align="center" valign="top" width="50%"><strong>Probability calibration</strong><br><a href="docs/figures/calibration_reliability.png"><img src="docs/figures/calibration_reliability.png" width="390" alt="Confidence versus accuracy before and after training-subject isotonic recalibration"></a><br><sub>Full LOSO ECE: <b>0.070 → 0.025</b></sub></td>
-<td align="center" valign="top" width="50%"><strong>Few-shot personalization</strong><br><a href="docs/figures/personalization.png"><img src="docs/figures/personalization.png" width="390" alt="Mean per-subject calibration error against requested enrollment budget"></a><br><sub>ECE: <b>0.146 → 0.069</b> · requested 20</sub></td>
+<td align="center" valign="top" width="50%"><strong>Probability calibration</strong><br><a href="outputs/figures/calibration_reliability.png"><img src="outputs/figures/calibration_reliability.png" width="390" alt="Confidence versus accuracy before and after training-subject isotonic recalibration"></a><br><sub>Full LOSO ECE: <b>0.070 → 0.025</b></sub></td>
+<td align="center" valign="top" width="50%"><strong>Few-shot personalization</strong><br><a href="outputs/figures/personalization.png"><img src="outputs/figures/personalization.png" width="390" alt="Mean per-subject calibration error against requested enrollment budget"></a><br><sub>ECE: <b>0.146 → 0.069</b> · requested 20</sub></td>
 </tr>
 <tr>
-<td align="center" valign="top" width="50%"><strong>Binary confusion · RF</strong><br><a href="docs/figures/binary_confusion.png"><img src="docs/figures/binary_confusion.png" width="390" alt="Pooled row-normalized binary Random Forest confusion matrix at default classifier decisions"></a><br><sub>Stress recall <b>≈0.87</b> · default decisions</sub></td>
-<td align="center" valign="top" width="50%"><strong>Three-class confusion · LR</strong><br><a href="docs/figures/multiclass_confusion.png"><img src="docs/figures/multiclass_confusion.png" width="390" alt="Pooled row-normalized three-class Logistic Regression confusion matrix"></a><br><sub>Baseline ↔ amusement confusion</sub></td>
+<td align="center" valign="top" width="50%"><strong>Binary confusion · RF</strong><br><a href="outputs/figures/binary_confusion.png"><img src="outputs/figures/binary_confusion.png" width="390" alt="Pooled row-normalized binary Random Forest confusion matrix at default classifier decisions"></a><br><sub>Stress recall <b>≈0.87</b> · default decisions</sub></td>
+<td align="center" valign="top" width="50%"><strong>Three-class confusion · LR</strong><br><a href="outputs/figures/multiclass_confusion.png"><img src="outputs/figures/multiclass_confusion.png" width="390" alt="Pooled row-normalized three-class Logistic Regression confusion matrix"></a><br><sub>Baseline ↔ amusement confusion</sub></td>
 </tr>
 </table>
 
@@ -133,7 +133,7 @@ Imputation/scaling/balancing/calibration use training subjects only.
 Leakage gaps use matched non-overlapping windows; chart error bars are subject SDs.
 Chest/wrist differences do not establish sensor equivalence.
 
-*AUROC/AUPRC: pooled OOF [threshold pass](results/threshold_metrics.json);
+*AUROC/AUPRC: pooled OOF [threshold pass](outputs/results/threshold_metrics.json);
 AUPRC is average precision. XGBoost omits benchmark sample weights; CNN values unavailable.
 
 RF Youden J: **0.454** threshold · sensitivity **0.902** · specificity **0.913** ·
@@ -143,7 +143,7 @@ Confusion matrices instead use default decisions, pooled and row-normalized.
 ### Cross-dataset transfer
 
 Separate wrist-feature RF; 18 shared features; version 2 slopes per second; balanced accuracy. Within WESAD **0.868**; within Non-EEG **0.699**.
-Raw-data rerun: 15 WESAD / 20 Non-EEG subjects. [Original transfer snapshot](results/historical/cross_dataset_v1.json) retained.
+Raw-data rerun: 15 WESAD / 20 Non-EEG subjects. [Original transfer snapshot](outputs/results/historical/cross_dataset_v1.json) retained.
 Uses NeuroKit2 0.2.12; heart-rate extraction also differs from the historical 0.2.7 environment.
 Transfer is confounded by devices, stressors, and labels. SHAP explains a full-data fit;
 it is not causal or held-out evidence.
@@ -155,8 +155,8 @@ LOSO evaluates separate fits. Median imputation → standardization → RF, trai
 Outputs: baseline/stress label and **uncalibrated stress probability**; recalibration maps are not bundled.
 No pretrained third-party weights. [Checksum verification](SECURITY.md).
 
-Sources: [benchmark](results/metrics.json) · [statistics](results/stats.json) ·
-[ablation](results/ablation.csv) · [wrist](results/wrist.json) · [transfer](results/cross_dataset.json).
+Sources: [benchmark](outputs/results/metrics.json) · [statistics](outputs/results/stats.json) ·
+[ablation](outputs/results/ablation.csv) · [wrist](outputs/results/wrist.json) · [transfer](outputs/results/cross_dataset.json).
 
 </details>
 
@@ -191,7 +191,7 @@ Binary uses 1/2; three-class uses 1/2/3.
 
 No official version tag/checksums; verification uses all 15 committed SHA-256 references.
 Trusted pickles only: [security](SECURITY.md). macOS OpenMP: `brew install libomp`.
-Historical package versions: [result provenance](results/provenance.json) · [transfer environment](results/cross_dataset.json).
+Historical package versions: [result provenance](outputs/results/provenance.json) · [transfer environment](outputs/results/cross_dataset.json).
 Newer NeuroKit2 can change wrist/transfer
 results (commit `61d0d2c`). The synthetic demo provides no scientific evidence.
 
@@ -215,7 +215,7 @@ python scripts/build_dashboard_data.py
 python scripts/stamp_provenance.py
 ```
 
-Tables: `python scripts/update_readme_tables.py`. [Results snapshot](results/README.md) ·
+Tables: `python scripts/update_readme_tables.py`. [Results snapshot](outputs/results/README.md) ·
 [Dashboard setup](frontend/README.md) · [Architecture](#architecture) · [Contributing](CONTRIBUTING.md).
 
 </details>
@@ -229,7 +229,7 @@ Wearable signals pass through preprocessing, windowing, and a LOSO benchmark.
 Feature models use extracted features; the CNN uses raw signal windows.
 The static dashboard displays exported experiment results.
 
-[Shipped model](#shipped-model) · [Data protocol](#data-and-evaluation-protocol) · [Results snapshot](results/README.md)
+[Shipped model](#shipped-model) · [Data protocol](#data-and-evaluation-protocol) · [Results snapshot](outputs/results/README.md)
 
 ### Repository layout
 
@@ -237,14 +237,10 @@ The static dashboard displays exported experiment results.
 | --- | --- |
 | `src/` · `scripts/` | Research modules and experiment commands |
 | `notebooks/` | Runnable synthetic demo |
-| `frontend/src/pages/` · `components/` · `data/` | Dashboard views, shared UI, data modules |
+| `frontend/src/pages/` · `components/` | Dashboard views and shared UI |
 | `frontend/config/` · `frontend/tooling.mjs` | Configuration sources and dashboard commands |
-| `docs/figures/` · `docs/assets/` | Committed research figures and `demo.gif` |
-| `results/` | Committed benchmark snapshot and provenance |
-| `outputs/figures/` | Ignored local experiment and synthetic plots |
-| `outputs/models/` | Shipped Random Forest and SHA-256 checksum |
-| `data/` | Local datasets and caches |
-| `outputs/logs/` | Ignored runtime logs, created automatically |
+| `data/` | Local raw datasets |
+| [outputs/](outputs/README.md) | Results, figures, model + SHA-256, dashboard exports and ignored generated files |
 
 ### Pipeline stages
 
@@ -263,13 +259,14 @@ The static dashboard displays exported experiment results.
 
 - **Configuration:** frozen dataclasses for sampling rates, filters, and subjects in `src/config.py`.
 - **Logging:** structured logs through `LoggerMixin` in `src/logging_config.py`.
-- **Synthetic data:** `src/synthetic.py`; `python scripts/calibration.py --synthetic` runs offline.
+- **Synthetic data:** `src/synthetic.py`; `python scripts/calibration.py --synthetic` runs offline
+  in `outputs/generated/demo/`.
   Near-separable synthetic signals produce no meaningful calibration or optimism evidence.
 - **Portable features:** version 2 EDA/TEMP slopes are per second; caches use versioned sidecars.
-  [Results history](results/README.md) identifies the earlier slope-unit mismatch.
+  [Results history](outputs/results/README.md) identifies the earlier slope-unit mismatch.
 - **Reproduction:** default `SEED = 42`; [experiment commands](#reproduce-experiments) regenerate
-  `results/` and local `outputs/figures/`. Provenance is recorded in [results/README.md](results/README.md).
-  Committed `docs/figures/` remain a separate snapshot.
+  `outputs/results/` and local `outputs/generated/figures/`. Provenance is recorded in [outputs/results/README.md](outputs/results/README.md).
+  Committed `outputs/figures/` remain a separate snapshot.
 
 ### Data flow
 
@@ -389,7 +386,7 @@ Provided "AS IS", without warranty. Dataset and dependency terms apply separatel
 - Birjandtalab, Cogan, Pouyan, and Nourani. "A Non-EEG Dataset for Assessment of Neurological Status." IEEE BHI / PhysioNet, 2016.
 - Task Force of the ESC and NASPE. "Heart Rate Variability: Standards of Measurement, Physiological Interpretation, and Clinical Use." Circulation, 1996.
 - Guo, Pleiss, Sun, and Weinberger. "On Calibration of Modern Neural Networks." ICML, 2017.
-- Vickers and Elkin. "Decision Curve Analysis: A Novel Method for Evaluating Prediction Models." Medical Decision Making, 2006. The committed [decision-curve figure](docs/figures/calibration_decision_curve.png) remains available.
+- Vickers and Elkin. "Decision Curve Analysis: A Novel Method for Evaluating Prediction Models." Medical Decision Making, 2006. The committed [decision-curve figure](outputs/figures/calibration_decision_curve.png) remains available.
 - Lundberg and Lee. "A Unified Approach to Interpreting Model Predictions." NeurIPS, 2017.
 - Bhanushali et al. "Stress Classification and Personalization: Getting the Most out of the Least." arXiv:2107.05666, 2021.
 - Vos, Trinh, Sarnyai, and Rahimi Azghadi. "Generalizable Machine Learning for Stress Monitoring from Wearable Devices: A Systematic Literature Review." International Journal of Medical Informatics 173, 105026, 2023.

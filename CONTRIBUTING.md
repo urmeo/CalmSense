@@ -26,9 +26,9 @@ python -m pytest tests/ -q  # CI enforces ≥60% coverage on src/
   must come with a guard test in tests/.
 - **Never weaken the leakage guarantees.** Imputation, scaling, balancing, and calibration are fit
   *inside* each LOSO fold; if you touch the evaluation path, prove the test subject stays unseen.
-- **Don't commit generated artifacts** (data/processed/, results/calibration.json,
-  results/personalization.json, figures from synthetic runs). The committed results/ and
-  docs/figures/ are fixed WESAD snapshots, see [results/README.md](results/README.md).
+- **Don't commit generated artifacts** in `outputs/generated/` or local datasets in `data/`.
+  Committed `outputs/results/` and `outputs/figures/` preserve research snapshots;
+  see [result provenance](outputs/results/README.md).
 - **Commit messages:** short and concrete (1 to 3 words describing what changed), e.g. honest readme,
   fix leak, dedup windowing.
 

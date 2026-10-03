@@ -1,4 +1,4 @@
-"""Write results/provenance.json: the exact context the committed numbers came from.
+"""Write experiment provenance under the configured results output directory.
 
 Closes the reproducibility loop for an auditor: which commit, which seed, which package
 versions, which dataset. Run after the experiment scripts (or standalone any time).
@@ -13,7 +13,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from scripts.download_data import WESAD_SHA256
-from src.config import PROJECT_ROOT, SEED
+from src.config import RESULTS_DIR, SEED
 from src.utils import provenance
 
 # Versions that move the numbers if they change; the model pickle is coupled to scikit-learn.
@@ -62,8 +62,8 @@ def run():
         "packages": _package_versions(),
         "data": _dataset_fingerprint(),
     }
-    path = PROJECT_ROOT / "results" / "provenance.json"
-    path.parent.mkdir(exist_ok=True)
+    path = RESULTS_DIR / "provenance.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         json.dump(prov, f, indent=2)
     print(f"Wrote {path}")

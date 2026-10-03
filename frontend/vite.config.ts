@@ -35,6 +35,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss(), webManifest()],
   esbuild: { legalComments: 'eof' },
   build: {
+    outDir: '../outputs/generated/site',
+    emptyOutDir: true,
     license: { fileName: 'licenses.txt' },
     rollupOptions: {
       output: {

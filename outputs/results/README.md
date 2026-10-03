@@ -2,11 +2,11 @@
 
 These files preserve the WESAD benchmark (15 subjects, S2 to S17 excluding S12), with a
 separate corrected transfer experiment. WESAD is not redistributed (see
-[README dataset download and integrity](../README.md#dataset-download-and-integrity)), so a clean clone cannot regenerate them without first
+[README dataset download and integrity](../../README.md#dataset-download-and-integrity)), so a clean clone cannot regenerate them without first
 downloading WESAD. `python scripts/calibration.py --synthetic` provides an offline calibration smoke
-check. Use the [reproduction commands](../README.md#reproduce-experiments) for real datasets. For dataset and
-shipped-model lineage, see [README data protocol](../README.md#data-and-evaluation-protocol) and
-[shipped model](../README.md#shipped-model).
+check. Use the [reproduction commands](../../README.md#reproduce-experiments) for real datasets. For dataset and
+shipped-model lineage, see [README data protocol](../../README.md#data-and-evaluation-protocol) and
+[shipped model](../../README.md#shipped-model).
 
 | File | Produced by |
 | ---- | ----------- |
@@ -42,7 +42,7 @@ Versioned cache sidecars prevent automatic reuse of the old per-sample features.
 still differ; the comparison does not establish generalization to a matched independent corpus.
 
 The original result and figure remain in [historical/cross_dataset_v1.json](historical/cross_dataset_v1.json)
-and [the historical plot](../docs/figures/historical/cross_dataset_v1.png). Their 0.573 / 0.500 transfer
+and [the historical plot](../figures/historical/cross_dataset_v1.png). Their 0.573 / 0.500 transfer
 balanced accuracies include the old slope-unit mismatch and are not the corrected estimate.
 
 ## Probability metrics
@@ -54,7 +54,7 @@ ECE, reliability curves, p-values and original timestamps are unchanged. Histori
 already uses binary MSE. Full-window calibration is pooled; personalization uses subject means on a
 reserved half, so their aggregation and evaluation samples remain different.
 
-Synthetic runs write only to `results/demo/` and `outputs/figures/demo/`. Model exports refresh the
+Synthetic runs use `outputs/generated/demo/` for results, figures and models. Model exports refresh the
 verification checksum alongside the artifact.
 
 Committing calibration.json and personalization.json is **leakage-free by construction**: the

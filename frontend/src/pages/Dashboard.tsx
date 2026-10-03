@@ -10,7 +10,7 @@ import {
   Cell,
 } from 'recharts';
 import { Activity, Brain, Layers, Award } from 'lucide-react';
-import results from '../data/results';
+import results from '../../../outputs/dashboard/results';
 
 const r = results as any;
 

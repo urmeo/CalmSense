@@ -1,12 +1,14 @@
 """The dashboard exports matched comparisons without modifying research sources."""
 
 import json
-from pathlib import Path
+from types import SimpleNamespace
 
+import numpy as np
 import pytest
 
-from scripts import build_dashboard_data
+from scripts import build_dashboard_data, export_signals
 from src.calibration import BINARY_BRIER_DEFINITION
+from src.config import RESULTS_DIR
 
 
 def _read_module(path):
@@ -17,15 +19,14 @@ def _read_module(path):
 
 
 def test_export_preserves_matched_metrics_and_normalizes_historical_brier(tmp_path, monkeypatch):
-    root = Path(__file__).resolve().parent.parent
-    result_files = list((root / "results").glob("*.json"))
+    result_files = list(RESULTS_DIR.glob("*.json"))
     originals = {path: path.read_bytes() for path in result_files}
-    output = tmp_path / "results.ts"
-    monkeypatch.setattr(build_dashboard_data, "FRONTEND", output)
+    output = tmp_path / "dashboard" / "results.ts"
+    monkeypatch.setattr(build_dashboard_data, "DASHBOARD_RESULTS", output)
     build_dashboard_data.run()
     exported = _read_module(output)
-    metrics = json.loads(originals[root / "results/metrics.json"])
-    calibration = json.loads(originals[root / "results/calibration.json"])
+    metrics = json.loads(originals[RESULTS_DIR / "metrics.json"])
+    calibration = json.loads(originals[RESULTS_DIR / "calibration.json"])
     for task in ("binary", "multiclass"):
         data = exported[task]
         assert data["loso_matched_accuracy"] == metrics[task]["loso_matched_accuracy"]
@@ -52,7 +53,7 @@ def test_export_rejects_nonfinite_values_without_replacing_snapshot(
     output = tmp_path / "results.ts"
     before = "const data = {};\n\nexport default data;\n"
     output.write_text(before, encoding="utf-8")
-    monkeypatch.setattr(build_dashboard_data, "FRONTEND", output)
+    monkeypatch.setattr(build_dashboard_data, "DASHBOARD_RESULTS", output)
     monkeypatch.setattr(
         build_dashboard_data,
         "_load_json",
@@ -64,3 +65,46 @@ def test_export_rejects_nonfinite_values_without_replacing_snapshot(
         build_dashboard_data.run()
 
     assert output.read_text(encoding="utf-8") == before
+
+
+def test_signal_export_creates_output_folder_and_preserves_aligned_samples(tmp_path, monkeypatch):
+    samples = np.arange(6, dtype=float)
+    recording = {
+        "chest": {
+            "ECG": samples,
+            "EDA": samples + 10,
+            "Temp": samples + 20,
+            "ACC": np.column_stack((samples + 30, samples + 40, samples + 50)),
+        },
+        "label": np.repeat([1, 2, 3], 2),
+    }
+    loader = SimpleNamespace(load_subject=lambda subject: recording)
+    output = tmp_path / "dashboard" / "signals.ts"
+    monkeypatch.setattr(export_signals, "DASHBOARD_SIGNALS", output)
+    monkeypatch.setattr(export_signals, "WESADLoader", lambda: loader)
+    monkeypatch.setattr(export_signals, "FS", SimpleNamespace(CHEST=2))
+    monkeypatch.setattr(export_signals, "SUBJECTS", ["S2"])
+    monkeypatch.setattr(export_signals, "SECONDS", 1)
+    monkeypatch.setattr(export_signals, "OUT_FS", 2)
+
+    export_signals.run()
+
+    data = _read_module(output)["S2"]
+    assert data["time"] == [0, 0.5, 1, 1.5, 2, 2.5]
+    assert data["conditions"] == [
+        "Baseline",
+        "Baseline",
+        "Stress",
+        "Stress",
+        "Amusement",
+        "Amusement",
+    ]
+    for name, offset in {
+        "ecg": 0,
+        "eda": 10,
+        "temp": 20,
+        "accX": 30,
+        "accY": 40,
+        "accZ": 50,
+    }.items():
+        assert data[name] == (samples + offset).tolist()

@@ -102,8 +102,8 @@ ipython_config.py
 # Raw data files (too large for git)
 data/raw/*
 
-# Processed data
-data/processed/*
+# Legacy local caches from checkouts before output consolidation
+data/processed/
 
 # Interim data
 data/interim/*
@@ -189,15 +189,10 @@ $RECYCLE.BIN/
 
 # Logs
 /logs/
-/outputs/logs/
 *.log
 
-# Generated plots; committed research snapshots live in docs/figures/
-outputs/figures/*
-
-# Demo (synthetic) outputs, never overwrite the committed real-WESAD results
-results/demo/
-outputs/figures/demo/
+# Generated experiments, synthetic demos, caches, logs, and dashboard builds
+/outputs/generated/
 outputs/models/demo/
 
 # Reports

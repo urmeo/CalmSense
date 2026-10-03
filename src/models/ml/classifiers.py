@@ -5,7 +5,7 @@ the choices at a glance, rather than hunting through constructor calls. A tuned
 subset (``scripts/tuning.py`` GRIDS: XGBoost max_depth, learning_rate and
 scale_pos_weight; LightGBM num_leaves, learning_rate and n_estimators; small grids
 for LR and RF) is selected by nested grouped cross-validation (inner ``GridSearchCV``,
-outer LOSO) and written to ``results/tuning.json``. The remaining values are
+outer LOSO) and written to ``outputs/results/tuning.json``. The remaining values are
 conventional defaults held fixed for reproducibility; tuned and default LOSO accuracy
 agree within noise. Re-check with ``python scripts/tuning.py``.
 

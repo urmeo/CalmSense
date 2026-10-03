@@ -19,14 +19,13 @@ from sklearn.model_selection import GroupKFold, LeaveOneGroupOut
 
 from scripts.calibration import _apply_calibrator, _fit_calibrator, _pos_proba
 from scripts.run_experiment import (
-    RESULTS_DIR,
     _fit_params,
     build_pipeline,
     load_cached,
     prepare_task,
 )
 from src import calibration as cal
-from src.config import FIGURES_DIR, SEED
+from src.config import DEMO_DIR, FIGURES_DIR, RESULTS_DIR, SEED
 from src.utils import provenance
 
 K_VALUES = [5, 10, 20]
@@ -141,8 +140,8 @@ def _plot(out, path):
 
 
 def run(synthetic=False, model="rf"):
-    results_dir = RESULTS_DIR / "demo" if synthetic else RESULTS_DIR
-    figures_dir = FIGURES_DIR / "demo" if synthetic else FIGURES_DIR
+    results_dir = DEMO_DIR / "results" if synthetic else RESULTS_DIR
+    figures_dir = DEMO_DIR / "figures" if synthetic else FIGURES_DIR
     results_dir.mkdir(parents=True, exist_ok=True)
     figures_dir.mkdir(parents=True, exist_ok=True)
 

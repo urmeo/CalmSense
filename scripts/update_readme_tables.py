@@ -12,10 +12,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.calibration import normalize_binary_calibration
+from src.config import RESULTS_DIR
 
 ROOT = Path(__file__).resolve().parent.parent
 README = ROOT / "README.md"
-RESULTS = ROOT / "results"
+RESULTS = RESULTS_DIR
 
 
 def _f(x: float) -> str:
@@ -69,7 +70,7 @@ def main() -> None:
     text = _replace(text, "calibration", _calibration_table())
     text = _replace(text, "personalization", _personalization_table())
     README.write_text(text)
-    print("README calibration and personalization tables updated from results/.")
+    print(f"README calibration and personalization tables updated from {RESULTS}.")
 
 
 if __name__ == "__main__":

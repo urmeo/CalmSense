@@ -26,12 +26,10 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.class_weight import compute_sample_weight
 
-from src.config import FIGURES_DIR, MODELS_DIR, PROJECT_ROOT, SEED
+from src.config import DEMO_DIR, FIGURES_DIR, MODELS_DIR, RESULTS_DIR, SEED
 from src.dataset import WindowedDataset, load_cached
 from src.models.ml.classifiers import get_classifier
 from src.utils import provenance, save_verified_joblib, set_seed
-
-RESULTS_DIR = PROJECT_ROOT / "results"
 
 TASKS = {
     "binary": {"keep": [1, 2], "names": ["baseline", "stress"]},
@@ -304,10 +302,10 @@ def run():
     args = parser.parse_args()
     set_seed(SEED)
 
-    # Synthetic runs write to demo/ so they never overwrite the committed real-WESAD results.
-    results_dir = RESULTS_DIR / "demo" if args.synthetic else RESULTS_DIR
-    figures_dir = FIGURES_DIR / "demo" if args.synthetic else FIGURES_DIR
-    models_dir = MODELS_DIR / "demo" if args.synthetic else MODELS_DIR
+    # Synthetic runs share a separate output root and never overwrite real-WESAD results.
+    results_dir = DEMO_DIR / "results" if args.synthetic else RESULTS_DIR
+    figures_dir = DEMO_DIR / "figures" if args.synthetic else FIGURES_DIR
+    models_dir = DEMO_DIR / "models" if args.synthetic else MODELS_DIR
     results_dir.mkdir(parents=True, exist_ok=True)
     figures_dir.mkdir(parents=True, exist_ok=True)
     models_dir.mkdir(parents=True, exist_ok=True)
@@ -408,7 +406,7 @@ def run():
             "per_subject": best[1]["per_subject"].to_dict("records"),
         }
 
-        # Serialize best classical model for the API
+        # Serialize the best classical model for offline inference.
         if task == "binary":
             top_clf = max(
                 [(k, results[k]) for k in CLASSIFIERS],
@@ -422,14 +420,15 @@ def run():
                 {"pipeline": final, "features": feature_cols, "classes": cfg["names"]},
                 models_dir / "stress_classifier.joblib",
             )
-            print(f"  Saved API model ({CLF_NAMES[top_clf]}) + SHAP.")
+            print(f"  Saved inference model ({CLF_NAMES[top_clf]}) + SHAP.")
 
     summary["provenance"] = provenance()
     with open(results_dir / "metrics.json", "w") as f:
         json.dump(summary, f, indent=2)
 
     print(f"\nResults written to {results_dir}")
-    print("Run scripts/build_dashboard_data.py to refresh the dashboard.")
+    if not args.synthetic:
+        print("Run scripts/build_dashboard_data.py to refresh the dashboard.")
 
 
 if __name__ == "__main__":

@@ -9,10 +9,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import pandas as pd
 
 from src.calibration import BINARY_BRIER_DEFINITION, normalize_binary_calibration
-from src.config import PROJECT_ROOT
+from src.config import OUTPUT_DIR, RESULTS_DIR
 
-RESULTS_DIR = PROJECT_ROOT / "results"
-FRONTEND = PROJECT_ROOT / "frontend" / "src" / "data" / "results.ts"
+DASHBOARD_RESULTS = OUTPUT_DIR / "dashboard" / "results.ts"
 
 # Keys the dashboard consumes per task (per-subject lists stay out of the bundle)
 TASK_KEYS = [
@@ -45,7 +44,9 @@ def _load_csv(name):
 def run():
     metrics = _load_json("metrics.json")
     if metrics is None:
-        raise SystemExit("results/metrics.json missing. Run scripts/run_experiment.py first.")
+        raise SystemExit(
+            f"{RESULTS_DIR / 'metrics.json'} missing. Run scripts/run_experiment.py first."
+        )
 
     out = {}
     for task in ("binary", "multiclass"):
@@ -74,11 +75,12 @@ def run():
     if ablation:
         out["ablation"] = ablation
 
-    if not FRONTEND.parent.exists():
-        raise SystemExit(f"{FRONTEND.parent} missing")
     payload = json.dumps(out, indent=2, allow_nan=False)
-    FRONTEND.write_text(f"const data = {payload};\n\nexport default data;\n", encoding="utf-8")
-    print(f"Wrote {FRONTEND} with sections: {sorted(out)}")
+    DASHBOARD_RESULTS.parent.mkdir(parents=True, exist_ok=True)
+    DASHBOARD_RESULTS.write_text(
+        f"const data = {payload};\n\nexport default data;\n", encoding="utf-8"
+    )
+    print(f"Wrote {DASHBOARD_RESULTS} with sections: {sorted(out)}")
 
 
 if __name__ == "__main__":

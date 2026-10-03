@@ -11,7 +11,7 @@ import {
   YAxis,
 } from 'recharts';
 import { Trophy, AlertTriangle, Activity } from 'lucide-react';
-import results from '../data/results';
+import results from '../../../outputs/dashboard/results';
 import SummaryCard from '../components/SummaryCard';
 
 type Task = 'binary' | 'multiclass';

@@ -19,7 +19,6 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GroupKFold, LeaveOneGroupOut, StratifiedKFold
 
 from scripts.run_experiment import (
-    RESULTS_DIR,
     _fit_params,
     build_pipeline,
     load_cached,
@@ -27,7 +26,7 @@ from scripts.run_experiment import (
     prepare_task,
 )
 from src import calibration as cal
-from src.config import FIGURES_DIR, SEED
+from src.config import DEMO_DIR, FIGURES_DIR, RESULTS_DIR, SEED
 from src.utils import paired_effect_size, provenance, set_seed
 
 POSITIVE = "stress"
@@ -246,9 +245,9 @@ def _plot_decision(out, path):
 
 def run(synthetic=False, model="rf", n_bins=N_BINS):
     set_seed(SEED)
-    # Synthetic runs write to demo/ so they never overwrite the committed real-WESAD snapshot.
-    results_dir = RESULTS_DIR / "demo" if synthetic else RESULTS_DIR
-    figures_dir = FIGURES_DIR / "demo" if synthetic else FIGURES_DIR
+    # Synthetic runs never overwrite the committed real-WESAD snapshot.
+    results_dir = DEMO_DIR / "results" if synthetic else RESULTS_DIR
+    figures_dir = DEMO_DIR / "figures" if synthetic else FIGURES_DIR
     results_dir.mkdir(parents=True, exist_ok=True)
     figures_dir.mkdir(parents=True, exist_ok=True)
 
@@ -256,7 +255,7 @@ def run(synthetic=False, model="rf", n_bins=N_BINS):
         from src.synthetic import features
 
         print("Using synthetic data (demo only).")
-        features_df, x_raw, _ = features(n_subjects=6, block_sec=150, seed=SEED)
+        features_df, x_raw, _ = features(n_subjects=6, block_sec=150, seed=SEED, cache=False)
     else:
         cached = load_cached()
         if cached is None:

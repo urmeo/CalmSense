@@ -37,9 +37,10 @@ def test_sample_k_balances_classes():
 
 @pytest.mark.parametrize("synthetic", [False, True])
 def test_personalization_output_paths_protect_benchmark(tmp_path, monkeypatch, synthetic):
-    results_dir = tmp_path / "results"
-    figures_dir = tmp_path / "outputs" / "figures"
-    results_dir.mkdir()
+    results_dir = tmp_path / "outputs" / "results"
+    figures_dir = tmp_path / "outputs" / "generated" / "figures"
+    demo_dir = tmp_path / "outputs" / "generated" / "demo"
+    results_dir.mkdir(parents=True)
     figures_dir.mkdir(parents=True)
     real_result = results_dir / "personalization.json"
     real_figure = figures_dir / "personalization.png"
@@ -47,6 +48,7 @@ def test_personalization_output_paths_protect_benchmark(tmp_path, monkeypatch, s
     real_figure.write_bytes(b"committed benchmark plot")
     monkeypatch.setattr(personalize, "RESULTS_DIR", results_dir)
     monkeypatch.setattr(personalize, "FIGURES_DIR", figures_dir)
+    monkeypatch.setattr(personalize, "DEMO_DIR", demo_dir)
 
     def cached_features():
         assert not synthetic, "Synthetic demo read the real dataset cache"
@@ -74,13 +76,12 @@ def test_personalization_output_paths_protect_benchmark(tmp_path, monkeypatch, s
 
     personalize.run(synthetic=synthetic)
 
-    target_results = results_dir / "demo" if synthetic else results_dir
-    target_figures = figures_dir / "demo" if synthetic else figures_dir
+    target_results = demo_dir / "results" if synthetic else results_dir
+    target_figures = demo_dir / "figures" if synthetic else figures_dir
     assert json.loads((target_results / "personalization.json").read_text()) == metrics
     assert (target_figures / "personalization.png").read_bytes() == b"new plot"
     if synthetic:
         assert real_result.read_bytes() == b"committed benchmark snapshot"
         assert real_figure.read_bytes() == b"committed benchmark plot"
     else:
-        assert not (results_dir / "demo").exists()
-        assert not (figures_dir / "demo").exists()
+        assert not demo_dir.exists()

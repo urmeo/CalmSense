@@ -86,12 +86,13 @@ def test_no_em_or_en_dashes_anywhere():
         + sorted(ROOT.glob("tests/*.py"))
         + sorted(ROOT.glob("frontend/src/**/*.ts"))
         + sorted(ROOT.glob("frontend/src/**/*.tsx"))
+        + sorted(ROOT.glob("outputs/dashboard/**/*.ts"))
         + sorted(ROOT.glob("docs/*.md"))
         + sorted(ROOT.glob("notebooks/*.ipynb"))
         + [
             ROOT / "README.md",
             ROOT / "CONTRIBUTING.md",
-            ROOT / "results" / "README.md",
+            ROOT / "outputs" / "results" / "README.md",
         ]
     )
     en_dash, em_dash = chr(0x2013), chr(0x2014)  # by codepoint, so this guard never flags itself

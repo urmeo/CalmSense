@@ -13,13 +13,12 @@ from scipy.stats import friedmanchisquare, wilcoxon
 from scripts.run_experiment import (
     CLASSIFIERS,
     CLF_NAMES,
-    RESULTS_DIR,
     build_pipeline,
     load_cached,
     loso_evaluate,
     prepare_task,
 )
-from src.config import SEED
+from src.config import RESULTS_DIR, SEED
 from src.utils import paired_effect_size, provenance
 
 
@@ -100,6 +99,7 @@ def run():
             f"  {CLF_NAMES[a]:20s} vs {CLF_NAMES[b]:20s} Δ={d['delta_mean']:+.3f}  p_holm={d['p_holm']:.3f}"
         )
 
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     with open(RESULTS_DIR / "stats.json", "w") as f:
         json.dump(out, f, indent=2)
     print(f"\nWrote {RESULTS_DIR / 'stats.json'}")

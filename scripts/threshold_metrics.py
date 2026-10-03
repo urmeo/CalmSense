@@ -21,7 +21,8 @@ import numpy as np
 from sklearn.metrics import average_precision_score, roc_auc_score, roc_curve
 from sklearn.model_selection import LeaveOneGroupOut
 
-from scripts.run_experiment import CLF_NAMES, RESULTS_DIR, build_pipeline, load_cached, prepare_task
+from scripts.run_experiment import CLF_NAMES, build_pipeline, load_cached, prepare_task
+from src.config import RESULTS_DIR
 from src.utils import provenance
 
 FEATURE_MODELS = ["lr", "rf", "xgb", "lgbm"]
@@ -92,6 +93,7 @@ def run():
 
     out["provenance"] = provenance()
     path = RESULTS_DIR / "threshold_metrics.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         json.dump(out, f, indent=2)
     print(f"\nWrote {path}")

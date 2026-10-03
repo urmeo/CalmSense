@@ -17,8 +17,8 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score
 
-from scripts.run_experiment import FIGURES_DIR, RESULTS_DIR, build_pipeline, loso_evaluate
-from src.config import FS, PROCESSED_DATA_DIR, PROJECT_ROOT
+from scripts.run_experiment import build_pipeline, loso_evaluate
+from src.config import FIGURES_DIR, FS, PROCESSED_DATA_DIR, PROJECT_ROOT, RESULTS_DIR
 from src.datasets import non_eeg
 from src.portable import (
     OVERLAP,
@@ -235,7 +235,7 @@ def run():
     plt.tight_layout()
     plt.savefig(FIGURES_DIR / "cross_dataset.png", dpi=150)
     plt.close()
-    print("\nWrote results/cross_dataset.json and cross_dataset.png")
+    print(f"\nWrote {RESULTS_DIR / 'cross_dataset.json'} and {FIGURES_DIR / 'cross_dataset.png'}")
 
 
 if __name__ == "__main__":
