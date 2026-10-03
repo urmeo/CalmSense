@@ -39,6 +39,7 @@ def prepare_binary(df):
 
 
 def run():
+    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     df = load_wrist()
     if df is None:
         print("Building wrist features...")

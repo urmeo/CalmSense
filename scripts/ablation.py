@@ -42,6 +42,7 @@ def _group_of(col: str) -> str:
 
 def run():
     RESULTS_DIR.mkdir(exist_ok=True)
+    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     cached = load_cached()
     if cached is None:
         raise SystemExit("No cached features. Run scripts/run_experiment.py first.")
