@@ -1,38 +1,71 @@
 # Security Policy
 
-## Reporting a vulnerability
+CalmSense is research software, not a medical device. Security fixes target current `main`;
+older releases and experiment snapshots have no separate maintenance. CI tests Python **3.11 / 3.12**.
 
-Please report security issues privately through GitHub's
-[security advisories](https://github.com/urmeo/CalmSense/security/advisories/new) rather than opening a
-public issue. Include steps to reproduce and the affected version or commit. You can expect an
-acknowledgement within a few days.
+## Report privately
 
-## Threat model & known risks
+Use [Report a vulnerability](https://github.com/urmeo/CalmSense/security/advisories/new).
+Keep exploit details out of public issues and pull requests.
 
-CalmSense is research software, not a medical device or production service.
+Include:
 
-- **Pickle deserialization (WESAD).** WESAD subjects are distributed as Python pickles, and
-  src/data/loader.py unpickles them (encoding="latin1"). Unpickling executes arbitrary code,
-  **only load .pkl files you downloaded from the official WESAD source or generated yourself.** See
-  [README dataset download and integrity](README.md#dataset-download-and-integrity).
-- **Model deserialization (trust boundary).** The pipeline writes and reloads one model,
-  outputs/models/stress_classifier.joblib (scripts/run_experiment.py). joblib
-  uses pickle, so loading executes code: only load the model **this repo's own pipeline produced**. Its
-  SHA-256 is pinned in
-  [outputs/models/stress_classifier.joblib.sha256](outputs/models/stress_classifier.joblib.sha256);
-  verify from the repository root with
-  `(cd outputs/models && shasum -a 256 -c stress_classifier.joblib.sha256)`, and never load a
-  third-party .joblib. The public dashboard loads no model at all, it renders committed JSON.
+- Affected commit/version, component, and environment.
+- Minimal reproduction steps using synthetic data.
+- Impact, prerequisites, and redacted evidence; a suggested fix if available.
 
-## Static dashboard (no backend)
+Reports are handled on a best-effort basis. Use the private thread for updates and coordinate
+disclosure after a fix or mitigation. No guaranteed response or fix deadline.
 
-The dashboard has no server and runs no model: it renders the committed experiment output
-(frontend/src/data/results.json, frontend/src/data/signals.json), so there is no server-side attack
-surface and it accepts no user input or uploads.
+Report code execution, unsafe archive extraction, browser injection, credential exposure,
+or unauthorized data disclosure. Ordinary bugs and research-result questions belong in
+[Issues](https://github.com/urmeo/CalmSense/issues).
 
-## Supply chain & secrets
+## Trusted files only
 
-Supported dependency ranges are declared in pyproject.toml and audited in CI with pip-audit.
-The full git history
-(all refs) is scanned for committed secrets with [gitleaks](https://github.com/gitleaks/gitleaks),
-last run: **0 findings**.
+**Pickle and joblib can execute arbitrary code.** This applies to WESAD subjects, feature caches,
+and model artifacts. Only load files from a trusted source or your own trusted pipeline.
+
+- **WESAD:** follow the [dataset instructions](README.md#dataset-download-and-integrity).
+  Verify all subjects before loading, including existing or manually extracted files.
+  The loader does not check hashes automatically.
+- **Feature caches:** regenerate them locally; do not load third-party caches.
+- **Model:** use [`load_verified_joblib`](src/utils.py), which checks the SHA-256 sidecar before
+  deserialization. Obtain both model and checksum from a trusted checkout.
+
+From the repository root:
+
+```bash
+python scripts/download_data.py --verify-wesad
+(cd outputs/models && shasum -a 256 -c stress_classifier.joblib.sha256)
+```
+
+**A checksum detects changed bytes; it does not establish trust or make a pickle safe.**
+WESAD hashes are repository reference values, not publisher-issued checksums.
+If verification fails, stop and obtain a trusted copy; do not replace the expected hash to bypass it.
+
+## Dashboard and downloads
+
+The dashboard displays precomputed results. It has no application backend, model inference,
+or file uploads. Browser code, dependencies, and external resources remain part of its attack surface.
+
+The downloader rejects archive path traversal and archives declaring more than **10 GiB**
+uncompressed. These checks do not authenticate downloaded content.
+
+## Security checks
+
+[CI](.github/workflows/ci.yml) runs on pull requests to `main` and pushes to `main`:
+
+| Check | Coverage |
+| --- | --- |
+| `pip-audit` | Known vulnerabilities in installed Python dependencies |
+| `npm audit` | Frontend dependencies; moderate or higher findings fail CI |
+| Gitleaks | Secret scanning with full-history checkout |
+
+Passing checks is not a guarantee of security.
+
+## Exposed secrets or participant data
+
+Revoke or rotate exposed credentials immediately, then report privately. Deleting a file or
+commit does not revoke a secret. Never include live credentials, identifying information,
+or participant recordings in reports, issues, or commits; use redacted or synthetic examples.
