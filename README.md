@@ -243,7 +243,8 @@ The static dashboard displays exported experiment results.
 | `results/` | Committed benchmark snapshot and provenance |
 | `outputs/figures/` | Ignored local experiment and synthetic plots |
 | `outputs/models/` | Shipped Random Forest and SHA-256 checksum |
-| `data/` · `logs/` | Local datasets, caches, and runtime logs |
+| `data/` | Local datasets and caches |
+| `outputs/logs/` | Ignored runtime logs, created automatically |
 
 ### Pipeline stages
 

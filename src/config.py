@@ -19,7 +19,7 @@ OUTPUT_DIR = PROJECT_ROOT / "outputs"
 MODELS_DIR = OUTPUT_DIR / "models"
 FIGURES_DIR = OUTPUT_DIR / "figures"
 
-LOGS_DIR = PROJECT_ROOT / "logs"
+LOGS_DIR = OUTPUT_DIR / "logs"
 
 # S1, S12 excluded
 VALID_SUBJECTS: List[str] = [

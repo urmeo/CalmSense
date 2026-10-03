@@ -193,9 +193,8 @@ $RECYCLE.BIN/
 # =============================================================================
 
 # Logs
-logs/*
-!logs/.gitkeep
-!logs/README.md
+/logs/
+/outputs/logs/
 *.log
 
 # Generated plots; committed research snapshots live in docs/figures/
