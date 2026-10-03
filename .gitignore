@@ -102,7 +102,7 @@ ipython_config.py
 # Raw data files (too large for git)
 data/raw/*
 
-# Legacy local caches from checkouts before output consolidation
+# Local caches
 data/processed/
 
 # Interim data
@@ -111,7 +111,7 @@ data/interim/*
 # External data
 data/external/*
 
-# Model files, except the small serving + in-browser models
+# Model files, except the shipped RF classifier and checksum
 *.pkl
 *.pickle
 *.h5

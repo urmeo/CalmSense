@@ -99,7 +99,7 @@ Click figures to enlarge.
 
 15 bins; pooled binary RF predictions. Isotonic uses training-subject OOF probabilities.
 The plot compares full-window LOSO and its isotonic recalibration; matched windows are separate rows.
-Binary Brier is stress-probability MSE; multiclass sums squared class errors. Historical calibration's
+Binary Brier is stress-probability MSE; multiclass sums squared class errors. Stored calibration's
 two-class scores and paired Brier gap/CI are halved for display; source JSON, ECE, curves and p-values are preserved.
 
 ### Personalization through probability recalibration
@@ -145,8 +145,7 @@ Confusion matrices instead use default decisions, pooled and row-normalized.
 ### Cross-dataset transfer
 
 Separate wrist-feature RF; 18 shared features; version 2 slopes per second; balanced accuracy. Within WESAD **0.868**; within Non-EEG **0.699**.
-Raw-data rerun: 15 WESAD / 20 Non-EEG subjects. [Original transfer snapshot](outputs/results/historical/cross_dataset_v1.json) retained.
-Uses NeuroKit2 0.2.12; heart-rate extraction also differs from the historical 0.2.7 environment.
+15 WESAD / 20 Non-EEG subjects; NeuroKit2 0.2.12. Heart-rate extraction differs from the benchmark's 0.2.7 environment.
 Portable features preserve sample timestamps when non-finite values are omitted.
 Transfer is confounded by devices, stressors, and labels. SHAP explains a full-data fit;
 it is not causal or held-out evidence.
@@ -163,9 +162,8 @@ Sources: [benchmark](outputs/results/metrics.json) · [statistics](outputs/resul
 
 ### Result provenance
 
-Historical records retain timestamps, environments and hashes; some source SHAs no longer resolve.
-Transfer source hashes identify the implementation; its recorded base SHA excludes uncommitted changes.
-The [archived transfer plot](outputs/figures/historical/cross_dataset_v1.png) shows **0.573 / 0.500** with old per-sample slopes.
+[Benchmark metadata](outputs/results/provenance.json) · [Transfer metadata](outputs/results/cross_dataset.json).
+Transfer records raw-file manifests, source-file hashes and a working-tree dirty flag.
 
 </details>
 
@@ -200,9 +198,8 @@ Binary uses 1/2; three-class uses 1/2/3.
 
 No official version tag/checksums; verification uses all 15 committed SHA-256 references.
 Trusted pickles only: [security](SECURITY.md). macOS OpenMP: `brew install libomp`.
-Historical package versions: [result provenance](outputs/results/provenance.json) · [transfer environment](outputs/results/cross_dataset.json).
-Newer NeuroKit2 can change wrist/transfer
-results (commit `61d0d2c`). The synthetic demo provides no scientific evidence.
+Package environments: [benchmark](outputs/results/provenance.json) · [transfer](outputs/results/cross_dataset.json).
+NeuroKit2 versions can change wrist/transfer results. The synthetic demo provides no scientific evidence.
 
 ### Reproduce experiments
 
@@ -299,13 +296,12 @@ Synthetic outputs stay in `generated/demo/{results,figures,models}/`; committed 
 
 ### Shared modules and reproducibility
 
-- **Configuration:** frozen dataclasses for sampling rates, filters, and subjects in `src/config.py`.
+- **Configuration:** sampling rates, filters, feature settings, and subject list in `src/config.py`.
 - **Logging:** structured logs through `LoggerMixin` in `src/logging_config.py`.
 - **Synthetic data:** `src/synthetic.py`; `python scripts/calibration.py --synthetic` runs offline
   in `outputs/generated/demo/`.
   Near-separable synthetic signals produce no meaningful calibration or optimism evidence.
 - **Portable features:** version 2 EDA/TEMP slopes are per second; caches use versioned sidecars.
-  [Result provenance](#result-provenance) identifies the earlier slope-unit mismatch.
 - **Reproduction:** default `SEED = 42`; [experiment commands](#reproduce-experiments) regenerate
   `outputs/results/` and local `outputs/generated/figures/`; see [result provenance](#result-provenance).
   Committed `outputs/figures/` remain a separate snapshot.
@@ -403,16 +399,21 @@ Feature models: fold-local imputation/scaling. CNN: raw windows.
 
 ## Limitations
 
-- **15 lab subjects** · wide CIs · weak CNN baseline · no clinical claim.
-- Exploratory ablation/calibration/personalization; no multiplicity correction. One confounded transfer pair.
+1. **Cohort:** 15 WESAD lab subjects; wide confidence intervals and no clinical validation.
+2. **Analysis:** Weak CNN baseline. Exploratory ablation, calibration, and personalization analyses have no correction for multiple comparisons.
+3. **Transfer:** One WESAD/Non-EEG pair; devices, stressors, and labels differ.
 
 ## Future work
 
-Third matched corpus · free-living data · streaming wearable inference.
+1. Test transfer on a third dataset with matched sensors and stress labels.
+2. Evaluate stress predictions during daily life outside the lab.
+3. Build live wearable inference; measure prediction latency and battery use.
 
 ## Ethics & data use
 
-Sensitive signals: informed consent, minimal collection, research use only. Dataset licenses apply.
+1. Obtain informed consent before collecting physiological recordings.
+2. Collect only required signals; omit names and direct identifiers.
+3. Use predictions for research only; follow each dataset's terms.
 
 ## License
 
