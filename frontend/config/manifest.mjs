@@ -1,4 +1,5 @@
-{
+// Native module source; generated tool files are ignored.
+export default {
   "short_name": "CalmSense",
   "name": "CalmSense - Stress Detection Dashboard",
   "description": "Subject-independent stress detection from wearable signals.",
@@ -23,4 +24,4 @@
   "display": "standalone",
   "theme_color": "#1A365D",
   "background_color": "#1A365D"
-}
+};

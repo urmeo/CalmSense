@@ -5,11 +5,20 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   lint:
     name: Lint & Type Check
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
@@ -19,8 +28,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -e ".[dev]"
+          python -m pip install -e ".[dev]"
       - name: Ruff lint
         run: ruff check src/ tests/ scripts/
       - name: Ruff format check
@@ -31,6 +39,7 @@ jobs:
   test:
     name: Test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     needs: lint
     strategy:
       matrix:
@@ -44,20 +53,14 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -e ".[dev]"
+          python -m pip install -e ".[dev]"
       - name: Run tests with coverage
-        run: pytest tests/ -q --cov=src --cov-report=term-missing --cov-report=xml --cov-fail-under=60
-      - name: Upload coverage report
-        if: matrix.python-version == '3.12'
-        uses: actions/upload-artifact@v7
-        with:
-          name: coverage-xml
-          path: coverage.xml
+        run: python -m pytest tests/ -q --cov=src --cov-report=term-missing --cov-fail-under=60
 
   security:
     name: Dependency audit (pip-audit)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
@@ -67,20 +70,21 @@ jobs:
       - name: Install project + pip-audit
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pip-audit
+          python -m pip install -e . pip-audit
       - name: Audit installed dependencies (blocking)
-        # No ignores: every advisory previously suppressed here was an onnx
-        # untrusted-model crash, and the ONNX stack is gone. Any CVE fails CI.
         run: pip-audit --desc
 
   secrets:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0  # scan full history, not just the tip commit
+          fetch-depth: 0
       - uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -88,23 +92,36 @@ jobs:
   frontend:
     name: Frontend build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: frontend/config/package-lock.mjs
       - name: Install dependencies
-        working-directory: frontend
-        run: npm ci
+        run: node tooling.mjs install
+      - name: Audit frontend dependencies
+        run: node tooling.mjs audit
       - name: Build
-        working-directory: frontend
-        run: npm run build
+        run: node tooling.mjs build
+      - name: SPA fallback
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        run: cp dist/index.html dist/404.html
+      - name: Upload Pages artifact
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
 
   clean-clone:
     name: Clean-clone smoke (pip install -e . -> demo)
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     needs: lint
     steps:
       - uses: actions/checkout@v7
@@ -112,11 +129,29 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - name: Install the advertised way (pyproject only, no requirements.txt)
-        # Catches dependency-resolution regressions a stranger would hit, e.g. an
-        # unpinned scipy pulling a version that dropped scipy.signal.daub.
+      - name: Install the advertised way
         run: |
           python -m pip install --upgrade pip
-          pip install -e .
-      - name: make demo (offline synthetic pipeline)
-        run: make demo
+          python -m pip install -e .
+      - name: Synthetic calibration smoke
+        run: python scripts/calibration.py --synthetic
+
+  deploy:
+    name: Deploy dashboard
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: [lint, test, security, secrets, frontend, clean-clone]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

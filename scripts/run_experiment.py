@@ -7,7 +7,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import joblib
 import matplotlib
 
 matplotlib.use("Agg")
@@ -30,7 +29,7 @@ from sklearn.utils.class_weight import compute_sample_weight
 from src.config import FIGURES_DIR, MODELS_DIR, PROJECT_ROOT, SEED
 from src.dataset import WindowedDataset, load_cached
 from src.models.ml.classifiers import get_classifier
-from src.utils import provenance, set_seed
+from src.utils import provenance, save_verified_joblib, set_seed
 
 RESULTS_DIR = PROJECT_ROOT / "results"
 
@@ -419,7 +418,7 @@ def run():
             importance.to_csv(results_dir / "shap_top_features.csv", index=False)
             final = build_pipeline(top_clf)
             final.fit(X, y, **_fit_params(final, y))
-            joblib.dump(
+            save_verified_joblib(
                 {"pipeline": final, "features": feature_cols, "classes": cfg["names"]},
                 models_dir / "stress_classifier.joblib",
             )

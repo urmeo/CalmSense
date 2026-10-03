@@ -8,16 +8,17 @@ especially welcome.
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-make install-dev          # pinned deps (requirements.lock) + editable package + dev tools
-make demo                 # smoke-test the full pipeline on synthetic data (no download)
+python -m pip install -e ".[dev]"
+python scripts/calibration.py --synthetic  # calibration smoke check; no download
 ```
 
 ## Before you open a PR
 
 ```bash
-make format               # ruff format + autofix
-make lint                 # ruff check
-make test                 # pytest (must pass; CI enforces ≥60% coverage on src/)
+ruff format src/ tests/ scripts/
+ruff check --fix src/ tests/ scripts/
+ruff check src/ tests/ scripts/
+python -m pytest tests/ -q  # CI enforces ≥60% coverage on src/
 ```
 
 - **Target main** with a focused PR; keep unrelated changes out.
@@ -26,8 +27,8 @@ make test                 # pytest (must pass; CI enforces ≥60% coverage on sr
 - **Never weaken the leakage guarantees.** Imputation, scaling, balancing, and calibration are fit
   *inside* each LOSO fold; if you touch the evaluation path, prove the test subject stays unseen.
 - **Don't commit generated artifacts** (data/processed/, results/calibration.json,
-  results/personalization.json, figures from synthetic runs). The committed results/ are a fixed
-  WESAD snapshot, see [results/README.md](results/README.md).
+  results/personalization.json, figures from synthetic runs). The committed results/ and
+  docs/figures/ are fixed WESAD snapshots, see [results/README.md](results/README.md).
 - **Commit messages:** short and concrete (1 to 3 words describing what changed), e.g. honest readme,
   fix leak, dedup windowing.
 

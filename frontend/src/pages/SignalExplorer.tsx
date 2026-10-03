@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import Plot from 'react-plotly.js';
+import Plot from '../components/Plot';
 import { ZoomIn, ZoomOut, RefreshCw } from 'lucide-react';
-import realSignals from '../signals.json';
+import realSignals from '../data/signals';
 
 // Real WESAD chest signals (baseline -> stress -> amusement), downsampled for display
 const subjects = Object.keys(realSignals);
@@ -97,7 +97,7 @@ const SignalExplorer: React.FC = () => {
     title: { text: `Signal Explorer: Subject ${selectedSubject}`, font: { size: 18 } },
     showlegend: true,
     legend: { orientation: 'h', y: -0.12 },
-    xaxis: { title: 'Time (s)', range: xRange, showgrid: true, gridcolor: 'rgba(0,0,0,0.1)' },
+    xaxis: { title: { text: 'Displayed time (s)' }, range: xRange, showgrid: true, gridcolor: 'rgba(0,0,0,0.1)' },
     height: 600,
     margin: { t: 70, b: 70, l: 60, r: 40 },
     paper_bgcolor: 'rgba(0,0,0,0)',
@@ -133,7 +133,7 @@ const SignalExplorer: React.FC = () => {
     const top = 1 - i * slice;
     const bottom = Math.max(0, 1 - (i + 1) * slice + gap);
     layout[axisKey] = {
-      title: panel.title,
+      title: { text: panel.title },
       domain: [bottom, top],
       showgrid: true,
       gridcolor: 'rgba(0,0,0,0.1)',
@@ -145,9 +145,13 @@ const SignalExplorer: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Signal Explorer</h1>
-          <p className="text-gray-500 dark:text-gray-400">Real WESAD chest signals across conditions</p>
+          <p className="text-gray-500 dark:text-gray-400">
+            Real WESAD chest signal clips, downsampled and concatenated for display.
+            The time axis does not represent a continuous recording.
+          </p>
         </div>
         <select
+          aria-label="WESAD subject"
           value={selectedSubject}
           onChange={(e) => setSelectedSubject(e.target.value)}
           className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
@@ -194,7 +198,7 @@ const SignalExplorer: React.FC = () => {
         <Plot
           data={buildTraces()}
           layout={layout}
-          config={{ responsive: true, displayModeBar: true, modeBarButtonsToRemove: ['lasso2d', 'select2d'] }}
+          config={{ responsive: true, showSendToCloud: false, displayModeBar: true, modeBarButtonsToRemove: ['lasso2d', 'select2d'] }}
           style={{ width: '100%' }}
           onRelayout={(e: any) => {
             if (e['xaxis.range[0]'] !== undefined) {

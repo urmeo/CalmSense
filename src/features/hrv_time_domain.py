@@ -83,20 +83,7 @@ class HRVTimeDomainExtractor(BaseHRVExtractor):
         return float(len(rr) / max_count)
 
     def extract_all(self, rr_intervals: np.ndarray) -> Dict[str, float]:
-        features = {
-            "MeanNN": np.nan,
-            "SDNN": np.nan,
-            "RMSSD": np.nan,
-            "pNN50": np.nan,
-            "pNN20": np.nan,
-            "MedianNN": np.nan,
-            "CVNN": np.nan,
-            "CVSD": np.nan,
-            "MadNN": np.nan,
-            "MCVNN": np.nan,
-            "IQRNN": np.nan,
-            "HRVTI": np.nan,
-        }
+        features = dict.fromkeys(self.get_feature_descriptions(), np.nan)
 
         rr = self._validate_input(rr_intervals)
         if rr is None:

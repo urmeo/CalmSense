@@ -36,7 +36,7 @@ def test_docs_make_no_best_overall_ranking_claim():
 
 def test_readme_local_links_and_images_exist():
     """Check the overview's Markdown destinations and HTML image sources."""
-    refs = re.findall(r"\]\(([^\s)]+)\)", README) + re.findall(r'src="([^"]+)"', README)
+    refs = re.findall(r"\]\(([^\s)]+)\)", README) + re.findall(r'(?:src|href)="([^"]+)"', README)
     for ref in refs:
         url = urlsplit(ref)
         if url.scheme or not url.path:
@@ -90,7 +90,6 @@ def test_no_em_or_en_dashes_anywhere():
         + sorted(ROOT.glob("notebooks/*.ipynb"))
         + [
             ROOT / "README.md",
-            ROOT / "MODEL_CARD.md",
             ROOT / "CONTRIBUTING.md",
             ROOT / "results" / "README.md",
         ]

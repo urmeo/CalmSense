@@ -1,14 +1,12 @@
 """Write results/provenance.json: the exact context the committed numbers came from.
 
 Closes the reproducibility loop for an auditor: which commit, which seed, which package
-versions, which dataset. Run at the end of `make reproduce` (and standalone any time).
+versions, which dataset. Run after the experiment scripts (or standalone any time).
 """
 
 import hashlib
 import json
-import subprocess
 import sys
-from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
@@ -16,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from scripts.download_data import WESAD_SHA256
 from src.config import PROJECT_ROOT, SEED
+from src.utils import provenance
 
 # Versions that move the numbers if they change; the model pickle is coupled to scikit-learn.
 KEY_PACKAGES = [
@@ -29,15 +28,6 @@ KEY_PACKAGES = [
     "torch",
     "shap",
 ]
-
-
-def _git_sha() -> str:
-    try:
-        return subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], cwd=PROJECT_ROOT, text=True
-        ).strip()
-    except Exception:
-        return "unknown"
 
 
 def _package_versions() -> dict:
@@ -66,8 +56,7 @@ def _dataset_fingerprint() -> dict:
 
 def run():
     prov = {
-        "git_sha": _git_sha(),
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        **provenance(),
         "seed": SEED,
         "python": sys.version.split()[0],
         "packages": _package_versions(),

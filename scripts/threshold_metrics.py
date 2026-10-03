@@ -6,7 +6,7 @@ the project's thesis is that the probability matters. This computes AUROC and AU
 point for the shipped model (random forest) at the Youden-J threshold: sensitivity,
 specificity, PPV, NPV. Same folds as scripts/run_experiment.py, so the numbers line up.
 
-Run inside `make reproduce` (needs cached features from run_experiment.py first).
+Run after run_experiment.py, which caches the features used by this analysis.
 xgboost/lightgbm need OpenMP (brew install libomp on macOS); models that cannot import
 are skipped with an "available": false marker rather than failing the whole run.
 """

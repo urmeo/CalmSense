@@ -113,6 +113,7 @@ def compute(X, y, groups, model="rf", k_values=K_VALUES):
 
     return {
         "model": model,
+        "brier_definition": cal.BINARY_BRIER_DEFINITION,
         "eval_frac": 0.5,
         "k_values": k_values,
         "n_subjects": len(acc["uncalibrated"]),
@@ -130,7 +131,7 @@ def _plot(out, path):
     plt.plot(
         ks, [out["fewshot"][str(k)]["ece"] for k in ks], "o-", color="#2ecc71", label="few-shot"
     )
-    plt.xlabel("Enrollment windows per subject")
+    plt.xlabel("Requested enrollment budget (windows)")
     plt.ylabel("ECE (mean over subjects)")
     plt.title("Few-shot personalization closes the calibration gap")
     plt.legend()
@@ -140,14 +141,16 @@ def _plot(out, path):
 
 
 def run(synthetic=False, model="rf"):
-    RESULTS_DIR.mkdir(exist_ok=True)
-    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+    results_dir = RESULTS_DIR / "demo" if synthetic else RESULTS_DIR
+    figures_dir = FIGURES_DIR / "demo" if synthetic else FIGURES_DIR
+    results_dir.mkdir(parents=True, exist_ok=True)
+    figures_dir.mkdir(parents=True, exist_ok=True)
 
     if synthetic:
         from src.synthetic import features
 
         print("Using synthetic data (demo only).")
-        features_df, x_raw, _ = features(n_subjects=8, block_sec=150, seed=SEED)
+        features_df, x_raw, _ = features(n_subjects=8, block_sec=150, seed=SEED, cache=False)
     else:
         cached = load_cached()
         if cached is None:
@@ -158,9 +161,9 @@ def run(synthetic=False, model="rf"):
     out = compute(X, y, groups, model=model)
 
     out["provenance"] = provenance()
-    with open(RESULTS_DIR / "personalization.json", "w") as f:
+    with open(results_dir / "personalization.json", "w") as f:
         json.dump(out, f, indent=2)
-    _plot(out, FIGURES_DIR / "personalization.png")
+    _plot(out, figures_dir / "personalization.png")
 
     print(f"\n{'condition':18s} {'ECE':>7s} {'Brier':>7s}")
     print(
@@ -170,7 +173,7 @@ def run(synthetic=False, model="rf"):
     for k in out["k_values"]:
         f = out["fewshot"][str(k)]
         print(f"{'few-shot k=' + str(k):18s} {f['ece']:>7.3f} {f['brier']:>7.3f}")
-    print(f"\nWrote {RESULTS_DIR / 'personalization.json'}")
+    print(f"\nWrote {results_dir / 'personalization.json'}")
 
 
 if __name__ == "__main__":

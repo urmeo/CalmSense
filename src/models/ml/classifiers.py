@@ -7,7 +7,7 @@ scale_pos_weight; LightGBM num_leaves, learning_rate and n_estimators; small gri
 for LR and RF) is selected by nested grouped cross-validation (inner ``GridSearchCV``,
 outer LOSO) and written to ``results/tuning.json``. The remaining values are
 conventional defaults held fixed for reproducibility; tuned and default LOSO accuracy
-agree within noise. Re-check with ``make tuning``.
+agree within noise. Re-check with ``python scripts/tuning.py``.
 
 A flat registry keeps the family in one place; ``get_classifier("rf")`` is the only
 entry point callers need. Passing keyword arguments overrides the shipped defaults.

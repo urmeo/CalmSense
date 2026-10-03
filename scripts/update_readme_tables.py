@@ -9,6 +9,10 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from src.calibration import normalize_binary_calibration
+
 ROOT = Path(__file__).resolve().parent.parent
 README = ROOT / "README.md"
 RESULTS = ROOT / "results"
@@ -28,7 +32,7 @@ def _replace(text: str, name: str, body: str) -> str:
 
 def _calibration_table() -> str:
     with open(RESULTS / "calibration.json") as fh:
-        d = json.load(fh)
+        d = normalize_binary_calibration(json.load(fh))
     head = "| Evaluation | ECE | MCE | Brier |\n| --- | :-: | :-: | :-: |"
     rows = [
         ("Subject-mixed 5-fold, non-overlapping", "within_subject"),

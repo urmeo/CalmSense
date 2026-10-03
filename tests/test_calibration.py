@@ -1,14 +1,56 @@
 """Calibration metrics behave correctly on known inputs."""
 
 import numpy as np
+import pytest
 
 from src.calibration import (
     brier_score,
     expected_calibration_error,
     maximum_calibration_error,
     net_benefit,
+    normalize_binary_calibration,
     reliability_curve,
 )
+
+
+def test_binary_brier_is_independent_of_probability_representation():
+    y = np.array([0, 1, 1, 0])
+    p = np.array([0.1, 0.9, 0.8, 0.3])
+    assert brier_score(y, p) == pytest.approx(0.0375)
+    assert brier_score(y, np.column_stack([1 - p, p])) == pytest.approx(0.0375)
+
+
+def test_multiclass_brier_remains_summed():
+    y = np.array([0, 2])
+    p = np.array([[0.8, 0.1, 0.1], [0.1, 0.1, 0.8]])
+    assert brier_score(y, p) == pytest.approx(0.06)
+
+
+def test_legacy_calibration_conversion_preserves_source_and_is_idempotent():
+    original = {
+        "loso": {"ece": 0.07, "brier": 0.136},
+        "gap_significance": {
+            "mean_brier_gap": 0.06,
+            "ci95": [0.02, 0.1],
+            "wilcoxon_p": 0.001,
+            "per_subject": {"S2": {"loso": 0.2, "within": 0.1}},
+        },
+        "provenance": {"git_sha": "historical", "generated_at": "original"},
+    }
+    out = normalize_binary_calibration(original)
+    assert out["loso"] == {"ece": 0.07, "brier": 0.068}
+    assert out["gap_significance"]["mean_brier_gap"] == 0.03
+    assert out["gap_significance"]["ci95"] == [0.01, 0.05]
+    assert out["gap_significance"]["per_subject"]["S2"] == {"loso": 0.1, "within": 0.05}
+    assert out["gap_significance"]["wilcoxon_p"] == original["gap_significance"]["wilcoxon_p"]
+    assert out["provenance"] == original["provenance"]
+    assert original["loso"]["brier"] == 0.136
+    assert normalize_binary_calibration(out) == out
+
+
+def test_unknown_brier_scale_is_rejected():
+    with pytest.raises(ValueError, match="Unknown binary Brier definition"):
+        normalize_binary_calibration({"brier_definition": "unknown"})
 
 
 def test_net_benefit_at_impossible_threshold_is_zero():

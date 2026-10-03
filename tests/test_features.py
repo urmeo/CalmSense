@@ -6,6 +6,48 @@ from src.features.hrv_time_domain import HRVTimeDomainExtractor
 from src.preprocessing.ecg_processor import ECGProcessor
 
 
+def test_missing_eda_preserves_feature_order_and_zero_event_counts():
+    from src.features.eda_features import EDAFeatureExtractor
+
+    extractor = EDAFeatureExtractor()
+    features = extractor.extract_all({})
+    assert list(features) == [
+        "SCL_mean",
+        "SCL_std",
+        "SCL_slope",
+        "SCL_min",
+        "SCL_max",
+        "SCR_count",
+        "SCR_rate",
+        "SCR_amplitude_mean",
+        "SCR_amplitude_max",
+        "SCR_rise_time_mean",
+        "SCR_recovery_time_mean",
+        "SCR_AUC",
+        "EDA_mean",
+        "EDA_range",
+        "EDA_kurtosis",
+    ]
+    assert all(
+        value == 0.0 if key.startswith("SCR_") else np.isnan(value)
+        for key, value in features.items()
+    )
+    features["SCL_mean"] = 3.0
+    assert np.isnan(extractor.extract_all({})["SCL_mean"])
+
+
+def test_compute_failure_preserves_earlier_values_and_remaining_nans(monkeypatch):
+    extractor = HRVTimeDomainExtractor()
+
+    def fail(_):
+        raise RuntimeError("synthetic compute failure")
+
+    monkeypatch.setattr(extractor, "compute_sdnn", fail)
+    features = extractor.extract_all(np.full(60, 800.0))
+    assert features["MeanNN"] == 800.0
+    assert all(np.isnan(value) for key, value in features.items() if key != "MeanNN")
+
+
 def test_rmssd_constant_rr_is_zero():
     rr = np.full(60, 800.0)  # constant heartbeat
     features = HRVTimeDomainExtractor().extract_all(rr)

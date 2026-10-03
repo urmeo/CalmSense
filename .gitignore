@@ -126,6 +126,7 @@ data/external/*
 outputs/models/*
 !outputs/models/.gitkeep
 !outputs/models/stress_classifier.joblib
+!outputs/models/stress_classifier.joblib.sha256
 
 # =============================================================================
 # IDE / Editor
@@ -194,18 +195,12 @@ $RECYCLE.BIN/
 # Logs
 logs/*
 !logs/.gitkeep
+!logs/README.md
 *.log
 
-# Figures: keep generated result PNGs
+# Generated plots; committed research snapshots live in docs/figures/
 outputs/figures/*
 !outputs/figures/.gitkeep
-!outputs/figures/*.png
-# Unreferenced figures; make reproduce still generates them, not committed
-outputs/figures/binary_pca.png
-outputs/figures/multiclass_pca.png
-outputs/figures/multiclass_optimism_gap.png
-outputs/figures/multiclass_per_subject.png
-outputs/figures/calibration_gap.png
 
 # Demo (synthetic) outputs, never overwrite the committed real-WESAD results
 results/demo/
@@ -235,6 +230,10 @@ configs/local/
 *.local.yaml
 
 # Node.js (for frontend)
+# Generated from frontend/config/*.mjs by tooling.mjs
+frontend/package.json
+frontend/package-lock.json
+frontend/tsconfig.json
 frontend/node_modules/
 frontend/build/
 frontend/dist/

@@ -1,0 +1,947 @@
+const data = {
+  "binary": {
+    "n_windows": 869,
+    "n_features": 58,
+    "classes": [
+      "baseline",
+      "stress"
+    ],
+    "models": [
+      {
+        "model": "Logistic Regression",
+        "accuracy_mean": 0.9018260232930319,
+        "accuracy_std": 0.1050115077832913,
+        "f1_macro_mean": 0.8825822730594991,
+        "balanced_accuracy": 0.8985127569058852
+      },
+      {
+        "model": "Random Forest",
+        "accuracy_mean": 0.9132857382783859,
+        "accuracy_std": 0.10067168914776647,
+        "f1_macro_mean": 0.8983021720206017,
+        "balanced_accuracy": 0.90282495044455
+      },
+      {
+        "model": "XGBoost",
+        "accuracy_mean": 0.9025112501213267,
+        "accuracy_std": 0.11842527517884838,
+        "f1_macro_mean": 0.873121621157624,
+        "balanced_accuracy": 0.885211030869278
+      },
+      {
+        "model": "LightGBM",
+        "accuracy_mean": 0.8935700023056233,
+        "accuracy_std": 0.11446973551180127,
+        "f1_macro_mean": 0.8599324552875776,
+        "balanced_accuracy": 0.8714427301285543
+      },
+      {
+        "model": "1D-CNN",
+        "accuracy_mean": 0.7183561164569502,
+        "accuracy_std": 0.27722034724356825,
+        "f1_macro_mean": 0.6480460011342682,
+        "balanced_accuracy": 0.730012635190745
+      }
+    ],
+    "best_model": "Random Forest",
+    "loso_accuracy": 0.9132857382783859,
+    "loso_pooled_accuracy": 0.9125431530494822,
+    "loso_matched_accuracy": 0.9066059225512528,
+    "within_subject_accuracy": 0.9635535307517085,
+    "optimism_gap_pts": 5.7
+  },
+  "multiclass": {
+    "n_windows": 1032,
+    "n_features": 58,
+    "classes": [
+      "baseline",
+      "stress",
+      "amusement"
+    ],
+    "models": [
+      {
+        "model": "Logistic Regression",
+        "accuracy_mean": 0.6703704077878144,
+        "accuracy_std": 0.16290182282941648,
+        "f1_macro_mean": 0.6126683067120021,
+        "balanced_accuracy": 0.6682125876235817
+      },
+      {
+        "model": "Random Forest",
+        "accuracy_mean": 0.6367187240148422,
+        "accuracy_std": 0.21471396206514726,
+        "f1_macro_mean": 0.5345091832414199,
+        "balanced_accuracy": 0.5659130805740479
+      },
+      {
+        "model": "XGBoost",
+        "accuracy_mean": 0.6334898885478485,
+        "accuracy_std": 0.20318066113706604,
+        "f1_macro_mean": 0.5518748200396154,
+        "balanced_accuracy": 0.5829297319021652
+      },
+      {
+        "model": "LightGBM",
+        "accuracy_mean": 0.6582011585550105,
+        "accuracy_std": 0.18671909663718414,
+        "f1_macro_mean": 0.5683473906942399,
+        "balanced_accuracy": 0.6129739449949972
+      },
+      {
+        "model": "1D-CNN",
+        "accuracy_mean": 0.6255016718370817,
+        "accuracy_std": 0.23598541801728817,
+        "f1_macro_mean": 0.5429313964846325,
+        "balanced_accuracy": 0.6387417833390854
+      }
+    ],
+    "best_model": "Logistic Regression",
+    "loso_accuracy": 0.6703704077878144,
+    "loso_pooled_accuracy": 0.6705426356589147,
+    "loso_matched_accuracy": 0.6583011583011583,
+    "within_subject_accuracy": 0.7915057915057915,
+    "optimism_gap_pts": 13.3
+  },
+  "shap": [
+    {
+      "feature": "ACC_zero_crossings",
+      "mean_abs_shap": 1.3547838
+    },
+    {
+      "feature": "HRV_MedianNN",
+      "mean_abs_shap": 0.8845277
+    },
+    {
+      "feature": "EDA_SCR_amplitude_max",
+      "mean_abs_shap": 0.851968
+    },
+    {
+      "feature": "ACC_std",
+      "mean_abs_shap": 0.8164616
+    },
+    {
+      "feature": "EDA_SCR_recovery_time_mean",
+      "mean_abs_shap": 0.7394631
+    },
+    {
+      "feature": "HRV_MeanNN",
+      "mean_abs_shap": 0.68244267
+    },
+    {
+      "feature": "RESP_rate",
+      "mean_abs_shap": 0.66373026
+    },
+    {
+      "feature": "EDA_SCL_max",
+      "mean_abs_shap": 0.51800895
+    },
+    {
+      "feature": "ACC_peak_freq",
+      "mean_abs_shap": 0.396291
+    },
+    {
+      "feature": "TEMP_mean",
+      "mean_abs_shap": 0.3304044
+    },
+    {
+      "feature": "ACC_magnitude",
+      "mean_abs_shap": 0.29409736
+    },
+    {
+      "feature": "EDA_SCL_slope",
+      "mean_abs_shap": 0.25538525
+    }
+  ],
+  "stats": {
+    "best_model": "Random Forest",
+    "best_accuracy_mean": 0.9132857382783859,
+    "best_ci95": [
+      0.8602649526590214,
+      0.9602347205671683
+    ],
+    "omnibus_friedman": {
+      "chi2": 0.9813084112149771,
+      "p_value": 0.8057746412606928
+    },
+    "pairwise_holm": {
+      "Logistic Regression vs Random Forest": {
+        "delta_mean": -0.01145971498535403,
+        "p_raw": 0.5939546753269146,
+        "p_holm": 1.0
+      },
+      "Logistic Regression vs XGBoost": {
+        "delta_mean": -0.0006852268282948604,
+        "p_raw": 0.6100665567498502,
+        "p_holm": 1.0
+      },
+      "Logistic Regression vs LightGBM": {
+        "delta_mean": 0.008256020987408519,
+        "p_raw": 1.0,
+        "p_holm": 1.0
+      },
+      "Random Forest vs XGBoost": {
+        "delta_mean": 0.01077448815705917,
+        "p_raw": 0.4768097606977212,
+        "p_holm": 1.0
+      },
+      "Random Forest vs LightGBM": {
+        "delta_mean": 0.01971573597276255,
+        "p_raw": 0.2615722360139494,
+        "p_holm": 1.0
+      },
+      "XGBoost vs LightGBM": {
+        "delta_mean": 0.00894124781570338,
+        "p_raw": 0.40652926629258523,
+        "p_holm": 1.0
+      }
+    }
+  },
+  "wrist": {
+    "wrist_models": [
+      {
+        "model": "Logistic Regression",
+        "accuracy_mean": 0.859865352263528,
+        "f1_macro_mean": 0.8437449444563258
+      },
+      {
+        "model": "Random Forest",
+        "accuracy_mean": 0.8931950318845121,
+        "f1_macro_mean": 0.8695873626969576
+      },
+      {
+        "model": "XGBoost",
+        "accuracy_mean": 0.9056235360205233,
+        "f1_macro_mean": 0.8844367064723023
+      },
+      {
+        "model": "LightGBM",
+        "accuracy_mean": 0.8874690584966299,
+        "f1_macro_mean": 0.8652392560683516
+      }
+    ],
+    "wrist_best": {
+      "model": "XGBoost",
+      "accuracy_mean": 0.9056235360205233,
+      "f1_macro_mean": 0.8844367064723023
+    },
+    "chest_best": {
+      "model": "Random Forest",
+      "accuracy_mean": 0.9132857382783859
+    },
+    "same_model_rf": {
+      "chest": 0.9132857382783859,
+      "wrist": 0.8931950318845121,
+      "drop_pts": 2.009070639387378
+    },
+    "best_per_arm_drop_pts": 0.7662202257862627
+  },
+  "cross_dataset": {
+    "n_shared_features": 18,
+    "methodology": {
+      "portable_schema_version": 2,
+      "slope_units": "per_second",
+      "finite_sample_timestamps": "original_sample_positions",
+      "window_seconds": 60.0,
+      "overlap": 0.5,
+      "packages": {
+        "numpy": "2.5.3",
+        "pandas": "2.3.3",
+        "scikit-learn": "1.6.1",
+        "neurokit2": "0.2.12",
+        "wfdb": "4.3.1"
+      }
+    },
+    "datasets": {
+      "wesad": {
+        "n_windows": 869,
+        "n_subjects": 15,
+        "label_counts": {
+          "0": 562,
+          "1": 307
+        },
+        "cache_sha256": "ce45076602775d668cd6894657342d34925128961d610f99db734d9aa27595a5",
+        "source_provenance": {
+          "feature_source": "raw_reextraction",
+          "dataset_version": "WESAD official Uni-Siegen distribution",
+          "raw_file_sha256": {
+            "S2/S2.pkl": "36ef5e8afc0f91998eefba7c12fc9fa97b7b07198cbec0126917d7abb436ca23",
+            "S3/S3.pkl": "5c8bd4a82af029c082e610bca28a011fca2ae3b23e14a18458ebb5990be4015e",
+            "S4/S4.pkl": "0f0740a79388723360ff12b4f47c465665ea7827d1399b18ac43908daac17900",
+            "S5/S5.pkl": "74bd187e3a9c1ca4259af52d04974c8e7ff7dc49ceea7e269f499ca98fe6d8ec",
+            "S6/S6.pkl": "8aa9bf57b69f4fe5bce06c550230857627c3f05befa2f787151646bb29ee8f62",
+            "S7/S7.pkl": "9cb62705ae7f53dca327a9a00a6f9fdabf5128d449174ab37594658e912cb6d8",
+            "S8/S8.pkl": "dac1141dac11d56b3641be982f45da63f05e9d74154f59e6ea0cdcf47fc72710",
+            "S9/S9.pkl": "24dc004e201bd541f092989443f0a29ebf89e4a227a80bb6b6d1987255039544",
+            "S10/S10.pkl": "41da29c68366f33650f3d41a6be78107bf6942929c3bb0ef46238078ddddee9f",
+            "S11/S11.pkl": "f39557a8d660b10154936f51debf2926aea7ebb9b26a168858f59502f914d8f7",
+            "S13/S13.pkl": "772fb490f19b279e49367271e009fc10d3a3ca1e3456df0d68b9063a73992066",
+            "S14/S14.pkl": "e7bd33c57538319a25c6d53e6a9fb6c1abd12800cfc64bb63275d89de8d2fd60",
+            "S15/S15.pkl": "1ea573bc6b45ba79fb134f9460d691b86176f60dce23420dc514c28017d4049c",
+            "S16/S16.pkl": "f65cf40cada75c3e9f5813276d7dcc90359c3b06dec41d68656c0a6e61dbc575",
+            "S17/S17.pkl": "3315796a75227d54d7b0056736f671484fd2fb85afffa65818fd76aeff2920fa"
+          },
+          "manifest_sha256": "d48cc567a1a05a11a047f4c59d5bbc1003f4d86501dcfb185414271a0a81ccf5",
+          "packages": {
+            "numpy": "2.5.3",
+            "pandas": "2.3.3",
+            "scipy": "1.18.1",
+            "scikit-learn": "1.6.1",
+            "neurokit2": "0.2.12",
+            "wfdb": "4.3.1"
+          },
+          "generation_context": {
+            "git_sha": "ff68e761b43a220c8f76effa2893526915b25ebd",
+            "generated_at": "2026-10-03T14:55:01.840058+00:00",
+            "working_tree_dirty": true,
+            "source_file_sha256": {
+              "src/portable.py": "dea06bf88d389ecdafc441e20850d378442ee5ce851bf3a34e969cf719bffcee",
+              "src/datasets/non_eeg.py": "7d3830f49d5c0c884c827e764229dff6f447145e00440b0009c7e014e90cc282",
+              "scripts/cross_dataset.py": "fdc32b6f70ced9e925400a9498152ec6ed66fdbb5cd03a1d7152baf7126a9940",
+              "scripts/run_experiment.py": "ed11ca7acc3729f494c566591e9b456ac8d981c68384d9473178455e76fcc9ac",
+              "src/models/ml/classifiers.py": "6e2c077cb5471b170d0caf833111ea1878a2289c309448cdeb17848822aac29e",
+              "src/config.py": "244c1471096e71671e898322ac5d8d88f47f506a9b2823392457a479ef449b64"
+            }
+          },
+          "integrity_check": "matched_committed_wesad_reference_manifest"
+        }
+      },
+      "noneeg": {
+        "n_windows": 1133,
+        "n_subjects": 20,
+        "label_counts": {
+          "0": 709,
+          "1": 424
+        },
+        "cache_sha256": "4643afa4f66e5b69f4f10d4873649b5498b4ec29ecc728d9e2ffc399e4e7eeca",
+        "source_provenance": {
+          "feature_source": "raw_reextraction",
+          "dataset_version": "PhysioNet Non-EEG 1.0.0",
+          "raw_file_sha256": {
+            "Subject1_AccTempEDA.hea": "c3e3662a21b475f7253f1531782de7c54aa232efe637c5646dd2233a417f1cc3",
+            "Subject1_AccTempEDA.dat": "4b9110a099419ed77d80397ad433d8c03eaafda26ceb223a29ebd987c1023fcf",
+            "Subject1_AccTempEDA.atr": "461f57af6d4098806e648d9ba43ec9285bea677079e418ef6661fc483d4fd4ae",
+            "Subject1_SpO2HR.hea": "29bf5322ff7331df90a6db4771c756838e5cd46e5d4939ecb460b15e1d2a3c53",
+            "Subject1_SpO2HR.dat": "ba8489e8b9be69c1bc2c2cd349656245412fe7fcd105d271de22f786ea87d4e2",
+            "Subject2_AccTempEDA.hea": "4e149e150e3ddfdc524a47e8db4384da1bb93cd97bab0877d709812656cd126e",
+            "Subject2_AccTempEDA.dat": "a3d960b165feb363354333fbbb118127bb4a2028b0e1af4f82fe4fe068bb7892",
+            "Subject2_AccTempEDA.atr": "03050f943446452a336067269345dce9b249ae4b8f17d9848c893c0252f0e463",
+            "Subject2_SpO2HR.hea": "d5392d8703641c9db85223b5134b3896fd16ef2ae468914c4f3091db880e883a",
+            "Subject2_SpO2HR.dat": "b47b2e43e23a42485cc4834b3f0c0ba211f6e5e621e327b3bca5a620423e96be",
+            "Subject3_AccTempEDA.hea": "c255e04857e490148ff57de013168956410176dbba50d05be10a7106b1e9f430",
+            "Subject3_AccTempEDA.dat": "c1d79d77e6e2b742590c9785d90b6ce29e72cc3b58c0d087fbd4e3e0434a25e8",
+            "Subject3_AccTempEDA.atr": "14813d6a89f758e568c34424780fa36e7b7051d90710f1970a610c187d9715ab",
+            "Subject3_SpO2HR.hea": "8154af677f778bc41b73f5af5b858da13db066ff94beb0adc07ee3aa5632d06b",
+            "Subject3_SpO2HR.dat": "b37920dd7cfcd9dd1fa012476f7ada6101b7f1c56d90d22d02562ac50804c2bd",
+            "Subject4_AccTempEDA.hea": "699006012ffdd7b80856fbf09fc2e88cfa145c77fdf7e3d37c422ab465805272",
+            "Subject4_AccTempEDA.dat": "4e6d9fbccae6dc5c9562d89f025c2815a9d686dac0481ba1c0d2175c0bd3562d",
+            "Subject4_AccTempEDA.atr": "faacc3ce8500afebeb4415581ffc2ff63edb0ff8e4e307b39b6980dc9fc57370",
+            "Subject4_SpO2HR.hea": "cf08714fc1893ff3ad145fabd2b8e34e48c55324ef4c8bc3b8d87519292c7d4e",
+            "Subject4_SpO2HR.dat": "fa0f27d2d2b7145f13ef77cc936de2dae487b9d23757752e018025e489827f4d",
+            "Subject5_AccTempEDA.hea": "2ed24b6791a3d6c1b8dbd4726bd654c642d9bf8935b1daecce5a5e7170330e2a",
+            "Subject5_AccTempEDA.dat": "febc9b10bc23169643066bf74d45f62eb780cfef9d4041b86895cce607dc876c",
+            "Subject5_AccTempEDA.atr": "4586b8b1e31a4daa6d74b9c9ea5bea912306ad06e1bd4daa58470c5a465319a5",
+            "Subject5_SpO2HR.hea": "aa0c4b32b76beeb40d3121962960646e1ef3cf05268cf3b956c2068aeb6f3566",
+            "Subject5_SpO2HR.dat": "11647a0f4dde5c974e887358d044e8c7083b3ad1df3e4750e01539a7c0e0786c",
+            "Subject6_AccTempEDA.hea": "05965fb726000bb95385615979a2c7e8a72174f49089f7305362aedd42922767",
+            "Subject6_AccTempEDA.dat": "39df81d2e3b62b5ca8ead496f4b9ebd24a38a1c0a97b361b944da589915b39cd",
+            "Subject6_AccTempEDA.atr": "19638f2e04ac65d2a50252b0f35ade0b84fcccdc4bba264bea4bc177894d0210",
+            "Subject6_SpO2HR.hea": "22942814676b75748ea2ec4bcfa9a262219925f88d26c5a0b992f246e5dc375b",
+            "Subject6_SpO2HR.dat": "9490b29cef38e5501978f964ef40d77cfb4d2cf36fa549f5cece2a6007520aff",
+            "Subject7_AccTempEDA.hea": "d02274bb615566410927107c6901dc47749915d93a11b8f1c9d2b1f4331451e1",
+            "Subject7_AccTempEDA.dat": "7e650a82b534bd5c2e98e0207ed53d12f0dd14dd613123af89e541a45acfbaed",
+            "Subject7_AccTempEDA.atr": "9cbf5560b42df6807c13315b78df823db2464b251263b91c4bd87b30606cd83b",
+            "Subject7_SpO2HR.hea": "27f09ff2f25d914502d1a60ef18d5237fb86cc31cf8178b8bb74176f03d8b542",
+            "Subject7_SpO2HR.dat": "d62d88ab5560bb8c295936e7f710f443bbded40f9dca167962b3159abf631cc3",
+            "Subject8_AccTempEDA.hea": "60e8f07399c2b2a6b743cf4e89a57c576615576d8ccfb4d2a7177a2e9ce2f1ef",
+            "Subject8_AccTempEDA.dat": "db2cb495c7a5983aa09701de91c47aeadbd548f69db28ce37858d10cba3469ac",
+            "Subject8_AccTempEDA.atr": "87f535b1b8aae9810fc1978ed7b2d96af1ed3f50944d8233b43f0f17b88158c3",
+            "Subject8_SpO2HR.hea": "4ca107e6499d7f80532d0428411d82528f94fb093f1a3e45337988f3aed7f92b",
+            "Subject8_SpO2HR.dat": "87a7fc8eae8c5e71e5ade66731c91b5b34d4e72496a0b5c0463c76f3f87a805d",
+            "Subject9_AccTempEDA.hea": "99eab9abb40c9ef7ffedf1db7ba3534f59f924400fc24c05345c3a0ee6925c21",
+            "Subject9_AccTempEDA.dat": "882637d07329d1b71175ee7a229ab41aff26aca741d8cf61c75f1bf1571a8f43",
+            "Subject9_AccTempEDA.atr": "adcee4adeea28ca73b2ed163dced2b79770a5abce497b499ceeb7ad6bed83fa1",
+            "Subject9_SpO2HR.hea": "68d05ac96f65ed66369c7cd3041ed81754b2e20bedf35a07303d9c465798baa4",
+            "Subject9_SpO2HR.dat": "c62b43e35b27fd4f189a59a7ca67f4228b95257cd1e94470b40a4dbd496bd156",
+            "Subject10_AccTempEDA.hea": "5e7dac5c13b59efa5de8b986de6a1f380cc249d60e4587a3be0bcc6a100162f0",
+            "Subject10_AccTempEDA.dat": "4ffb176d15b966f23fc19283220aff327d043ec3b1f1aa39853f62d04a713fbd",
+            "Subject10_AccTempEDA.atr": "e18369410282121ff3cfa79f8ed8cfeea15b73b5b8227d1953fd3551395a50ad",
+            "Subject10_SpO2HR.hea": "fda50b6ba9862f96693d3517273502696b71ab6c3531b24d4e9004ded2736fa6",
+            "Subject10_SpO2HR.dat": "579a9eed3becaeff3fbd53ecfac320bf1b244150e4a7620cacc85d1e4ba00484",
+            "Subject11_AccTempEDA.hea": "103994de98a660f6077b9a2af6680b18304f7ba4d6fd15f9e9af5322be12bd33",
+            "Subject11_AccTempEDA.dat": "e220f404c795081e5996abcc8bed3f983fbbc5666f00f977ad24d1dfd74f1f5a",
+            "Subject11_AccTempEDA.atr": "20d8a34663837ad8c831180b8351cafd7acdc5f6ca31a88c96e2c2a0717c92ae",
+            "Subject11_SpO2HR.hea": "77e5c1ec4c04361ab20990e81eadb42046babc56f8a1410286c5033a933bd439",
+            "Subject11_SpO2HR.dat": "72a0eb7728659da346b97bfba6a011327122a0e5fa52ba2982b1431a1160de30",
+            "Subject12_AccTempEDA.hea": "b97ba77c0d17b41b118724bb1f72a37a1d7b35213a408bc335887f2dcae0f44b",
+            "Subject12_AccTempEDA.dat": "38ae91180870a23f0bd139e88ab81be94ab0701a38c2789bfd021102232ff70d",
+            "Subject12_AccTempEDA.atr": "1d4b209979bd978746319173e4c14cde12264775f773a56f6bef29f6052e391b",
+            "Subject12_SpO2HR.hea": "4eb067343b4148b1769e611b63669683e9acc830d50f6ba953ad6e19ae8c35b6",
+            "Subject12_SpO2HR.dat": "d817cd801b0754add2bfcbf296910d6578f1c3f146faec33d4c51bb1b503afd1",
+            "Subject13_AccTempEDA.hea": "8c6d4ae2bb34dc6cbb33060b8a68a835354dffdc58604baf6209599aaec4bb54",
+            "Subject13_AccTempEDA.dat": "277869268a939796d7e23d388212d47225b9fefe650ae7f5dbac82be5d844e67",
+            "Subject13_AccTempEDA.atr": "adcee4adeea28ca73b2ed163dced2b79770a5abce497b499ceeb7ad6bed83fa1",
+            "Subject13_SpO2HR.hea": "7d8c48e1efec17c337f5f4a3324aeab4701fca69f53d865ddf22cb42877217cc",
+            "Subject13_SpO2HR.dat": "696599a78924701529637a64de33fa21daad56e23aa798da4557c9c77dea6e99",
+            "Subject14_AccTempEDA.hea": "483307083b8a3c97b3ec78b760da0e2bbf41dade62e5a5302cccaf357db68160",
+            "Subject14_AccTempEDA.dat": "e3400f15e54238dc0b3681b378b6a48a73de00e765717386e24d06d8347bd049",
+            "Subject14_AccTempEDA.atr": "720724ae41b8ca2290a231f8ea3069876df48c361006dd73a7b6230e9fe1221a",
+            "Subject14_SpO2HR.hea": "879a013a22d14045c558b7a3dc603f953c58b23613707cac0bc1882c19112c67",
+            "Subject14_SpO2HR.dat": "b6f1d4a306a5ead02de3958886accdb8442796904e4341927ffa7ca12d8f9ebb",
+            "Subject15_AccTempEDA.hea": "b471f85bda75c4180090d9facc6d3b956ec8c54d22049bbd13ba36ada35e440e",
+            "Subject15_AccTempEDA.dat": "72dfadef1182a2ff867d3f88660f58cca4497683cc4668af7b7e8cacef334986",
+            "Subject15_AccTempEDA.atr": "52bf9656fb47e5e1ff954df32eb2e2ef49c9cb102cc2b58d0b5031c3b9c4e18b",
+            "Subject15_SpO2HR.hea": "113f3e09a8e6123adb7abbc397e5464d90547110d910c975fce01b5482512f67",
+            "Subject15_SpO2HR.dat": "cb49fac4b2d59fb40555d20c0c1e61b1f500a679dd5f02c34162a0ead774dada",
+            "Subject16_AccTempEDA.hea": "9be128d1c11f104bda91a29673217da8bd696121867847a06e853310edc61ca2",
+            "Subject16_AccTempEDA.dat": "ad5d69af41c9f95410f3fbda9ad4e7c19459fb67b32d79e1acb7573dbb435301",
+            "Subject16_AccTempEDA.atr": "d9e7026051bcf1524f87cae6b06d79c1ccd49df958d87ba28306a0d8f938bbae",
+            "Subject16_SpO2HR.hea": "a1dd60a025ba4abd383c368e6f17be60ff6e44bc574cd5f9cf3b74ca9b8a5a71",
+            "Subject16_SpO2HR.dat": "fbcf993f94220e5bbe6d1eccd8e019f5ad16c35abcb4469ac0d790ca6b780d08",
+            "Subject17_AccTempEDA.hea": "4b3c371969a8568a528367e04d9e69ae4efdad52b9f80e536309b9edf67248b0",
+            "Subject17_AccTempEDA.dat": "f1dd03373f942d3cffa5e0d76b89e5e51cfc8c50037cb61d804d8b65308be0bf",
+            "Subject17_AccTempEDA.atr": "6cddaed47d3189b26c64a9afd2914f946454e8a89c6203ec066b60d270d5e22d",
+            "Subject17_SpO2HR.hea": "822aa941c2694df886e15d8315152bab9e41f43078c8143c308a533441d43241",
+            "Subject17_SpO2HR.dat": "23313e3d7a45135e1d0a3e3dd754ed38a161d485ccd4c33c3bfa2c782e0d5d4e",
+            "Subject18_AccTempEDA.hea": "cd162ead0e42dbcb3e8dfc41a34983be556941ad9c670e19694739d963454eeb",
+            "Subject18_AccTempEDA.dat": "d0cfd19a2b1f206529db7cc02bf658e12ee81dd053a98b029b89ce56ecd9397c",
+            "Subject18_AccTempEDA.atr": "561adf472427596323a384a28eb2655bb4361f6cf056911a89b282a7d0d9b9ad",
+            "Subject18_SpO2HR.hea": "ee2b9fec3b39205f063554b76655533f1b4ee5e959f9efc040a3c2521f9b2d0b",
+            "Subject18_SpO2HR.dat": "33f3c349bb0ecf9598c30742397e9503ae4089e5638c7bcbcb05142593980094",
+            "Subject19_AccTempEDA.hea": "cbafc848996921d9ce65e180583b9e3ef6d2c0fd609fc15e7e40d577a8bed28e",
+            "Subject19_AccTempEDA.dat": "f7ac626bc70fa291172ec75e6ea60d075bed85971c5943a637de13b849f61f46",
+            "Subject19_AccTempEDA.atr": "dbf3578755b30277dfb7a3f1f6df9107ccdbe880ba78409680b0aa33790f1f31",
+            "Subject19_SpO2HR.hea": "328d521c656a9da4d572c6aa8bd137acecc1e1a78078c44f21847aebe0e9d768",
+            "Subject19_SpO2HR.dat": "4674f096de8e5a2a84f10ba1f828b8eb967ad163a4a593d7caeefc6f0893863c",
+            "Subject20_AccTempEDA.hea": "26f672f4291c52ef26fc5c7779bde767d154afa0f0b905a608db67ee659fb969",
+            "Subject20_AccTempEDA.dat": "9c7b6fdd0917220dd662272d0003a3980d5b08b06429a510af24ca7417aed865",
+            "Subject20_AccTempEDA.atr": "d93424f4d55681fa9d4910a52a36e863bb86b4cfa12c21051c372ec20a4a795b",
+            "Subject20_SpO2HR.hea": "2e6542118c9a7390dc6c05bd7725781d8ae0e74fd20c4d72d037a5887a8a02b0",
+            "Subject20_SpO2HR.dat": "0a7e9379c6eb2835a6170e5edc2708a327cfafb1f97e74a63c5494f7bb2f1e9a"
+          },
+          "manifest_sha256": "084b1478e83a683d7d88c6ec549e58a2d6a86ac0186dd06d82e25844625bdd73",
+          "packages": {
+            "numpy": "2.5.3",
+            "pandas": "2.3.3",
+            "scipy": "1.18.1",
+            "scikit-learn": "1.6.1",
+            "neurokit2": "0.2.12",
+            "wfdb": "4.3.1"
+          },
+          "generation_context": {
+            "git_sha": "ff68e761b43a220c8f76effa2893526915b25ebd",
+            "generated_at": "2026-10-03T14:55:01.840058+00:00",
+            "working_tree_dirty": true,
+            "source_file_sha256": {
+              "src/portable.py": "dea06bf88d389ecdafc441e20850d378442ee5ce851bf3a34e969cf719bffcee",
+              "src/datasets/non_eeg.py": "7d3830f49d5c0c884c827e764229dff6f447145e00440b0009c7e014e90cc282",
+              "scripts/cross_dataset.py": "fdc32b6f70ced9e925400a9498152ec6ed66fdbb5cd03a1d7152baf7126a9940",
+              "scripts/run_experiment.py": "ed11ca7acc3729f494c566591e9b456ac8d981c68384d9473178455e76fcc9ac",
+              "src/models/ml/classifiers.py": "6e2c077cb5471b170d0caf833111ea1878a2289c309448cdeb17848822aac29e",
+              "src/config.py": "244c1471096e71671e898322ac5d8d88f47f506a9b2823392457a479ef449b64"
+            }
+          },
+          "integrity_check": "local_fingerprint_without_official_checksum_manifest"
+        }
+      }
+    },
+    "within_wesad": {
+      "accuracy": 0.8748761460805793,
+      "f1_macro": 0.851954818659015,
+      "balanced_accuracy": 0.8675536416010757
+    },
+    "within_noneeg": {
+      "accuracy": 0.7198166147474223,
+      "f1_macro": 0.6722363419883234,
+      "balanced_accuracy": 0.698948159778588
+    },
+    "wesad_to_noneeg": {
+      "accuracy": 0.6345984112974404,
+      "balanced_accuracy": 0.5572990126939351,
+      "f1_macro": 0.5431095612873061
+    },
+    "noneeg_to_wesad": {
+      "accuracy": 0.5420023014959724,
+      "balanced_accuracy": 0.4936766086684363,
+      "f1_macro": 0.49346514352665494
+    },
+    "provenance": {
+      "git_sha": "ff68e761b43a220c8f76effa2893526915b25ebd",
+      "generated_at": "2026-10-03T14:56:01.455942+00:00",
+      "working_tree_dirty": true,
+      "source_file_sha256": {
+        "src/portable.py": "dea06bf88d389ecdafc441e20850d378442ee5ce851bf3a34e969cf719bffcee",
+        "src/datasets/non_eeg.py": "7d3830f49d5c0c884c827e764229dff6f447145e00440b0009c7e014e90cc282",
+        "scripts/cross_dataset.py": "fdc32b6f70ced9e925400a9498152ec6ed66fdbb5cd03a1d7152baf7126a9940",
+        "scripts/run_experiment.py": "ed11ca7acc3729f494c566591e9b456ac8d981c68384d9473178455e76fcc9ac",
+        "src/models/ml/classifiers.py": "6e2c077cb5471b170d0caf833111ea1878a2289c309448cdeb17848822aac29e",
+        "src/config.py": "244c1471096e71671e898322ac5d8d88f47f506a9b2823392457a479ef449b64"
+      }
+    }
+  },
+  "calibration": {
+    "model": "rf",
+    "positive_class": "stress",
+    "n_windows": 869,
+    "n_bins": 15,
+    "loso": {
+      "ece": 0.06992091011243548,
+      "mce": 0.15996866522258235,
+      "brier": 0.06815848472394363,
+      "reliability": [
+        {
+          "confidence": 0.5148948325580861,
+          "accuracy": 0.5714285714285714,
+          "count": 28
+        },
+        {
+          "confidence": 0.5649240021984343,
+          "accuracy": 0.6271186440677966,
+          "count": 59
+        },
+        {
+          "confidence": 0.6312004538929358,
+          "accuracy": 0.6865671641791045,
+          "count": 67
+        },
+        {
+          "confidence": 0.7020544971760107,
+          "accuracy": 0.8448275862068966,
+          "count": 58
+        },
+        {
+          "confidence": 0.7714289691923838,
+          "accuracy": 0.8507462686567164,
+          "count": 67
+        },
+        {
+          "confidence": 0.8400313347774176,
+          "accuracy": 1.0,
+          "count": 98
+        },
+        {
+          "confidence": 0.9029293512580363,
+          "accuracy": 0.9878787878787879,
+          "count": 165
+        },
+        {
+          "confidence": 0.9739737361537357,
+          "accuracy": 1.0,
+          "count": 327
+        }
+      ]
+    },
+    "loso_matched": {
+      "ece": 0.09041375566999431,
+      "mce": 0.25625116221041044,
+      "brier": 0.07175684749381185,
+      "reliability": [
+        {
+          "confidence": 0.5123096416796733,
+          "accuracy": 0.38095238095238093,
+          "count": 21
+        },
+        {
+          "confidence": 0.5698540441797111,
+          "accuracy": 0.6071428571428571,
+          "count": 28
+        },
+        {
+          "confidence": 0.6326377266784784,
+          "accuracy": 0.8888888888888888,
+          "count": 27
+        },
+        {
+          "confidence": 0.6967513764793114,
+          "accuracy": 0.9,
+          "count": 40
+        },
+        {
+          "confidence": 0.7694346111184952,
+          "accuracy": 0.7631578947368421,
+          "count": 38
+        },
+        {
+          "confidence": 0.8392015997813937,
+          "accuracy": 0.9836065573770492,
+          "count": 61
+        },
+        {
+          "confidence": 0.9022482905854983,
+          "accuracy": 1.0,
+          "count": 71
+        },
+        {
+          "confidence": 0.9682827831626782,
+          "accuracy": 1.0,
+          "count": 153
+        }
+      ]
+    },
+    "within_subject": {
+      "ece": 0.08542521968091943,
+      "mce": 0.2896024781616663,
+      "brier": 0.03825772712442127,
+      "reliability": [
+        {
+          "confidence": 0.5146082177270086,
+          "accuracy": 0.4,
+          "count": 5
+        },
+        {
+          "confidence": 0.5675403789811908,
+          "accuracy": 0.8571428571428571,
+          "count": 14
+        },
+        {
+          "confidence": 0.6380204988103402,
+          "accuracy": 0.6875,
+          "count": 16
+        },
+        {
+          "confidence": 0.6932859298203706,
+          "accuracy": 0.8695652173913043,
+          "count": 23
+        },
+        {
+          "confidence": 0.7683888009609818,
+          "accuracy": 0.95,
+          "count": 40
+        },
+        {
+          "confidence": 0.8373200508798057,
+          "accuracy": 0.9772727272727273,
+          "count": 44
+        },
+        {
+          "confidence": 0.9042228440914886,
+          "accuracy": 1.0,
+          "count": 93
+        },
+        {
+          "confidence": 0.9720663784239295,
+          "accuracy": 1.0,
+          "count": 204
+        }
+      ]
+    },
+    "recalibrated_isotonic": {
+      "ece": 0.02467522642534375,
+      "mce": 0.27128482972136214,
+      "brier": 0.06430397557807731,
+      "reliability": [
+        {
+          "confidence": 0.5212848297213621,
+          "accuracy": 0.25,
+          "count": 8
+        },
+        {
+          "confidence": 0.5559797255263665,
+          "accuracy": 0.5348837209302325,
+          "count": 43
+        },
+        {
+          "confidence": 0.6372416341979812,
+          "accuracy": 0.7608695652173914,
+          "count": 46
+        },
+        {
+          "confidence": 0.7054218785262538,
+          "accuracy": 0.6888888888888889,
+          "count": 45
+        },
+        {
+          "confidence": 0.7709683092741564,
+          "accuracy": 0.6190476190476191,
+          "count": 21
+        },
+        {
+          "confidence": 0.8458676148505605,
+          "accuracy": 0.8571428571428571,
+          "count": 21
+        },
+        {
+          "confidence": 0.9027452987752816,
+          "accuracy": 0.7441860465116279,
+          "count": 43
+        },
+        {
+          "confidence": 0.9917279332358445,
+          "accuracy": 0.9890965732087228,
+          "count": 642
+        }
+      ]
+    },
+    "recalibrated_sigmoid": {
+      "ece": 0.03455785263777166,
+      "mce": 0.15243934011675242,
+      "brier": 0.06107152500713654,
+      "reliability": [
+        {
+          "confidence": 0.5195308395486681,
+          "accuracy": 0.6666666666666666,
+          "count": 12
+        },
+        {
+          "confidence": 0.5682776782146391,
+          "accuracy": 0.6206896551724138,
+          "count": 29
+        },
+        {
+          "confidence": 0.6372878249652373,
+          "accuracy": 0.48484848484848486,
+          "count": 33
+        },
+        {
+          "confidence": 0.6966445360870728,
+          "accuracy": 0.725,
+          "count": 40
+        },
+        {
+          "confidence": 0.7648906384381117,
+          "accuracy": 0.7857142857142857,
+          "count": 56
+        },
+        {
+          "confidence": 0.8383300270253566,
+          "accuracy": 0.86,
+          "count": 50
+        },
+        {
+          "confidence": 0.9022921172682933,
+          "accuracy": 0.9181818181818182,
+          "count": 110
+        },
+        {
+          "confidence": 0.9655232098182254,
+          "accuracy": 0.9962894248608535,
+          "count": 539
+        }
+      ]
+    },
+    "calibration_optimism_gap_ece": 0.005,
+    "recalibration_reduction_ece": 0.0452,
+    "gap_significance": {
+      "n_subjects": 15,
+      "mean_brier_gap": 0.03313058344903237,
+      "ci95": [
+        0.017412545966330194,
+        0.052759144364313726
+      ],
+      "wilcoxon_p": 6.103515625e-05,
+      "effect_size": {
+        "cohens_d": 0.9098290435818792,
+        "hedges_g": 0.8635665498404278,
+        "n": 15
+      },
+      "per_subject": {
+        "S10": {
+          "loso": 0.18578383206357932,
+          "within": 0.05295202985086177
+        },
+        "S11": {
+          "loso": 0.03072077115681337,
+          "within": 0.016226252800795208
+        },
+        "S13": {
+          "loso": 0.14200317006762073,
+          "within": 0.04929083280473264
+        },
+        "S14": {
+          "loso": 0.059327290131025515,
+          "within": 0.02634279559015876
+        },
+        "S15": {
+          "loso": 0.1367405525360041,
+          "within": 0.08981808646132731
+        },
+        "S16": {
+          "loso": 0.003469776550565957,
+          "within": 0.0014183555322078748
+        },
+        "S17": {
+          "loso": 0.05480927042906109,
+          "within": 0.044769809323732146
+        },
+        "S2": {
+          "loso": 0.11925496332179109,
+          "within": 0.08847491091021864
+        },
+        "S3": {
+          "loso": 0.03900979580672188,
+          "within": 0.024586380751688258
+        },
+        "S4": {
+          "loso": 0.00962269047458988,
+          "within": 0.009111659116757004
+        },
+        "S5": {
+          "loso": 0.02657884864827579,
+          "within": 0.013900095267939382
+        },
+        "S6": {
+          "loso": 0.05459078010873425,
+          "within": 0.0428012874280321
+        },
+        "S7": {
+          "loso": 0.0845115653403212,
+          "within": 0.033069458872905105
+        },
+        "S8": {
+          "loso": 0.03708010498560266,
+          "within": 0.02393430183058732
+        },
+        "S9": {
+          "loso": 0.08563277260596013,
+          "within": 0.055481175949237946
+        }
+      }
+    },
+    "decision_curve": {
+      "thresholds": [
+        0.05,
+        0.1,
+        0.15,
+        0.2,
+        0.25,
+        0.3,
+        0.35,
+        0.4,
+        0.45,
+        0.5,
+        0.55,
+        0.6
+      ],
+      "net_benefit_uncalibrated": [
+        0.33183937980740114,
+        0.31607211354046794,
+        0.3111757936776552,
+        0.30609896432681244,
+        0.2930571538166475,
+        0.285385500575374,
+        0.28016287509958393,
+        0.27234369006520903,
+        0.26979809603515015,
+        0.2658227848101266,
+        0.25827899245620767,
+        0.2537399309551208
+      ],
+      "net_benefit_recalibrated": [
+        0.33928895887590094,
+        0.32425521033115967,
+        0.31638800514452037,
+        0.3075373993095512,
+        0.2957422324510932,
+        0.28719381883938844,
+        0.27697618836859345,
+        0.2723436900652091,
+        0.25766293545349933,
+        0.26352128883774456,
+        0.26428845416187186,
+        0.26064441887226697
+      ],
+      "treat_all": [
+        0.3192417176427836,
+        0.2814218130673827,
+        0.2391525079536993,
+        0.1915995397008055,
+        0.13770617568085922,
+        0.07611375965806338,
+        0.005045587324068346,
+        -0.07786728039892604,
+        -0.17585521498064655,
+        -0.2934407364787112,
+        -0.4371563738652349,
+        -0.6168009205983889
+      ]
+    },
+    "provenance": {
+      "git_sha": "4e494d2cbf49891ed14f1db6131eb43b785729b1",
+      "generated_at": "2026-07-02T22:33:27.004062+00:00"
+    },
+    "brier_definition": "positive_class_mse",
+    "brier_rescaled_from": "two_class_sum"
+  },
+  "personalization": {
+    "model": "rf",
+    "eval_frac": 0.5,
+    "k_values": [
+      5,
+      10,
+      20
+    ],
+    "n_subjects": 15,
+    "uncalibrated": {
+      "ece": 0.14636554884970968,
+      "brier": 0.07253879080126666
+    },
+    "global": {
+      "ece": 0.10767801522307499,
+      "brier": 0.07401613307032795
+    },
+    "fewshot": {
+      "5": {
+        "ece": 0.09709093641399243,
+        "brier": 0.061340803849263624
+      },
+      "10": {
+        "ece": 0.07123851459460179,
+        "brier": 0.059257838839211256
+      },
+      "20": {
+        "ece": 0.0690109772096151,
+        "brier": 0.057684764555518596
+      }
+    },
+    "provenance": {
+      "git_sha": "4e494d2cbf49891ed14f1db6131eb43b785729b1",
+      "generated_at": "2026-07-02T22:33:46.610815+00:00"
+    },
+    "brier_definition": "positive_class_mse"
+  },
+  "ablation": [
+    {
+      "subset": "All features",
+      "n_features": 58,
+      "accuracy_mean": 0.913285738278386,
+      "accuracy_std": 0.1006716891477664,
+      "f1_macro_mean": 0.8983021720206017
+    },
+    {
+      "subset": "No motion (HRV+EDA+TEMP+RESP)",
+      "n_features": 53,
+      "accuracy_mean": 0.9010784915742408,
+      "accuracy_std": 0.1247711917291928,
+      "f1_macro_mean": 0.8902200515248017
+    },
+    {
+      "subset": "Autonomic (HRV+EDA)",
+      "n_features": 45,
+      "accuracy_mean": 0.8896425448986681,
+      "accuracy_std": 0.1296709506848814,
+      "f1_macro_mean": 0.8772234226146852
+    },
+    {
+      "subset": "HRV only",
+      "n_features": 30,
+      "accuracy_mean": 0.8098888705356447,
+      "accuracy_std": 0.1607918300147734,
+      "f1_macro_mean": 0.775126908397853
+    },
+    {
+      "subset": "EDA only",
+      "n_features": 15,
+      "accuracy_mean": 0.8280149288265276,
+      "accuracy_std": 0.1278242330897043,
+      "f1_macro_mean": 0.8029723389993931
+    },
+    {
+      "subset": "Motion only (ACC)",
+      "n_features": 5,
+      "accuracy_mean": 0.884758068444891,
+      "accuracy_std": 0.0806252403036477,
+      "f1_macro_mean": 0.870252363040202
+    }
+  ]
+};
+
+export default data;

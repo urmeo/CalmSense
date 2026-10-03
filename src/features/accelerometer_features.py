@@ -45,13 +45,7 @@ class AccelerometerFeatureExtractor(LoggerMixin):
         return self.extract_from_magnitude(magnitude)
 
     def extract_from_magnitude(self, magnitude: np.ndarray) -> Dict[str, float]:
-        features = {
-            "ACC_magnitude": np.nan,
-            "ACC_std": np.nan,
-            "ACC_zero_crossings": np.nan,
-            "ACC_energy": np.nan,
-            "ACC_peak_freq": np.nan,
-        }
+        features = dict.fromkeys(self.get_feature_descriptions(), np.nan)
 
         validated = self._validate_signal(magnitude)
         if validated is None:

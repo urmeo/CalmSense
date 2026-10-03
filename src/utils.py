@@ -75,6 +75,19 @@ def provenance() -> dict:
     return {"git_sha": sha, "generated_at": datetime.now(timezone.utc).isoformat()}
 
 
+def save_verified_joblib(bundle, path: Union[str, Path]) -> None:
+    """Write a joblib bundle and the SHA-256 sidecar used to verify its bytes."""
+    import hashlib
+
+    import joblib
+
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    joblib.dump(bundle, path)
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    path.with_name(path.name + ".sha256").write_text(f"{digest}  {path.name}\n")
+
+
 def load_verified_joblib(path: Union[str, Path]):
     """Load a joblib bundle only after its bytes match the committed SHA-256 sidecar.
 
