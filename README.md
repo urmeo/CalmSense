@@ -372,8 +372,15 @@ Feature models: fold-local imputation/scaling. CNN: raw windows.
 
 ## Tech stack
 
-**Models:** scikit-learn, XGBoost, LightGBM, PyTorch · **Signals:** NeuroKit2, SciPy · **Explainability:** SHAP.
-**Dashboard:** React, TypeScript · **Checks:** GitHub Actions, Ruff, mypy, pytest.
+| Layer | Technologies |
+| :-- | :-- |
+| Data & signals | Python, NumPy, pandas, SciPy, NeuroKit2, WFDB |
+| Models | scikit-learn, XGBoost, LightGBM, PyTorch |
+| Explainability | SHAP |
+| Research figures | Matplotlib, Seaborn |
+| Dashboard | React, TypeScript, Vite, Tailwind CSS |
+| Interactive charts | Plotly, Recharts |
+| Quality & CI | pytest, Ruff, mypy, GitHub Actions |
 
 ## Limitations
 
