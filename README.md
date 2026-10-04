@@ -2,15 +2,14 @@
 
 ### A Machine Learning and Deep Learning Framework for Wearable Biosignal Analysis, Integrating 1D CNNs, Explainable AI, Probability Calibration, and Cross-Dataset Evaluation.
 
-[Live demo](https://urmeo.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urmeo/CalmSense/blob/main/notebooks/CalmSense.ipynb) · [Structure](#architecture) · [Shipped model](#shipped-model)
+[Live demo](https://urmeo.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urmeo/CalmSense/blob/main/notebooks/CalmSense.ipynb) · [Code](#architecture) · [Model](#shipped-model)
 
 [![CalmSense dashboard](outputs/figures/demo.gif)](https://urmeo.github.io/CalmSense/)
 
 ## Overview
 
 Stress classification from ECG, EDA, temperature, respiration, and motion.
-**LOSO:** train on 14 subjects, test on the 15th; repeat for all 15.
-The static dashboard displays committed results.
+**15-fold LOSO:** train on 14 subjects; test on one. Static results dashboard.
 
 | **15** | **58** | **869** | **1,032** |
 | :--: | :--: | :--: | :--: |
@@ -20,34 +19,33 @@ The static dashboard displays committed results.
 
 ```mermaid
 flowchart TD
-    A["WESAD chest signals"] --> B["Preprocess: filters, R-peaks, EDA decomposition"]
-    B --> C["Windows: 60 s, 50% overlap, label purity ≥90%"]
-    C --> D["60 registered features: HRV, EDA, temperature, respiration, motion"]
-    C --> R["Signal tensors for 1D-CNN: 5 channels × 1,024 samples"]
+    A["WESAD chest"] --> B["Filter signals; detect R-peaks; decompose EDA"]
+    B --> C["60 s windows; 50% overlap; ≥90% label purity"]
+    C --> D["60 registered features"]
+    C --> R["Signals: 5 channels × 1,024 samples"]
     D --> E["LOSO: LR, RF, XGBoost, LightGBM"]
     R --> N["LOSO: 1D-CNN"]
     E --> F["Benchmark metrics"]
     N --> F
-    D --> G["Calibration and few-shot personalization"]
-    D --> H["SHAP (full-data fit), ablation, statistics, tuning"]
-    D --> I["Full-data RF refit and checksum"]
-    W["WESAD wrist signals"] --> V["Wrist-only LOSO and chest comparison"]
+    D --> G["Calibration; personalization"]
+    D --> H["SHAP; ablation; statistics; tuning"]
+    D --> I["Full-data model refit + checksum"]
+    W["WESAD wrist"] --> V["Wrist LOSO; chest comparison"]
     E --> V
-    W --> P["18 portable features: transfer analysis"]
-    O["Non-EEG records"] --> P
-    F --> J["Dashboard data export"]
+    W --> P["18 portable features; transfer"]
+    O["Non-EEG"] --> P
+    F --> J["Dashboard export"]
     G --> J
     H --> J
     V --> J
     P --> J
-    J --> K["Static React dashboard; no backend"]
+    J --> K["React dashboard"]
 ```
 
 ## Results
 
-**Saved benchmark from the earlier pipeline.** Corrected code requires a fresh benchmark; see [provenance](#result-provenance).
-
-**15-fold LOSO** · baseline vs stress; three-class adds amusement.
+**Historical snapshots.** Corrected code requires a fresh benchmark; see [provenance](#result-provenance).
+Binary: baseline/stress. Three-class adds amusement.
 
 | Model | Binary acc | Binary F1 | AUROC* | AUPRC* | 3-class acc | 3-class F1 |
 | :-- | --: | --: | --: | --: | --: | --: |
@@ -57,29 +55,13 @@ flowchart TD
 | LightGBM | 0.894 | 0.860 | 0.965 | 0.946 | 0.658 | 0.568 |
 | 1D-CNN | 0.718 | 0.648 | n/a | n/a | 0.626 | 0.543 |
 
-Accuracy / macro-F1: subject means. *AUROC/AUPRC: separate pooled pass; see notes below.
-Saved comparison CSVs and plots contain four feature models; `metrics.json` also records the CNN.
-RF balanced accuracy: **0.903** (pooled default decisions).
+Accuracy/macro-F1: subject means. RF pooled balanced accuracy: **0.903**.
+RF accuracy **95% CI [0.860, 0.960]**; four-model comparison **p = 0.806** (no significant difference).
+Plots/CSVs cover four feature models; [metrics](outputs/results/metrics.json) also include CNN.
 
-**RF accuracy 95% CI: [0.860, 0.960]** · no significant difference detected among four feature models (**p = 0.806**).
-
-<details>
-<summary>6 checks · numeric summary</summary>
-
-| Check | Result |
-| :-- | :-- |
-| Subject leakage | Binary **0.907 → 0.964** (+5.7 pp) · three-class **0.658 → 0.792** (+13.3 pp) |
-| Motion ablation | **0.913 → 0.901** without motion |
-| Chest / wrist | **0.913 / 0.893** · same RF |
-| Transfer | **0.557 / 0.494** balanced accuracy |
-| Isotonic calibration | ECE **0.070 → 0.025** |
-| Personalization | ECE **0.146 → 0.069** · requested 20 windows |
-
-</details>
+Matched subject-mixed gaps: binary **+5.7 pp**; three-class **0.658 → 0.792 (+13.3 pp)**.
 
 ## Graphs & charts
-
-Click figures to enlarge.
 
 <table width="100%">
 <tr>
@@ -109,9 +91,9 @@ Click figures to enlarge.
 </table>
 
 <details>
-<summary>Calibration and personalization · full metrics</summary>
+<summary>Calibration & personalization</summary>
 
-### Probability calibration
+### Calibration
 
 <!-- AUTOGEN:calibration START -->
 | Evaluation | ECE | MCE | Brier |
@@ -122,14 +104,11 @@ Click figures to enlarge.
 | LOSO, all windows + isotonic | 0.025 | 0.271 | 0.064 |
 <!-- AUTOGEN:calibration END -->
 
-15 bins; pooled binary RF predictions; isotonic fitted to training-subject OOF probabilities.
-The plot uses full-window LOSO; matched windows are separate rows.
-Binary Brier is stress-probability MSE; multiclass sums squared class errors.
-Historical two-class Brier scores and paired gap/CI are halved for display; source values, ECE, curves and p-values remain unchanged.
+15 bins; pooled RF; training-subject OOF isotonic fit. Plot: all windows; matched rows: non-overlapping subset.
+Binary Brier: stress-probability MSE; historical two-class scores/gap/CI halved for display. Source artifacts unchanged.
+[Decision curve](outputs/figures/calibration_decision_curve.png).
 
-[Decision-curve analysis](outputs/figures/calibration_decision_curve.png).
-
-### Personalization through probability recalibration
+### Personalization
 
 <!-- AUTOGEN:personalization START -->
 | Recalibration / requested enrollment budget | ECE | Brier |
@@ -141,110 +120,77 @@ Historical two-class Brier scores and paired gap/CI are halved for display; sour
 | Per-subject, budget 20 | 0.069 | 0.058 |
 <!-- AUTOGEN:personalization END -->
 
-Subject means on a reserved half; no classifier retraining. Budgets are requests:
-5 draws 4 balanced windows; class availability can reduce enrollment. Brier uses the same positive-class MSE convention.
-Enrollment and evaluation windows are disjoint.
+Subject means; reserved-half evaluation; disjoint enrollment; no classifier retraining.
+Budget 5 enrolls 4 balanced windows; class availability can reduce requests.
 
 </details>
 
 <details>
-<summary>Protocol and metric notes</summary>
+<summary>Protocol & provenance</summary>
 
-### Data and evaluation protocol
+### Evaluation
 
-| Dataset | Subjects | Role |
-| :-- | --: | :-- |
-| WESAD | 15 | Primary LOSO benchmark |
-| PhysioNet Non-EEG | 20 | Transfer only |
+Imputation, scaling, balancing, calibration: training subjects only.
+Matched gaps: non-overlapping windows. Error bars: subject SDs.
 
-60 s windows · 50% overlap · ≥90% label agreement; meditation excluded.
-Imputation/scaling/balancing/calibration use training subjects only.
-Leakage gaps use matched non-overlapping windows; chart error bars are subject SDs.
-Chest/wrist differences do not establish sensor equivalence.
+*AUROC/AUPRC: separate [pooled OOF pass](outputs/results/threshold_metrics.json); AUPRC = average precision. XGBoost unweighted; CNN unavailable.
+RF Youden J: threshold **0.454**, sensitivity **0.902**, specificity **0.913**, PPV **0.850**, NPV **0.945**; selected on evaluated predictions (exploratory).
+Confusion matrices: pooled, row-normalized default decisions.
 
-*AUROC/AUPRC: pooled OOF [threshold pass](outputs/results/threshold_metrics.json);
-AUPRC is average precision. XGBoost omits benchmark sample weights; CNN values unavailable.
+### Transfer
 
-RF Youden J: **0.454** threshold · sensitivity **0.902** · specificity **0.913** ·
-PPV **0.850** · NPV **0.945**. Selected on the evaluated predictions; exploratory.
-Confusion matrices instead use default decisions, pooled and row-normalized.
-
-### Cross-dataset transfer
-
-Saved wrist-feature RF; 18 shared features; portable schema v2; balanced accuracy. Within WESAD **0.868**; within Non-EEG **0.699**.
-15 WESAD / 20 Non-EEG subjects; NeuroKit2 0.2.12. Heart-rate extraction differs from the benchmark's 0.2.7 environment.
-Portable features preserve sample timestamps when non-finite values are omitted.
-Units are not harmonized: WESAD ACC uses [1/64 g ticks](https://www.empatica.com/blog/decoding-wearable-sensor-signals-what-to-expect-from-your-e4-data/);
-Non-EEG ACC/EDA headers declare NU. No physical conversion is supplied.
-Transfer is confounded by units, devices, stressors, and labels. SHAP explains a full-data fit;
-it is not causal or held-out evidence.
+RF; **18** wrist features; portable **v2**; **15 WESAD/20 Non-EEG subjects**.
+Within-dataset balanced accuracy: **0.868/0.699**. NeuroKit2: **0.2.12** vs benchmark **0.2.7**.
+Unmatched units: WESAD ACC [1/64 g](https://www.empatica.com/blog/decoding-wearable-sensor-signals-what-to-expect-from-your-e4-data/); Non-EEG ACC/EDA NU.
+SHAP: full-data XGBoost fit; no held-out or causal evidence.
 
 ### Shipped model
 
-The [shipped chest RF](outputs/models/stress_classifier.joblib) is refit on all **869** binary windows;
-LOSO evaluates separate fits. Median imputation → standardization → RF, trained with **scikit-learn 1.6.1**.
-Outputs: baseline/stress label and **uncalibrated stress probability**; recalibration maps are not bundled.
-This model uses the original feature definitions. Refit it before using schema v2 features.
-No pretrained third-party weights. [Checksum verification](SECURITY.md).
-
-Sources: [benchmark](outputs/results/metrics.json) · [statistics](outputs/results/stats.json) ·
-[ablation](outputs/results/ablation.csv) · [wrist](outputs/results/wrist.json) · [transfer](outputs/results/cross_dataset.json).
+[Chest RF](outputs/models/stress_classifier.joblib): full-data refit, **869** windows; separate LOSO fits.
+Median imputation → standardization → RF; **scikit-learn 1.6.1**.
+Baseline/stress; **uncalibrated** probabilities; no bundled recalibration.
+Original feature definitions; refit before using schema v2. [Verify](SECURITY.md).
 
 ### Result provenance
 
-[Benchmark metadata](outputs/results/provenance.json) · [Transfer metadata](outputs/results/cross_dataset.json).
-Transfer records raw-file manifests, source-file hashes and a working-tree dirty flag.
-
-Published metrics, figures, and the shipped model are preserved historical snapshots.
-Current extraction **schema v2** corrects HRV spectra, entropy, recurrence, slopes, and filtering;
-benchmark **protocol v2** holds out subjects for CNN validation and weights the XGBoost threshold pass.
-CNN LOSO reserves 3 of 14 training subjects for early stopping; 11 supply gradients and normalization.
-Portable **schema v3** also corrects Non-EEG heart-rate alignment at fractional-second window boundaries.
-Fresh extraction and model fitting are required to report results from this code.
+Snapshots predate corrected extraction **v2**, benchmark **v2**, and portable **v3**.
+Corrections: HRV/entropy/recurrence/filtering/slopes, CNN subject holdout, XGBoost weights, Non-EEG HR alignment.
+CNN training subjects: **11** gradients/normalization; **3** validation.
+[Environments](outputs/results/provenance.json) · [Transfer hashes](outputs/results/cross_dataset.json).
+Fresh extraction/fitting required; stamps do not certify historical results or ancillary linkage.
 
 </details>
 
-<details>
-<summary>Run and reproduce · datasets and integrity</summary>
+## Run
 
-Python **3.11 / 3.12**. From the repository root:
+Python **3.11/3.12**; repository root:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
-python scripts/calibration.py --synthetic  # offline calibration smoke check
+python scripts/calibration.py --synthetic
 ```
 
-### Dataset download and integrity
+Synthetic run: software check only. macOS: `brew install libomp`.
 
-WESAD: [official UCI source](https://archive.ics.uci.edu/dataset/465/wesad+wearable+stress+and+affect+detection),
-research agreement; not redistributed.
-Non-EEG: [PhysioNet source](https://physionet.org/content/noneeg/1.0.0/), downloads directly;
-[Birjandtalab et al., IEEE SiPS 2016](https://doi.org/10.1109/SiPS.2016.27).
+<details>
+<summary>Datasets & experiments</summary>
+
+[WESAD](https://archive.ics.uci.edu/dataset/465/wesad+wearable+stress+and+affect+detection): research agreement; not redistributed. [Non-EEG](https://physionet.org/content/noneeg/1.0.0/): transfer only.
 
 ```bash
-python scripts/download_data.py --wesad  # data/raw/WESAD
-python scripts/download_data.py          # data/external/noneeg
+python scripts/download_data.py --wesad
+python scripts/download_data.py
 python scripts/download_data.py --verify-wesad
 python scripts/download_data.py --verify-noneeg
 ```
 
-Manual extraction: `data/raw/WESAD/S2/S2.pkl` through `S17/S17.pkl`, excluding S12.
-`latin1` pickles: chest ACC/ECG/EMG/EDA/Temp/Resp and labels **700 Hz**;
-wrist ACC **32 Hz**, BVP **64 Hz**, EDA/TEMP **4 Hz**.
-Labels: **1** baseline · **2** stress · **3** amusement; **0, 4 to 7** excluded.
-Binary uses 1/2; three-class uses 1/2/3.
+WESAD path: `data/raw/WESAD/S2/S2.pkl` through S17, excluding S12.
+Chest/labels **700 Hz**; wrist ACC/BVP/EDA/TEMP **32/64/4/4 Hz**.
+Verify WESAD reference hashes/Non-EEG publisher manifest. [Trusted pickles only](SECURITY.md).
 
-WESAD verification uses all 15 repository SHA-256 references; Non-EEG uses the publisher's manifest.
-Trusted pickles only: [security](SECURITY.md). macOS OpenMP: `brew install libomp`.
-Package environments: [benchmark](outputs/results/provenance.json) · [transfer](outputs/results/cross_dataset.json).
-NeuroKit2 versions can change wrist/transfer results. The synthetic demo provides no scientific evidence.
-
-### Reproduce experiments
-
-After downloading both datasets, run these scripts in order to generate current results, local figures,
-the model and checksum, README tables, and dashboard data:
+Run in order:
 
 ```bash
 python scripts/run_experiment.py
@@ -261,144 +207,84 @@ python scripts/build_dashboard_data.py
 python scripts/stamp_provenance.py
 ```
 
-The README updater refreshes only its two marked tables. Review benchmark summaries and
-committed figures explicitly before publishing a new run; dashboard ancillary snapshots remain
-unverified unless linked to their source benchmark.
+Transfer verifies code/package fingerprints.
+README updater changes two tables only; review remaining numbers/figures/provenance before publishing.
 
-Legacy chest/wrist caches rebuild automatically. Transfer caches verify extractor hashes and package versions;
-`--rebuild` replaces stale caches. Provenance stamping records the current environment and file hashes;
-it does not prove that this environment produced existing results.
+</details>
 
-### Dashboard development
+<details>
+<summary>Dashboard development</summary>
 
-Node **24** and npm. From `frontend/`:
+Node **24** + npm; from `frontend/`:
 
 ```bash
 node tooling.mjs install
 node tooling.mjs dev
-node tooling.mjs test     # Dashboard regression checks
-node tooling.mjs build    # TypeScript check and production build
+node tooling.mjs test
+node tooling.mjs build
 node tooling.mjs preview
 node tooling.mjs audit
-node tooling.mjs update   # Dependency edits: review source lock changes
 ```
 
-Edit `frontend/config/*.mjs`; commands generate ignored npm/TypeScript JSON files.
-GitHub dependency discovery does not read the custom manifest.
-CI installs locked dependencies, blocks moderate or higher frontend audit findings, builds once and publishes `outputs/generated/site/`
-under `/CalmSense/` with a deep-link fallback after all checks pass on `main` (push or manual run).
-From the repository root: `python scripts/build_dashboard_data.py` refreshes dashboard results;
-`python scripts/export_signals.py` refreshes signal snapshots and requires WESAD.
+Configs: `frontend/config/*.mjs`; generated JSON ignored. GitHub cannot discover dependencies from this manifest.
+Build: `outputs/generated/site/`, base `/CalmSense/`; automatic CI/deployment disabled.
+Root exports: `scripts/build_dashboard_data.py` (results), `scripts/export_signals.py` (WESAD clips).
 
 </details>
 
 ## Architecture
 
-<details>
-<summary>Repository layout · 8 pipeline stages · data flow</summary>
+| Path | Contents |
+| :-- | :-- |
+| `src/` | Data, preprocessing, features, models, calibration |
+| `scripts/` | Experiments, downloads, exports |
+| `notebooks/` | Synthetic Colab demo |
+| `frontend/` | Dashboard and configs |
+| `outputs/{results,figures,models,dashboard}/` | Saved research and dashboard artifacts |
+| `outputs/generated/` | Ignored caches, plots, logs, demo, site |
 
-### Repository layout
+Settings/seed **42**: `src/config.py`. Experiments update results/models; plots stay under `generated/`.
 
-| Location | Contents |
-| --- | --- |
-| `src/` · `scripts/` | Research modules and experiment commands |
-| `notebooks/` | Runnable synthetic demo |
-| `frontend/src/pages/` · `components/` | Dashboard views and shared UI |
-| `frontend/config/` · `frontend/tooling.mjs` | Configuration sources and dashboard commands |
-| `data/` | Local raw datasets |
-| `outputs/results/` | Committed metrics, tables, history and provenance |
-| `outputs/figures/` | Committed research plots and `demo.gif` |
-| `outputs/models/` | Shipped model and SHA-256 checksum |
-| `outputs/dashboard/` | Committed results and signal modules |
-| `outputs/generated/` | Ignored caches, figures, logs, site builds and synthetic runs |
+## Models & features
 
-Experiments refresh `results/` and `models/`; local plots use `generated/figures/`.
-Synthetic outputs stay in `generated/demo/{results,figures,models}/`; committed figures remain separate.
+| Model | Settings |
+| :-- | :-- |
+| Logistic Regression | C=1; L2; class-balanced |
+| Random Forest | 200 trees; depth 10; class-balanced |
+| XGBoost | 200 trees; depth 7; learning rate 0.1 |
+| LightGBM | 200 trees; 50 leaves; learning rate 0.1 |
+| 1D-CNN | Residual blocks; AdamW; early stopping |
 
-### Pipeline stages
-
-| Stage | Operation | Code |
-| --- | --- | --- |
-| 1. Ingest | WESAD chest/wrist pickles; Non-EEG records for transfer | `src/data/loader.py`, `src/datasets/non_eeg.py` |
-| 2. Preprocess | Butterworth filtering, ECG R-peaks and ectopic correction, EDA tonic/phasic decomposition | `src/preprocessing/{filters,ecg_processor,eda_processor}.py` |
-| 3. Window | 60 s; 50% overlap; ≥90% label purity | `src/dataset.py` (chest), `src/dataset_wrist.py` (wrist), shared `window_label()` |
-| 4. Features | 60-column extraction schema; saved benchmark used 58 after dropping two all-NaN respiration columns | `src/features/feature_pipeline.py` and modality extractors |
-| 5. Benchmark | LOSO; training-fold imputation/scaling/balancing; LR/RF/XGBoost/LightGBM and raw-window 1D-CNN | `scripts/run_experiment.py`, `src/models/ml/classifiers.py`, `src/models/dl/cnn_1d.py` |
-| 6. Calibration | ECE/MCE/Brier, decision-curve net benefit, training-subject recalibration, few-shot personalization | `src/calibration.py`, `scripts/{calibration,personalize}.py` |
-| 7. Analysis | Optimism gap, ablation, wrist/chest, transfer, SHAP, statistics, tuning | `scripts/{ablation,wrist,cross_dataset,stats,tuning}.py`, `src/portable.py` |
-| 8. Dashboard | Export results for the static React dashboard | `scripts/build_dashboard_data.py`, `scripts/export_signals.py`, `frontend/` |
-
-Sampling rates, filters, feature settings, subjects, and **seed 42**: `src/config.py`.
-Structured logs: `src/logging_config.py`. Offline demo: `src/synthetic.py`.
-Portable schema v3 uses per-second slopes, timestamp-aligned HR samples, and versioned cache sidecars.
-
-</details>
-
-## Models
-
-<details>
-<summary>5 models · settings</summary>
-
-| Model | Key settings |
-| --- | --- |
-| Logistic Regression | C=1.0, L2, class-balanced |
-| Random Forest | 200 trees, depth 10, class-balanced |
-| XGBoost | 200 trees, depth 7, learning rate 0.1 |
-| LightGBM | 200 trees, 50 leaves, learning rate 0.1 |
-| 1D-CNN | Residual blocks, AdamW, early stopping |
-
-Feature models: fold-local imputation/scaling. CNN: raw windows.
-
-</details>
-
-## Features
-
-**60 registered columns**; the saved benchmark retained **58**, excluding all-NaN
-`RESP_inhale_exhale_ratio` and `RESP_variability`.
-
-<details>
-<summary>6 groups · counts and examples</summary>
-
-| Group | Count | Examples |
-| --- | ---: | --- |
-| HRV time domain | 12 | MeanNN, SDNN, RMSSD, pNN50 |
-| HRV frequency | 8 | LF/HF power, LF/HF ratio |
-| HRV nonlinear | 10 | SampEn, DFA, SD1/SD2, CSI |
-| EDA | 15 | SCL level, SCR count, SCR amplitude |
-| Temperature + respiration | 10 | Temperature slope, respiration rate |
-| Accelerometer | 5 | Magnitude mean, standard deviation, energy |
-
-</details>
+**60 registered features**: HRV **30**, EDA **15**, temperature/respiration **10**, ACC **5**.
+Saved **58** exclude all-NaN `RESP_inhale_exhale_ratio` and `RESP_variability`.
 
 ## Tech stack
 
 | Layer | Technologies |
 | :-- | :-- |
-| Data & signals | Python, NumPy, pandas, SciPy, NeuroKit2, WFDB |
-| Models | scikit-learn, XGBoost, LightGBM, PyTorch |
-| Explainability | SHAP |
-| Research figures | Matplotlib, Seaborn |
-| Dashboard | React, TypeScript, Vite, Tailwind CSS |
-| Interactive charts | Plotly, Recharts |
-| Quality & CI | pytest, Ruff, mypy, GitHub Actions |
+| Signals & data | Python, NumPy, pandas, SciPy, NeuroKit2, WFDB |
+| Models & explanation | scikit-learn, XGBoost, LightGBM, PyTorch, SHAP |
+| Figures | Matplotlib, Seaborn |
+| Dashboard | React, TypeScript, Vite, Tailwind CSS, Plotly, Recharts |
+| Quality | pytest, Ruff, mypy |
 
 ## Limitations
 
-1. **Cohort:** 15 WESAD lab subjects; wide confidence intervals and no clinical validation.
-2. **Analysis:** 60 s windows limit VLF and long-term DFA estimates. CNN performance is weak; exploratory analyses lack multiplicity correction.
-3. **Transfer:** One WESAD/Non-EEG pair; signal units, devices, stressors, and labels differ.
+1. **Cohort:** 15 lab subjects; wide CIs; no clinical validation.
+2. **Analysis:** 60 s windows limit VLF and long-term DFA; weak CNN; exploratory tests lack multiplicity correction.
+3. **Transfer:** One dataset pair; units, devices, stressors, and labels differ.
 
 ## Future work
 
-1. Test transfer on a third dataset with matched sensors and stress labels.
-2. Evaluate stress predictions during daily life outside the lab.
-3. Build live wearable inference; measure prediction latency and battery use.
+1. Validate transfer on a third corpus with matched sensors/labels.
+2. Test daily-life recordings outside the lab.
+3. Measure live inference latency and wearable battery use.
 
 ## Ethics & data use
 
-1. Obtain informed consent before collecting physiological recordings.
-2. Collect only required signals; omit names and direct identifiers.
-3. Use predictions for research only; follow each dataset's terms.
+1. Obtain informed consent for physiological recordings.
+2. Collect required signals only; omit identifiers.
+3. Research use only; follow dataset terms.
 
 ## References
 
