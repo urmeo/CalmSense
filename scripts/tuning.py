@@ -25,7 +25,7 @@ from scripts.run_experiment import (
 )
 from src.config import DEMO_DIR, FIGURES_DIR, RESULTS_DIR, SEED
 from src.features.feature_pipeline import FEATURE_SCHEMA_VERSION
-from src.utils import provenance, write_json
+from src.utils import write_json, analysis_provenance, benchmark_reference
 
 GRIDS = {
     "lr": {"clf__C": [0.1, 1.0, 10.0]},
@@ -184,13 +184,14 @@ def run(synthetic=False, inner_splits=3):
             raise SystemExit("No cached features. Run scripts/run_experiment.py first.")
         features_df, x_raw = cached
 
+    benchmark_sha = benchmark_reference(results_dir, features_df)
     X, y, groups, _, _ = prepare_task(features_df, x_raw, [1, 2])
     tuned = compute(X, y, groups, inner_splits)
     defaults = _defaults(results_dir, groups=groups)
     if not defaults and (results_dir / "metrics.json").exists():
         print("No compatible default benchmark; the comparison is omitted.")
 
-    tuned["provenance"] = provenance()
+    tuned["provenance"] = analysis_provenance(results_dir, benchmark_sha)
     write_json(results_dir / "tuning.json", tuned)
     if defaults:
         _plot(tuned, defaults, figures_dir / "tuning.png")

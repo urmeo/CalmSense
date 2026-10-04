@@ -21,7 +21,12 @@ from scripts.run_experiment import (
 )
 from src.dataset_wrist import WristDataset, load_wrist
 from src.features.feature_pipeline import FEATURE_SCHEMA_VERSION
-from src.utils import provenance, write_json
+from src.utils import (
+    feature_frame_sha256,
+    write_json,
+    analysis_provenance,
+    benchmark_reference,
+)
 
 META = ["subject_id", "window_id", "label", "label_name"]
 
@@ -56,6 +61,7 @@ def _validate_chest_comparison(chest, groups):
 
 
 def run():
+    benchmark_sha = benchmark_reference(RESULTS_DIR, shared_cache=False)
     chest_path = RESULTS_DIR / "metrics.json"
     if not chest_path.exists():
         raise SystemExit(
@@ -110,7 +116,8 @@ def run():
         "best_per_arm_drop_pts": (chest_best["accuracy_mean"] - best["accuracy_mean"])
         * 100,
     }
-    out["provenance"] = provenance()
+    out["provenance"] = analysis_provenance(RESULTS_DIR, benchmark_sha)
+    out["provenance"]["feature_frame_sha256"] = feature_frame_sha256(df)
     write_json(RESULTS_DIR / "wrist.json", out)
 
     plt.figure(figsize=(4.5, 4))

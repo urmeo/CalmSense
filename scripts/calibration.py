@@ -25,7 +25,14 @@ from scripts.run_experiment import (
 from scripts.stats import bootstrap_ci
 from src import calibration as cal
 from src.config import DEMO_DIR, FIGURES_DIR, RESULTS_DIR, SEED
-from src.utils import paired_effect_size, provenance, set_seed, write_json
+from src.utils import (
+    paired_effect_size,
+    provenance,
+    set_seed,
+    write_json,
+    analysis_provenance,
+    benchmark_reference,
+)
 
 POSITIVE = "stress"
 N_BINS = 15
@@ -305,8 +312,10 @@ def run(synthetic=False, model="rf", n_bins=N_BINS):
             raise SystemExit("No cached features. Run scripts/run_experiment.py first.")
         features_df, x_raw = cached
 
+    benchmark_sha = benchmark_reference(results_dir, features_df)
     X, y, groups, _, _ = prepare_task(features_df, x_raw, [1, 2])
     out = compute(X, y, groups, model=model, n_bins=n_bins)
+    out["provenance"] = analysis_provenance(results_dir, benchmark_sha)
 
     _plot_reliability(out, figures_dir / "calibration_reliability.png")
     _plot_gap(out, figures_dir / "calibration_gap.png")

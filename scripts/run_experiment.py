@@ -23,12 +23,21 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.class_weight import compute_sample_weight
 
-from src.config import DEMO_DIR, FIGURES_DIR, MODELS_DIR, RESULTS_DIR, SEED
+from src.config import (
+    DEMO_DIR,
+    FIGURES_DIR,
+    MODELS_DIR,
+    PROCESSED_DATA_DIR,
+    RESULTS_DIR,
+    SEED,
+)
 from src.dataset import WindowedDataset, load_cached
 from src.features.feature_pipeline import FEATURE_SCHEMA_VERSION
 from src.models.ml.classifiers import get_classifier
 from src.utils import (
     atomic_write_text,
+    feature_frame_sha256,
+    pipeline_source_sha256,
     provenance,
     save_verified_joblib,
     set_seed,
@@ -196,7 +205,7 @@ def plot_per_subject(subj_df, path):
 def plot_gap(loso_acc, kfold_acc, path):
     plt.figure(figsize=(4.5, 4))
     bars = plt.bar(
-        ["LOSO\n(subject-independent)", "5-fold\n(within-subject)"],
+        ["LOSO\n(subject-independent)", "5-fold\n(subject-mixed)"],
         [loso_acc, kfold_acc],
         color=["#3498db", "#e67e22"],
     )
@@ -350,6 +359,19 @@ def run():
                 f"{task} benchmark is missing required classes: {', '.join(missing)}"
             )
     summary = {}
+    source_context = {**provenance(), "source_file_sha256": pipeline_source_sha256()}
+    inputs = {
+        "dataset": "synthetic" if args.synthetic else "WESAD",
+        "feature_frame_sha256": feature_frame_sha256(features_df),
+    }
+    if not args.synthetic:
+        for name, key in (
+            ("features.parquet", "feature_cache_sha256"),
+            ("raw_windows.npz", "raw_windows_sha256"),
+        ):
+            path = PROCESSED_DATA_DIR / name
+            if path.exists():
+                inputs[key] = sha256_file(path)
 
     for task, cfg in TASKS.items():
         print(f"\n=== Task: {task} ===")
@@ -485,7 +507,10 @@ def run():
             }
             print(f"  Saved inference model ({CLF_NAMES[top_clf]}) + SHAP.")
 
-    summary["provenance"] = provenance()
+    if source_context["source_file_sha256"] != pipeline_source_sha256():
+        raise ValueError("Pipeline source changed during the primary benchmark")
+    summary["provenance"] = source_context
+    summary["inputs"] = inputs
     summary["benchmark_protocol_version"] = BENCHMARK_PROTOCOL_VERSION
     summary["methodology"] = {
         "feature_schema_version": FEATURE_SCHEMA_VERSION,

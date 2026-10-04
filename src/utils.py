@@ -3,7 +3,7 @@ import random
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Generator, Union
+from typing import Any, Callable, Generator, Union, cast
 
 
 def set_seed(seed: int = 42, deterministic: bool = True) -> None:
@@ -106,6 +106,109 @@ def sha256_file(path: Union[str, Path]) -> str:
 
     with Path(path).open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def feature_frame_sha256(frame) -> str:
+    import hashlib
+    import json
+    from pandas.util import hash_pandas_object
+
+    metadata = {
+        "columns": list(frame.columns),
+        "dtypes": [str(dtype) for dtype in frame.dtypes],
+        "attrs": frame.attrs,
+    }
+    digest = hashlib.sha256(
+        json.dumps(metadata, sort_keys=True, allow_nan=False).encode()
+    )
+    hash_frame = cast(Callable[..., Any], hash_pandas_object)
+    digest.update(hash_frame(frame, index=True).to_numpy().astype("<u8").tobytes())
+    return digest.hexdigest()
+
+
+def pipeline_source_sha256() -> dict:
+    root = Path(__file__).resolve().parent.parent
+    files = sorted((root / "src").rglob("*.py")) + sorted(
+        (root / "scripts").glob("*.py")
+    )
+    return {str(path.relative_to(root)): sha256_file(path) for path in files}
+
+
+def benchmark_reference(
+    results_dir: Union[str, Path], frame=None, *, shared_cache=True
+):
+    import hashlib
+    import json
+    import re
+
+    from .config import PROCESSED_DATA_DIR
+    from .features.feature_pipeline import FEATURE_SCHEMA_VERSION
+
+    path = Path(results_dir) / "metrics.json"
+    if not path.exists():
+        return None
+    payload = path.read_bytes()
+    metrics = json.loads(payload)
+    if not isinstance(metrics, dict) or metrics.get("benchmark_protocol_version") != 2:
+        return None
+    context, inputs = metrics.get("provenance", {}), metrics.get("inputs", {})
+    if not isinstance(context, dict) or not isinstance(inputs, dict):
+        return None
+    if (
+        inputs.get("dataset") != "WESAD"
+        or not isinstance(context.get("git_sha"), str)
+        or not re.fullmatch(r"[0-9a-f]{40,64}", context["git_sha"])
+        or any(
+            not isinstance(metrics.get(task), dict)
+            or metrics[task].get("feature_schema_version") != FEATURE_SCHEMA_VERSION
+            for task in ("binary", "multiclass")
+        )
+    ):
+        return None
+    if not isinstance(context.get("source_file_sha256"), dict):
+        return None
+    if context.get("source_file_sha256") != pipeline_source_sha256():
+        raise ValueError(
+            "Primary benchmark source differs from the current pipeline; rerun it"
+        )
+    keys = ("feature_frame_sha256", "feature_cache_sha256", "raw_windows_sha256")
+    if any(
+        not isinstance(inputs.get(key), str)
+        or not re.fullmatch(r"[0-9a-f]{64}", inputs[key])
+        for key in keys
+    ):
+        return None
+    if shared_cache:
+        for name, key in (
+            ("features.parquet", "feature_cache_sha256"),
+            ("raw_windows.npz", "raw_windows_sha256"),
+        ):
+            cache = PROCESSED_DATA_DIR / name
+            if not cache.exists() or sha256_file(cache) != inputs[key]:
+                raise ValueError(
+                    "Primary benchmark cache differs from the current analysis inputs"
+                )
+        if (
+            frame is not None
+            and feature_frame_sha256(frame) != inputs["feature_frame_sha256"]
+        ):
+            raise ValueError(
+                "Analysis feature frame differs from the primary benchmark inputs"
+            )
+    return hashlib.sha256(payload).hexdigest()
+
+
+def analysis_provenance(results_dir: Union[str, Path], benchmark_sha256) -> dict:
+    context = provenance()
+    if benchmark_sha256 is not None:
+        path = Path(results_dir) / "metrics.json"
+        if not path.exists() or sha256_file(path) != benchmark_sha256:
+            raise ValueError("Primary benchmark changed during the analysis")
+        if benchmark_reference(results_dir, shared_cache=False) != benchmark_sha256:
+            raise ValueError("Primary benchmark context changed during the analysis")
+        context["primary_benchmark_sha256"] = benchmark_sha256
+        context["source_file_sha256"] = pipeline_source_sha256()
+    return context
 
 
 def replace_verified_pair(new_primary, new_sidecar, primary, sidecar) -> None:

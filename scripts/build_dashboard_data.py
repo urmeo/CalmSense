@@ -8,7 +8,7 @@ import pandas as pd
 
 from src.calibration import BINARY_BRIER_DEFINITION, normalize_binary_calibration
 from src.config import OUTPUT_DIR, RESULTS_DIR
-from src.utils import atomic_write_text, sha256_file
+from src.utils import atomic_write_text, benchmark_reference, sha256_file
 
 DASHBOARD_RESULTS = OUTPUT_DIR / "dashboard" / "results.ts"
 
@@ -114,7 +114,16 @@ def _unit_metric(value, name):
 
 def _unverified_sections(metrics, out):
     """Protocol versions apply only to the recorded analysis."""
-    sections = set(out) - {"binary", "multiclass", "benchmark_protocol_version"}
+    sections = set(out) & {
+        "shap",
+        "stats",
+        "wrist",
+        "cross_dataset",
+        "calibration",
+        "personalization",
+        "tuning",
+        "ablation",
+    }
     artifacts = metrics.get("artifacts", {})
     if not isinstance(artifacts, dict):
         raise ValueError("Benchmark artifact metadata must be an object")
@@ -132,6 +141,31 @@ def _unverified_sections(metrics, out):
                 "SHAP snapshot does not match the primary benchmark artifact"
             )
         sections.remove("shap")
+    for section in sorted(sections):
+        data = out[section]
+        if section == "ablation":
+            references = [row.get("benchmark_sha256") for row in data]
+            if not any(reference is not None for reference in references):
+                continue
+        else:
+            context = data.get("provenance", {}) if isinstance(data, dict) else {}
+            if (
+                not isinstance(context, dict)
+                or "primary_benchmark_sha256" not in context
+            ):
+                continue
+            references = [context["primary_benchmark_sha256"]]
+            primary_context = metrics.get("provenance", {})
+            if not isinstance(primary_context, dict) or context.get(
+                "source_file_sha256"
+            ) != primary_context.get("source_file_sha256"):
+                raise ValueError(
+                    f"{section} snapshot source does not match the primary benchmark"
+                )
+        expected = benchmark_reference(RESULTS_DIR, shared_cache=False)
+        if expected is None or any(reference != expected for reference in references):
+            raise ValueError(f"{section} snapshot does not match the primary benchmark")
+        sections.remove(section)
     return sorted(sections)
 
 
@@ -143,6 +177,9 @@ def run():
         )
     if not isinstance(metrics, dict):
         raise ValueError("Benchmark results must be an object")
+    artifacts = metrics.get("artifacts", {})
+    if not isinstance(artifacts, dict):
+        raise ValueError("Benchmark artifact metadata must be an object")
 
     out = {}
     # Export preserves source metadata; it does not certify a new benchmark.
@@ -158,14 +195,19 @@ def run():
             if not isinstance(metrics[task], dict):
                 raise ValueError(f"{task}: benchmark task must be an object")
             out[task] = {k: metrics[task].get(k) for k in TASK_KEYS}
-            if "n_subjects" in metrics[task]:
-                out[task]["n_subjects"] = metrics[task]["n_subjects"]
+            for key in ("n_subjects", "inference_model"):
+                if key in metrics[task]:
+                    out[task][key] = metrics[task][key]
 
     shap = _load_csv("shap_top_features.csv")
     if shap:
         out["shap"] = sorted(shap, key=lambda row: row["mean_abs_shap"], reverse=True)[
             :12
         ]
+        artifact = artifacts.get("shap", {})
+        if isinstance(artifact, dict) and artifact:
+            out["shap_model"] = artifact.get("model")
+            out["shap_scope"] = artifact.get("scope")
     for key, fname in [
         ("stats", "stats.json"),
         ("wrist", "wrist.json"),
@@ -191,6 +233,11 @@ def run():
 
     if out.get("benchmark_protocol_version", 1) >= 2:
         out["unverified_sections"] = _unverified_sections(metrics, out)
+    if "ablation" in out:
+        out["ablation"] = [
+            {key: value for key, value in row.items() if key != "benchmark_sha256"}
+            for row in out["ablation"]
+        ]
 
     payload = json.dumps(out, indent=2, allow_nan=False)
     _validate_tasks(out)

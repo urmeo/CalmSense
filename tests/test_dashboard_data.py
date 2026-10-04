@@ -7,6 +7,7 @@ from functools import partialmethod
 import json
 from types import SimpleNamespace
 import numpy as np
+import pandas as pd
 from scripts import (
     build_dashboard_data,
     export_signals,
@@ -15,6 +16,13 @@ from scripts import (
 )
 from src.calibration import BINARY_BRIER_DEFINITION
 from src.config import RESULTS_DIR
+from src.utils import (
+    analysis_provenance,
+    benchmark_reference,
+    feature_frame_sha256,
+    pipeline_source_sha256,
+    sha256_file,
+)
 
 
 def _read_module(path):
@@ -407,6 +415,207 @@ class DashboardDataTests(unittest.TestCase):
         else:
             build_dashboard_data.run()
             self.assertNotIn("shap", _read_module(output)["unverified_sections"])
+
+
+class BenchmarkLinkageTests(unittest.TestCase):
+
+    def setUp(self):
+        self.stack = ExitStack()
+        self.addCleanup(self.stack.close)
+        self.root = Path(self.stack.enter_context(TemporaryDirectory()))
+        self.cache = self.root / "cache"
+        self.cache.mkdir()
+        (self.cache / "features.parquet").write_bytes(b"feature cache")
+        (self.cache / "raw_windows.npz").write_bytes(b"raw windows")
+        self.stack.enter_context(patch("src.config.PROCESSED_DATA_DIR", self.cache))
+        self.frame = pd.DataFrame({"subject": ["S2", "S3"], "value": [1.0, 2.0]})
+        self.frame.attrs["feature_schema_version"] = 2
+        self.metrics = {
+            "benchmark_protocol_version": 2,
+            "provenance": {
+                "git_sha": "a" * 40,
+                "source_file_sha256": pipeline_source_sha256(),
+            },
+            "inputs": {
+                "dataset": "WESAD",
+                "feature_frame_sha256": feature_frame_sha256(self.frame),
+                "feature_cache_sha256": sha256_file(self.cache / "features.parquet"),
+                "raw_windows_sha256": sha256_file(self.cache / "raw_windows.npz"),
+            },
+        }
+        for task in ("binary", "multiclass"):
+            self.metrics[task] = {
+                "feature_schema_version": 2,
+                "n_windows": 3,
+                "n_features": 1,
+                "n_subjects": 2,
+                "classes": ["baseline", "stress"]
+                + (["amusement"] if task == "multiclass" else []),
+                "models": [
+                    {
+                        "model": "Logistic Regression",
+                        "accuracy_mean": 0.9,
+                        "accuracy_std": 0.1,
+                        "f1_macro_mean": 0.8,
+                        "balanced_accuracy": 0.85,
+                    }
+                ],
+                "best_model": "Logistic Regression",
+                "inference_model": "Logistic Regression",
+                "loso_accuracy": 0.9,
+                "loso_pooled_accuracy": 0.88,
+            }
+        self._write_metrics()
+
+    def _write_metrics(self):
+        (self.root / "metrics.json").write_text(json.dumps(self.metrics))
+
+    def _bind(self):
+        reference = benchmark_reference(self.root, self.frame)
+        return analysis_provenance(self.root, reference)
+
+    def _export(self):
+        output = self.root / "results.ts"
+        with patch.object(build_dashboard_data, "RESULTS_DIR", self.root), patch.object(
+            build_dashboard_data, "DASHBOARD_RESULTS", output
+        ):
+            build_dashboard_data.run()
+        return _read_module(output)
+
+    def test_frame_identity_covers_values_order_and_schema(self):
+        expected = feature_frame_sha256(self.frame)
+        self.assertEqual(expected, feature_frame_sha256(self.frame.copy()))
+        changed = self.frame.copy()
+        changed.loc[0, "value"] = 3.0
+        self.assertNotEqual(expected, feature_frame_sha256(changed))
+        self.assertNotEqual(expected, feature_frame_sha256(self.frame.iloc[::-1]))
+        changed = self.frame.copy()
+        changed.attrs["feature_schema_version"] = 1
+        self.assertNotEqual(expected, feature_frame_sha256(changed))
+
+    def test_shared_inputs_require_the_recorded_frame_and_cache(self):
+        context = self._bind()
+        self.assertEqual(
+            context["primary_benchmark_sha256"], sha256_file(self.root / "metrics.json")
+        )
+        self.assertEqual(
+            context["source_file_sha256"],
+            self.metrics["provenance"]["source_file_sha256"],
+        )
+        changed = self.frame.copy()
+        changed.loc[0, "value"] = 3.0
+        with self.assertRaisesRegex(ValueError, "feature frame differs"):
+            benchmark_reference(self.root, changed)
+        (self.cache / "raw_windows.npz").write_bytes(b"changed raw windows")
+        with self.assertRaisesRegex(ValueError, "cache differs"):
+            benchmark_reference(self.root, self.frame)
+        self.assertEqual(
+            benchmark_reference(self.root, shared_cache=False),
+            context["primary_benchmark_sha256"],
+        )
+
+    def test_historical_synthetic_and_incomplete_contexts_remain_unverified(self):
+        cases = [
+            ("benchmark_protocol_version", None),
+            ("inputs", {**self.metrics["inputs"], "dataset": "synthetic"}),
+            ("inputs", {"dataset": "WESAD"}),
+            ("provenance", {"git_sha": "a" * 40}),
+            ("provenance", {**self.metrics["provenance"], "git_sha": "unknown"}),
+        ]
+        for key, value in cases:
+            with self.subTest(key=key, value=value):
+                original = self.metrics[key]
+                self.metrics[key] = value
+                self._write_metrics()
+                self.assertIsNone(benchmark_reference(self.root, self.frame))
+                self.assertNotIn(
+                    "primary_benchmark_sha256", analysis_provenance(self.root, None)
+                )
+                self.metrics[key] = original
+        self._write_metrics()
+
+    def test_primary_source_mismatch_prevents_linking(self):
+        self.metrics["provenance"]["source_file_sha256"]["src/utils.py"] = "0" * 64
+        self._write_metrics()
+        with self.assertRaisesRegex(ValueError, "source differs"):
+            benchmark_reference(self.root, self.frame)
+
+    def test_primary_changes_during_analysis_are_rejected(self):
+        reference = benchmark_reference(self.root, self.frame)
+        self.metrics["binary"]["n_windows"] = 4
+        self._write_metrics()
+        with self.assertRaisesRegex(ValueError, "changed during the analysis"):
+            analysis_provenance(self.root, reference)
+
+    def test_export_accepts_verified_json_csv_and_shap_links(self):
+        shap = self.root / "shap_top_features.csv"
+        shap.write_text("feature,mean_abs_shap\nvalue,0.1\n")
+        self.metrics["artifacts"] = {
+            "shap": {
+                "model": "XGBoost",
+                "scope": "full_data_binary_fit",
+                "path": shap.name,
+                "sha256": sha256_file(shap),
+            }
+        }
+        self._write_metrics()
+        context = self._bind()
+        for filename in (
+            "stats.json",
+            "wrist.json",
+            "cross_dataset.json",
+            "tuning.json",
+        ):
+            (self.root / filename).write_text(json.dumps({"provenance": context}))
+        pd.DataFrame(
+            [
+                {
+                    "subset": "ECG",
+                    "accuracy": 0.9,
+                    "benchmark_sha256": context["primary_benchmark_sha256"],
+                }
+            ]
+        ).to_csv(self.root / "ablation.csv", index=False)
+        for path in self.cache.iterdir():
+            path.unlink()
+        data = self._export()
+        self.assertEqual(data["unverified_sections"], [])
+        self.assertEqual(data["shap_model"], "XGBoost")
+        self.assertEqual(data["shap_scope"], "full_data_binary_fit")
+        self.assertEqual(data["binary"]["inference_model"], "Logistic Regression")
+        self.assertNotIn("benchmark_sha256", data["ablation"][0])
+
+    def test_stale_and_mixed_links_preserve_the_existing_dashboard(self):
+        output = self.root / "results.ts"
+        for fault in ("json_reference", "json_source", "csv_reference", "csv_mixed"):
+            with self.subTest(fault=fault):
+                output.write_text("previous snapshot")
+                context = self._bind()
+                if fault == "json_reference":
+                    context["primary_benchmark_sha256"] = "0" * 64
+                elif fault == "json_source":
+                    context["source_file_sha256"] = {}
+                if fault.startswith("json"):
+                    (self.root / "stats.json").write_text(
+                        json.dumps({"provenance": context})
+                    )
+                else:
+                    references = (
+                        ["0" * 64]
+                        if fault == "csv_reference"
+                        else [context["primary_benchmark_sha256"], None]
+                    )
+                    pd.DataFrame(
+                        [
+                            {"subset": "ECG", "benchmark_sha256": reference}
+                            for reference in references
+                        ]
+                    ).to_csv(self.root / "ablation.csv", index=False)
+                with self.assertRaisesRegex(ValueError, "does not match"):
+                    self._export()
+                self.assertEqual(output.read_text(), "previous snapshot")
+                (self.root / "stats.json").unlink(missing_ok=True)
+                (self.root / "ablation.csv").unlink(missing_ok=True)
 
 
 for index, invalid_number in enumerate([float("nan"), float("inf"), -float("inf")]):

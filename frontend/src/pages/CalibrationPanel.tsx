@@ -31,6 +31,8 @@ const calibrationAxes: ChartOption = {
 const CalibrationPanel: React.FC = () => {
   const cal = results.calibration;
   if (!cal) return <p role="status" className="text-gray-600 dark:text-gray-300">Calibration results are unavailable for this benchmark.</p>;
+  const names: Record<string, string> = { lr: 'Logistic Regression', rf: 'Random Forest', xgb: 'XGBoost', lgbm: 'LightGBM' };
+  const model = cal.model ? names[cal.model] ?? cal.model : 'Unrecorded model';
 
   const { loso, loso_matched, within_subject, recalibrated_isotonic, recalibrated_sigmoid, decision_curve } = cal;
   const dc = decision_curve;
@@ -55,7 +57,7 @@ const CalibrationPanel: React.FC = () => {
           <Gauge className="w-6 h-6" /> Calibration
         </h1>
         <p className="text-gray-500 dark:text-gray-400">
-          Binary Random Forest confidence on unseen subjects: full-window LOSO and
+          Binary {model} confidence on unseen subjects: full-window LOSO and
           training-subject recalibration ({cal.n_windows} windows, {cal.n_bins} bins).
           The optimism comparison uses a separate matched non-overlapping subset.
         </p>

@@ -16,7 +16,12 @@ from scripts.run_experiment import (
     prepare_task,
 )
 from src.config import RESULTS_DIR, SEED
-from src.utils import paired_effect_size, provenance, write_json
+from src.utils import (
+    paired_effect_size,
+    write_json,
+    analysis_provenance,
+    benchmark_reference,
+)
 
 
 def per_subject_acc(res) -> dict:
@@ -75,6 +80,7 @@ def run():
     if cached is None:
         raise SystemExit("No cached features. Run scripts/run_experiment.py first.")
     features_df, x_raw = cached
+    benchmark_sha = benchmark_reference(RESULTS_DIR, features_df)
     X, y, groups, _, _ = prepare_task(features_df, x_raw, [1, 2])
 
     scores = {}
@@ -116,7 +122,7 @@ def run():
             }
             for a, b in combinations(CLASSIFIERS, 2)
         },
-        "provenance": provenance(),
+        "provenance": analysis_provenance(RESULTS_DIR, benchmark_sha),
     }
 
     print(

@@ -74,7 +74,9 @@ class TuningTests(unittest.TestCase):
         scores = {model: {"accuracy_mean": 0.72, "best_params": {}}}
         self.stack.enter_context(patch.object(tuning, "compute", lambda *args: scores))
         provenance = {"git_sha": "test", "generated_at": "test"}
-        self.stack.enter_context(patch.object(tuning, "provenance", lambda: provenance))
+        self.stack.enter_context(
+            patch.object(tuning, "analysis_provenance", lambda *args: provenance)
+        )
         original_plot = tuning._plot
         plotted_defaults = []
 

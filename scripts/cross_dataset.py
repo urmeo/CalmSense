@@ -38,7 +38,14 @@ from src.portable import (
     WINDOW_SEC,
     wesad_portable,
 )
-from src.utils import provenance, replace_verified_pair, sha256_file, write_json
+from src.utils import (
+    provenance,
+    replace_verified_pair,
+    sha256_file,
+    write_json,
+    analysis_provenance,
+    benchmark_reference,
+)
 
 META = ["subject", "label"]
 
@@ -238,6 +245,7 @@ def within(df, feature_cols):
 
 
 def run(*, rebuild=False):
+    benchmark_sha = benchmark_reference(RESULTS_DIR, shared_cache=False)
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     wesad, wesad_cache = _load_or_build_cache(
@@ -294,7 +302,10 @@ def run(*, rebuild=False):
         "wesad_to_noneeg": transfer(wesad, noneeg, feature_cols),
         "noneeg_to_wesad": transfer(noneeg, wesad, feature_cols),
     }
-    out["provenance"] = _generation_context()
+    out["provenance"] = {
+        **_generation_context(),
+        **analysis_provenance(RESULTS_DIR, benchmark_sha),
+    }
     write_json(RESULTS_DIR / "cross_dataset.json", out)
 
     print("\n              within-LOSO   cross-dataset")

@@ -16,7 +16,7 @@ from scripts.run_experiment import (
     prepare_task,
 )
 from src.config import FIGURES_DIR, RESULTS_DIR
-from src.utils import atomic_write_text
+from src.utils import atomic_write_text, analysis_provenance, benchmark_reference
 
 FEATURE_GROUPS = ["HRV", "EDA", "TEMP", "RESP", "ACC"]
 
@@ -41,6 +41,7 @@ def run():
     if cached is None:
         raise SystemExit("No cached features. Run scripts/run_experiment.py first.")
     features_df, x_raw = cached
+    benchmark_sha = benchmark_reference(RESULTS_DIR, features_df)
 
     X, y, groups, feature_cols, _ = prepare_task(features_df, x_raw, [1, 2])
 
@@ -67,7 +68,10 @@ def run():
         )
         print(f"  {name:32s} ({len(cols):2d} feat)  acc={res['accuracy_mean']:.3f}")
 
+    analysis_provenance(RESULTS_DIR, benchmark_sha)
     df = pd.DataFrame(rows)
+    if benchmark_sha is not None:
+        df["benchmark_sha256"] = benchmark_sha
     atomic_write_text(RESULTS_DIR / "ablation.csv", df.to_csv(index=False))
 
     order = df.iloc[::-1]

@@ -13,7 +13,7 @@ from scripts.calibration import _pooled_proba
 from scripts.run_experiment import CLF_NAMES, build_pipeline, load_cached, prepare_task
 from src.calibration import brier_score
 from src.config import RESULTS_DIR
-from src.utils import provenance, write_json
+from src.utils import write_json, analysis_provenance, benchmark_reference
 
 FEATURE_MODELS = ["lr", "rf", "xgb", "lgbm"]
 POINT_MODEL = "rf"
@@ -63,6 +63,7 @@ def run():
     if cached is None:
         raise SystemExit("No cached features. Run scripts/run_experiment.py first.")
     features_df, x_raw = cached
+    benchmark_sha = benchmark_reference(RESULTS_DIR, features_df)
     X, y, groups, _, _ = prepare_task(features_df, x_raw, [1, 2])
 
     out = {"task": "binary", "n_windows": int(len(y)), "models": []}
@@ -96,7 +97,7 @@ def run():
         out["models"].append(row)
         print(f"  {name:20s} AUROC={row['auroc']:.3f}  AUPRC={row['auprc']:.3f}")
 
-    out["provenance"] = provenance()
+    out["provenance"] = analysis_provenance(RESULTS_DIR, benchmark_sha)
     out["methodology"] = {"xgboost_balancing": "training_fold_sample_weights"}
     path = RESULTS_DIR / "threshold_metrics.json"
     path.parent.mkdir(parents=True, exist_ok=True)

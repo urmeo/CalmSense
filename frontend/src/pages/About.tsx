@@ -6,11 +6,11 @@ import Panel from '../components/Panel';
 const details = [
   {
     title: 'Dataset', icon: Database,
-    items: ['WESAD: Wearable Stress and Affect Detection', '15 lab subjects; ECG, EDA, TEMP, RESP, ACC', 'Baseline, stress, amusement'],
+    items: ['WESAD: Wearable Stress and Affect Detection', `${results.binary.n_subjects ?? 'Unrecorded number of'} lab subjects; ECG, EDA, TEMP, RESP, ACC`, results.multiclass.classes.join(', ')],
   },
   {
     title: 'Models', icon: Cpu,
-    items: ['Logistic Regression, Random Forest, XGBoost, LightGBM', 'Residual 1D-CNN on raw signals', 'LOSO with training-fold imputation and scaling'],
+    items: [results.binary.models.map(({ model }) => model).join(', '), `Inference refit: ${results.binary.inference_model ?? 'unrecorded model'}`, 'LOSO with training-fold imputation and scaling'],
   },
   {
     title: 'Features', icon: BookOpen,
@@ -18,7 +18,7 @@ const details = [
   },
   {
     title: 'Explainability', icon: Shield,
-    items: ['Binary XGBoost mean |SHAP| on the full-data fit', 'Descriptive; no held-out or causal interpretation', 'Motion confounds and dataset-transfer limitations'],
+    items: [`Binary ${results.shap_model ?? 'unrecorded model'} mean |SHAP|${results.shap_scope === 'full_data_binary_fit' ? ' on the full-data fit' : '; fit scope unrecorded'}`, 'Descriptive; no held-out or causal interpretation', 'Motion confounds and dataset-transfer limitations'],
   },
 ];
 

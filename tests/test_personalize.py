@@ -130,8 +130,8 @@ class PersonalizeTests(unittest.TestCase):
         self.stack.enter_context(
             patch.object(
                 personalize,
-                "provenance",
-                lambda: {"git_sha": "test", "generated_at": "test"},
+                "analysis_provenance",
+                lambda *args: {"git_sha": "test", "generated_at": "test"},
             )
         )
         self.stack.enter_context(

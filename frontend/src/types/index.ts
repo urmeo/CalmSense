@@ -18,6 +18,7 @@ interface DecisionCurve {
 }
 
 export interface Calibration {
+  model?: string;
   n_windows: number;
   n_bins: number;
   loso: CalibrationSummary;
@@ -44,6 +45,7 @@ export interface TaskResult {
   classes: string[];
   models: ModelResult[];
   best_model: string;
+  inference_model?: string;
   loso_accuracy: number;
   loso_matched_accuracy?: number | null;
   within_subject_accuracy?: number | null;
@@ -56,6 +58,8 @@ export interface BenchmarkResults {
   binary: TaskResult;
   multiclass: TaskResult;
   shap?: { feature: string; mean_abs_shap: number }[];
+  shap_model?: string;
+  shap_scope?: string;
   calibration?: Calibration | null;
   wrist?: {
     same_model_rf?: { chest: number | null; wrist: number | null; drop_pts: number | null };

@@ -27,7 +27,7 @@ from scripts.run_experiment import (
 )
 from src import calibration as cal
 from src.config import DEMO_DIR, FIGURES_DIR, RESULTS_DIR, SEED
-from src.utils import provenance, write_json
+from src.utils import write_json, analysis_provenance, benchmark_reference
 
 K_VALUES = [5, 10, 20]
 METHOD = "isotonic"
@@ -178,10 +178,11 @@ def run(synthetic=False, model="rf"):
             raise SystemExit("No cached features. Run scripts/run_experiment.py first.")
         features_df, x_raw = cached
 
+    benchmark_sha = benchmark_reference(results_dir, features_df)
     X, y, groups, _, _ = prepare_task(features_df, x_raw, [1, 2])
     out = compute(X, y, groups, model=model)
 
-    out["provenance"] = provenance()
+    out["provenance"] = analysis_provenance(results_dir, benchmark_sha)
     write_json(results_dir / "personalization.json", out)
     _plot(out, figures_dir / "personalization.png")
 
