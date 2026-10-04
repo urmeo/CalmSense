@@ -403,6 +403,3 @@ Feature models: fold-local imputation/scaling. CNN: raw windows.
 ## License
 
 [MIT](LICENSE) · © 2025 Urme Bose · [Citation](CITATION.cff)
-
-Use, modify, distribute, or sell; retain copyright and license notices.
-Provided "AS IS", without warranty. Dataset and dependency terms apply separately.
