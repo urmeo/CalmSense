@@ -5,7 +5,7 @@
 [Live demo](https://urmeo.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urmeo/CalmSense/blob/main/notebooks/CalmSense.ipynb) · [Code](#architecture) · [Model](#protocol--provenance)
 
 <p align="center">
-<a href="https://urmeo.github.io/CalmSense/"><img src="outputs/figures/demo.gif" width="390" alt="CalmSense dashboard"></a>
+<a href="https://urmeo.github.io/CalmSense/"><img src="outputs/figures/demo.gif" width="800" alt="CalmSense dashboard"></a>
 </p>
 
 ## Overview
