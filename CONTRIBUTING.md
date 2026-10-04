@@ -36,4 +36,4 @@ see [transfer limitations](README.md#cross-dataset-transfer).
 ## Reporting bugs
 
 Open an issue with the command you ran, the expected vs actual behavior, and your OS/Python version.
-For security concerns, see [SECURITY.md](SECURITY.md) instead.
+Report security vulnerabilities [privately](https://github.com/urmeo/CalmSense/security/advisories/new).

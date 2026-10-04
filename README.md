@@ -149,7 +149,7 @@ SHAP: full-data XGBoost fit; no held-out or causal evidence.
 [Chest RF](outputs/models/stress_classifier.joblib): full-data refit, **869** windows; separate LOSO fits.
 Median imputation → standardization → RF; **scikit-learn 1.6.1**.
 Baseline/stress; **uncalibrated** probabilities; no bundled recalibration.
-Original feature definitions; refit before using schema v2. [Verify](SECURITY.md).
+Original feature definitions; refit before using schema v2. Load with [`load_verified_joblib`](src/utils.py) from a trusted checkout.
 
 ### Result provenance
 
@@ -188,7 +188,7 @@ python scripts/download_data.py --verify-noneeg
 
 WESAD path: `data/raw/WESAD/S2/S2.pkl` through S17, excluding S12.
 Chest/labels **700 Hz**; wrist ACC/BVP/EDA/TEMP **32/64/4/4 Hz**.
-Verify WESAD reference hashes/Non-EEG publisher manifest. [Trusted pickles only](SECURITY.md).
+Verify WESAD reference hashes/Non-EEG publisher manifest. Load trusted pickle/joblib files only; deserialization can execute code.
 
 Run in order:
 
