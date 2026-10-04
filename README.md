@@ -2,7 +2,7 @@
 
 ### A Machine Learning and Deep Learning Framework for Wearable Biosignal Analysis, Integrating 1D CNNs, Explainable AI, Probability Calibration, and Cross-Dataset Evaluation.
 
-[Live demo](https://urmeo.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urmeo/CalmSense/blob/main/notebooks/CalmSense.ipynb) · [Code](#architecture) · [Model](#shipped-model)
+[Live demo](https://urmeo.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urmeo/CalmSense/blob/main/notebooks/CalmSense.ipynb) · [Code](#architecture) · [Model](#protocol--provenance)
 
 <p align="center">
 <a href="https://urmeo.github.io/CalmSense/"><img src="outputs/figures/demo.gif" width="390" alt="CalmSense dashboard"></a>
@@ -46,7 +46,7 @@ flowchart TD
 
 ## Results
 
-**Historical snapshots.** Corrected code requires a fresh benchmark; see [provenance](#result-provenance).
+**Historical snapshots.** Corrected code requires a fresh benchmark; see [provenance](#protocol--provenance).
 Binary: baseline/stress. Three-class adds amusement.
 
 | Model | Binary acc | Binary F1 | AUROC* | AUPRC* | 3-class acc | 3-class F1 |
@@ -175,41 +175,11 @@ Budget 5 enrolls 4 balanced windows; class availability can reduce requests.
 
 </details>
 
-<details>
-<summary>Protocol & provenance</summary>
+## Protocol & provenance
 
-### Evaluation
-
-Imputation, scaling, balancing, calibration: training subjects only.
-Matched gaps: non-overlapping windows. Error bars: subject SDs.
-
-*AUROC/AUPRC: separate [pooled OOF pass](outputs/results/threshold_metrics.json); AUPRC = average precision. XGBoost unweighted; CNN unavailable.
-RF Youden J: threshold **0.454**, sensitivity **0.902**, specificity **0.913**, PPV **0.850**, NPV **0.945**; selected on evaluated predictions (exploratory).
-Confusion matrices: pooled, row-normalized default decisions.
-
-### Transfer
-
-RF; **18** wrist features; portable **v2**; **15 WESAD/20 Non-EEG subjects**.
-Within-dataset balanced accuracy: **0.868/0.699**. NeuroKit2: **0.2.12** vs benchmark **0.2.7**.
-Unmatched units: WESAD ACC [1/64 g](https://www.empatica.com/blog/decoding-wearable-sensor-signals-what-to-expect-from-your-e4-data/); Non-EEG ACC/EDA NU.
-SHAP: full-data XGBoost fit; no held-out or causal evidence.
-
-### Shipped model
-
-[Chest RF](outputs/models/stress_classifier.joblib): full-data refit, **869** windows; separate LOSO fits.
-Median imputation → standardization → RF; **scikit-learn 1.6.1**.
-Baseline/stress; **uncalibrated** probabilities; no bundled recalibration.
-Original feature definitions; refit before using schema v2. Load with [`load_verified_joblib`](src/utils.py) from a trusted checkout.
-
-### Result provenance
-
-Snapshots predate corrected extraction **v2**, benchmark **v2**, and portable **v3**.
-Corrections: HRV/entropy/recurrence/filtering/slopes, CNN subject holdout, XGBoost weights, Non-EEG HR alignment.
-CNN training subjects: **11** gradients/normalization; **3** validation.
-[Environments](outputs/results/provenance.json) · [Transfer hashes](outputs/results/cross_dataset.json).
-Fresh extraction/fitting required; stamps do not certify historical results or ancillary linkage.
-
-</details>
+1. **Evaluation:** 15-fold LOSO; train-only preprocessing/calibration; subject means. *AUROC/AUPRC: [pooled OOF](outputs/results/threshold_metrics.json), unweighted XGBoost; no CNN.
+2. **Model:** [Uncalibrated chest RF](outputs/models/stress_classifier.joblib); **869** training windows; scikit-learn **1.6.1**. Use the [verified loader](src/utils.py) from a trusted checkout.
+3. **Provenance:** [Historical results](outputs/results/provenance.json) predate extraction/benchmark **v2** and portable **v3**; rerun extraction and fitting. Transfer units differ; SHAP uses a full-data fit.
 
 ## Architecture
 
