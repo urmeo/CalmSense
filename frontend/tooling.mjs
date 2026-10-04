@@ -20,6 +20,14 @@ function writeIfChanged(path, content) {
   }
 }
 
+function lockSource(lock) {
+  const { packages, ...metadata } = lock;
+  const entries = Object.entries(packages).map(([name, value]) =>
+    JSON.stringify(name) + ':' + JSON.stringify(value));
+  return 'export default {\n' + JSON.stringify(metadata).slice(1, -1) +
+    ',\n"packages":{\n' + entries.join(',\n') + '\n}\n};\n';
+}
+
 function validateLock(manifest, lock) {
   const locked = lock.packages?.[''];
   if (!locked || lock.name !== manifest.name || lock.version !== manifest.version ||
@@ -90,8 +98,8 @@ try {
     validateLock(manifest, lock);
     for (const [name, value] of [['package.mjs', manifest], ['package-lock.mjs', lock]]) {
       writeIfChanged(join(root, 'config', name),
-        '// Native module source; generated tool files are ignored.\nexport default ' +
-        JSON.stringify(value, null, 2) + ';\n');
+        name === 'package-lock.mjs' ? lockSource(value) :
+          'export default ' + JSON.stringify(value, null, 2) + ';\n');
     }
     console.log('Updated config/package.mjs and config/package-lock.mjs. Review and commit their changes.');
   }
