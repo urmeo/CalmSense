@@ -1,6 +1,6 @@
 import pickle
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, cast, Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -66,12 +66,22 @@ class FeatureExtractionPipeline(LoggerMixin):
 
         features: Dict[str, float] = {}
         self._add(features, "hrv_time", "HRV_", lambda: self._hrv(rr, "hrv_time"))
-        self._add(features, "hrv_frequency", "HRV_", lambda: self._hrv(rr, "hrv_frequency"))
-        self._add(features, "hrv_nonlinear", "HRV_", lambda: self._hrv(rr, "hrv_nonlinear"))
+        self._add(
+            features, "hrv_frequency", "HRV_", lambda: self._hrv(rr, "hrv_frequency")
+        )
+        self._add(
+            features, "hrv_nonlinear", "HRV_", lambda: self._hrv(rr, "hrv_nonlinear")
+        )
         self._add(features, "eda", "EDA_", lambda: self._eda(window_data))
-        self._add(features, "temperature", "TEMP_", lambda: self._temperature(window_data))
-        self._add(features, "respiration", "RESP_", lambda: self._respiration(window_data))
-        self._add(features, "accelerometer", "ACC_", lambda: self._accelerometer(window_data))
+        self._add(
+            features, "temperature", "TEMP_", lambda: self._temperature(window_data)
+        )
+        self._add(
+            features, "respiration", "RESP_", lambda: self._respiration(window_data)
+        )
+        self._add(
+            features, "accelerometer", "ACC_", lambda: self._accelerometer(window_data)
+        )
         return features
 
     def _add(self, features, group, prefix, compute) -> None:
@@ -79,8 +89,12 @@ class FeatureExtractionPipeline(LoggerMixin):
             return
         result = compute()
         if result is None:
-            result = dict.fromkeys(self.extractors[group].get_feature_descriptions(), np.nan)
-        features.update({k if k.startswith(prefix) else prefix + k: v for k, v in result.items()})
+            result = dict.fromkeys(
+                self.extractors[group].get_feature_descriptions(), np.nan
+            )
+        features.update(
+            {k if k.startswith(prefix) else prefix + k: v for k, v in result.items()}
+        )
 
     def _hrv(self, rr, group):
         return None if rr is None else self.extractors[group].extract_all(rr)
@@ -94,7 +108,9 @@ class FeatureExtractionPipeline(LoggerMixin):
 
     def _temperature(self, w):
         temp = w.get("temperature")
-        return None if temp is None else self.extractors["temperature"].extract_all(temp)
+        return (
+            None if temp is None else self.extractors["temperature"].extract_all(temp)
+        )
 
     def _respiration(self, w):
         resp = w.get("respiration")
@@ -117,7 +133,9 @@ class FeatureExtractionPipeline(LoggerMixin):
         if "magnitude" in acc:
             return extractor.extract_from_magnitude(acc["magnitude"])
         empty = np.array([])
-        return extractor.extract_all(acc.get("x", empty), acc.get("y", empty), acc.get("z", empty))
+        return extractor.extract_all(
+            acc.get("x", empty), acc.get("y", empty), acc.get("z", empty)
+        )
 
     def extract_all_features(
         self,
@@ -149,14 +167,16 @@ class FeatureExtractionPipeline(LoggerMixin):
 
         if not all_features:
             return pd.DataFrame(
-                columns=["subject_id", "window_id", "label", *self.get_feature_names()]
+                columns=cast(
+                    Any, ["subject_id", "window_id", "label", *self.get_feature_names()]
+                )
             )
         features_df = pd.DataFrame(all_features)
 
         metadata_cols = ["subject_id", "window_id", "label"]
         existing_meta = [c for c in metadata_cols if c in features_df.columns]
         feature_cols = [c for c in features_df.columns if c not in metadata_cols]
-        features_df = features_df[existing_meta + feature_cols]
+        features_df = cast(pd.DataFrame, features_df[existing_meta + feature_cols])
 
         self.logger.info(
             f"Feature extraction complete: {len(features_df)} windows, {len(feature_cols)} features"
@@ -177,7 +197,9 @@ class FeatureExtractionPipeline(LoggerMixin):
             key if key.startswith(prefix) else prefix + key: description
             for group, (prefix, _) in self._GROUPS.items()
             if self.feature_config.get(group, True)
-            for key, description in self.extractors[group].get_feature_descriptions().items()
+            for key, description in self.extractors[group]
+            .get_feature_descriptions()
+            .items()
         }
 
     def save_features(

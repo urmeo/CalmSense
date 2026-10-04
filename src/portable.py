@@ -1,7 +1,7 @@
 """Native units; EDA/TEMP slopes per second."""
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, cast, Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -55,7 +55,9 @@ def _stats(
     return out
 
 
-def portable_features(eda, temp, acc_mag, hr, *, eda_fs: float, temp_fs: float) -> Dict[str, float]:
+def portable_features(
+    eda, temp, acc_mag, hr, *, eda_fs: float, temp_fs: float
+) -> Dict[str, float]:
     feats = {}
     feats.update(_stats(eda, "EDA", FEATURE_KEYS["EDA"], eda_fs))
     feats.update(_stats(temp, "TEMP", FEATURE_KEYS["TEMP"], temp_fs))
@@ -99,7 +101,8 @@ def wesad_portable(
 
         peaks = np.asarray(
             nk.ppg_findpeaks(
-                nk.ppg_clean(bvp, sampling_rate=FS.WRIST_BVP), sampling_rate=FS.WRIST_BVP
+                nk.ppg_clean(bvp, sampling_rate=cast(Any, FS.WRIST_BVP)),
+                sampling_rate=cast(Any, FS.WRIST_BVP),
             )["PPG_Peaks"]
         )
         beat_hr = 60.0 / (np.diff(peaks) / FS.WRIST_BVP)
@@ -130,4 +133,6 @@ def wesad_portable(
                 rows.append(row)
             t += step
 
-    return pd.DataFrame(rows, columns=[*PORTABLE_FEATURE_COLUMNS, "subject", "label"])
+    return pd.DataFrame(
+        rows, columns=cast(Any, [*PORTABLE_FEATURE_COLUMNS, "subject", "label"])
+    )

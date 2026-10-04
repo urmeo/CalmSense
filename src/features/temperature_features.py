@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import cast, Dict, Optional
 
 import numpy as np
 from scipy import stats
@@ -48,7 +48,7 @@ class TemperatureFeatureExtractor(LoggerMixin):
             x = np.arange(len(original))[np.isfinite(original)] / self.sampling_rate
             if len(x) > 1:
                 slope, _, _, _, _ = stats.linregress(x, temp)
-                features["TEMP_slope"] = float(slope)
+                features["TEMP_slope"] = float(cast(float, slope))
 
         except Exception as e:
             self.logger.error(f"Temperature feature extraction failed: {e}")

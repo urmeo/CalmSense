@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import Plot from '../components/Plot';
+import Chart, { type ChartOption } from '../components/Chart';
 import { ZoomIn, ZoomOut, RefreshCw } from 'lucide-react';
 import realSignals from '../../../outputs/dashboard/signals';
-import { zoomRange, relayoutRange } from '../lib/viewport';
+import { zoomRange, dataZoomRange } from '../lib/viewport';
 import { readSignalRecording, recordingDuration, conditionSegments, type SignalRecording } from '../lib/signals';
 
 const recordings = Object.fromEntries(Object.entries(realSignals).map(([subject, recording]) => [subject, readSignalRecording(recording)]));
@@ -46,67 +46,56 @@ const SignalPlots: React.FC<{ signalData: SignalRecording; subject: string }> = 
 
   const visiblePanels = PANELS.filter((p) => visibleSignals[p.key]);
 
-  const traces = visiblePanels.flatMap((panel, i) => panel.series.map((series) => ({
-    x: signalData.time,
-    y: signalData[series.y],
-    type: 'scatter',
-    mode: 'lines',
-    name: series.name,
-    line: { color: series.color, width: 1 },
-    xaxis: 'x',
-    yaxis: i === 0 ? 'y' : `y${i + 1}`,
-  })));
-
-  const layout: Record<string, unknown> = {
-    title: { text: `Signal Explorer: Subject ${subject}`, font: { size: 18 } },
-    showlegend: true,
-    legend: { orientation: 'h', y: -0.12 },
-    xaxis: { title: { text: 'Displayed time (s)' }, range: xRange, showgrid: true, gridcolor: 'rgba(0,0,0,0.1)' },
-    height: 600,
-    margin: { t: 70, b: 70, l: 60, r: 40 },
-    shapes: segments.map((s) => ({
-      type: 'rect',
-      xref: 'x',
-      yref: 'paper',
-      x0: s.x0,
-      x1: s.x1,
-      y0: 0,
-      y1: 1,
-      fillcolor: CONDITIONS[s.name]?.background || 'rgba(0,0,0,0.04)',
-      line: { width: 0 },
+  const panelHeight = (420 - (visiblePanels.length - 1) * 20) / Math.max(visiblePanels.length, 1);
+  const axisIndices = visiblePanels.map((_, i) => i);
+  const option: ChartOption = {
+    title: { text: `Signal Explorer: Subject ${subject}`, left: 'center', textStyle: { fontSize: 18 } },
+    legend: { type: 'scroll', bottom: 0 },
+    tooltip: { trigger: 'axis', confine: true, renderMode: 'richText' },
+    axisPointer: { link: [{ xAxisIndex: 'all' }] },
+    grid: visiblePanels.map((_, i) => ({ left: 65, right: 30, top: 65 + i * (panelHeight + 20), height: panelHeight })),
+    xAxis: visiblePanels.map((_, i) => ({
+      type: 'value', gridIndex: i, min: 0, max: duration,
+      name: i === visiblePanels.length - 1 ? 'Displayed time (s)' : '',
+      nameLocation: 'middle', nameGap: 30,
+      axisLabel: { show: i === visiblePanels.length - 1 },
+      axisPointer: { show: true },
     })),
-    annotations: segments.map((s) => ({
-      x: (s.x0 + s.x1) / 2,
-      y: 1.04,
-      xref: 'x',
-      yref: 'paper',
-      text: s.name,
-      showarrow: false,
-      font: { color: CONDITIONS[s.name]?.color || '#666' },
+    yAxis: visiblePanels.map((panel, i) => ({
+      type: 'value', gridIndex: i, name: panel.title, nameLocation: 'middle', nameGap: 45,
+      scale: true, splitLine: { lineStyle: { opacity: 0.2 } },
     })),
+    dataZoom: [
+      { id: 'signal-gesture', type: 'inside', xAxisIndex: axisIndices, filterMode: 'none',
+        startValue: xRange[0], endValue: xRange[1], rangeMode: ['value', 'value'], minValueSpan: sampleStep },
+      { id: 'signal-slider', type: 'slider', xAxisIndex: axisIndices, filterMode: 'none', bottom: 35, height: 20,
+        startValue: xRange[0], endValue: xRange[1], rangeMode: ['value', 'value'], minValueSpan: sampleStep },
+    ],
+    toolbox: { right: 20, top: 25, feature: {
+      dataZoom: { xAxisIndex: axisIndices, yAxisIndex: 'none' },
+      saveAsImage: { title: 'Download chart' },
+    } },
+    series: visiblePanels.flatMap((panel, i) => panel.series.map((series, j) => ({
+      name: series.name, type: 'line', xAxisIndex: i, yAxisIndex: i,
+      data: signalData.time.map((time, index) => [time, signalData[series.y][index]]),
+      showSymbol: false, lineStyle: { color: series.color, width: 1 }, itemStyle: { color: series.color },
+      markArea: j === 0 ? {
+        silent: true,
+        data: segments.map((segment) => [
+          { name: i === 0 ? segment.name : '', xAxis: segment.x0,
+            itemStyle: { color: CONDITIONS[segment.name]?.background || 'rgba(0,0,0,0.04)' },
+            label: { color: CONDITIONS[segment.name]?.color || '#666', position: 'insideTop' } },
+          { xAxis: segment.x1 },
+        ]),
+      } : undefined,
+    }))),
   };
-
-  // Stack visible axes.
-  const n = visiblePanels.length || 1;
-  const slice = 1 / n;
-  const gap = n > 1 ? 0.06 : 0;
-  visiblePanels.forEach((panel, i) => {
-    const axisKey = i === 0 ? 'yaxis' : `yaxis${i + 1}`;
-    const top = 1 - i * slice;
-    const bottom = Math.max(0, 1 - (i + 1) * slice + gap);
-    layout[axisKey] = {
-      title: { text: panel.title },
-      domain: [bottom, top],
-      showgrid: true,
-      gridcolor: 'rgba(0,0,0,0.1)',
-    };
-  });
 
   return (
     <div className="space-y-6">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
         <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center space-x-4">
+          <div className="flex flex-wrap items-center gap-4">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Signals:</span>
             {PANELS.map(({ key: signal }) => (
               <label key={signal} className="flex items-center space-x-2 cursor-pointer">
@@ -137,12 +126,11 @@ const SignalPlots: React.FC<{ signalData: SignalRecording; subject: string }> = 
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
         {visiblePanels.length === 0 ? (
           <p role="status" className="text-gray-600 dark:text-gray-300">Select a signal to display.</p>
-        ) : <Plot
-          data={traces}
-          layout={layout}
-          config={{ displayModeBar: true, modeBarButtonsToRemove: ['lasso2d', 'select2d'] }}
-          onRelayout={(event: unknown) => {
-            const range = relayoutRange(event, duration);
+        ) : <Chart
+          label={`Subject ${subject}: ${visiblePanels.map((panel) => panel.title).join(', ')}. Displayed clip time ${xRange[0].toFixed(1)} to ${xRange[1].toFixed(1)} seconds. Use zoom controls or drag the slider to inspect a range.`}
+          height={600} option={option}
+          onDataZoom={(event) => {
+            const range = dataZoomRange(event, duration);
             if (range) setXRange(range);
           }}
         />}

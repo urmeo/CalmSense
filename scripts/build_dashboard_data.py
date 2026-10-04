@@ -52,10 +52,15 @@ def _validate_tasks(out):
             if type(data.get(key)) is not int or data[key] <= 0:
                 raise ValueError(f"{task}: {key} must be a positive integer")
         if "n_subjects" in data and (
-            type(data["n_subjects"]) is not int or not 2 <= data["n_subjects"] <= data["n_windows"]
+            type(data["n_subjects"]) is not int
+            or not 2 <= data["n_subjects"] <= data["n_windows"]
         ):
-            raise ValueError(f"{task}: n_subjects must be an integer >= 2 and <= n_windows")
-        expected_classes = ["baseline", "stress"] + (["amusement"] if task == "multiclass" else [])
+            raise ValueError(
+                f"{task}: n_subjects must be an integer >= 2 and <= n_windows"
+            )
+        expected_classes = ["baseline", "stress"] + (
+            ["amusement"] if task == "multiclass" else []
+        )
         if data.get("classes") != expected_classes:
             raise ValueError(f"{task}: classes must be {expected_classes}")
         names = []
@@ -67,7 +72,12 @@ def _validate_tasks(out):
             ):
                 raise ValueError(f"{task}: model names must be nonempty strings")
             names.append(model["model"])
-            for key in ("accuracy_mean", "accuracy_std", "f1_macro_mean", "balanced_accuracy"):
+            for key in (
+                "accuracy_mean",
+                "accuracy_std",
+                "f1_macro_mean",
+                "balanced_accuracy",
+            ):
                 _unit_metric(model.get(key), f"{task}: {model['model']} {key}")
         if len(names) != len(set(names)):
             raise ValueError(f"{task}: model names must be unique")
@@ -83,14 +93,18 @@ def _validate_tasks(out):
                 _unit_metric(data[key], f"{task}: {key}")
         gap = data.get("optimism_gap_pts")
         if gap is not None:
-            matched, within = data.get("loso_matched_accuracy"), data.get("within_subject_accuracy")
+            matched, within = data.get("loso_matched_accuracy"), data.get(
+                "within_subject_accuracy"
+            )
             if (
                 type(gap) not in (int, float)
                 or matched is None
                 or within is None
                 or abs(gap - round((within - matched) * 100, 1)) > 1e-9
             ):
-                raise ValueError(f"{task}: optimism gap must match the recorded comparison")
+                raise ValueError(
+                    f"{task}: optimism gap must match the recorded comparison"
+                )
 
 
 def _unit_metric(value, name):
@@ -114,7 +128,9 @@ def _unverified_sections(metrics, out):
             or artifact.get("path") != path.name
             or artifact.get("sha256") != sha256_file(path)
         ):
-            raise ValueError("SHAP snapshot does not match the primary benchmark artifact")
+            raise ValueError(
+                "SHAP snapshot does not match the primary benchmark artifact"
+            )
         sections.remove("shap")
     return sorted(sections)
 
@@ -147,7 +163,9 @@ def run():
 
     shap = _load_csv("shap_top_features.csv")
     if shap:
-        out["shap"] = sorted(shap, key=lambda row: row["mean_abs_shap"], reverse=True)[:12]
+        out["shap"] = sorted(shap, key=lambda row: row["mean_abs_shap"], reverse=True)[
+            :12
+        ]
     for key, fname in [
         ("stats", "stats.json"),
         ("wrist", "wrist.json"),
@@ -163,7 +181,9 @@ def run():
             elif key == "personalization":
                 data.setdefault("brier_definition", BINARY_BRIER_DEFINITION)
                 if data["brier_definition"] != BINARY_BRIER_DEFINITION:
-                    raise ValueError("Personalization Brier values must use positive-class MSE")
+                    raise ValueError(
+                        "Personalization Brier values must use positive-class MSE"
+                    )
             out[key] = data
     ablation = _load_csv("ablation.csv")
     if ablation:
@@ -174,7 +194,9 @@ def run():
 
     payload = json.dumps(out, indent=2, allow_nan=False)
     _validate_tasks(out)
-    atomic_write_text(DASHBOARD_RESULTS, f"const data = {payload};\n\nexport default data;\n")
+    atomic_write_text(
+        DASHBOARD_RESULTS, f"const data = {payload};\n\nexport default data;\n"
+    )
     print(f"Wrote {DASHBOARD_RESULTS} with sections: {sorted(out)}")
 
 

@@ -79,7 +79,11 @@ def tune_model(key, X, y, groups, inner_splits=3):
                 "subject": groups[test_idx][0],
                 "accuracy": accuracy_score(y[test_idx], pred),
                 "f1_macro": f1_score(
-                    y[test_idx], pred, labels=np.unique(y), average="macro", zero_division=0
+                    y[test_idx],
+                    pred,
+                    labels=np.unique(y),
+                    average="macro",
+                    zero_division=0,
                 ),
                 "balanced_accuracy": balanced_accuracy_score(y[test_idx], pred),
             }
@@ -123,7 +127,10 @@ def _defaults(results_dir=None, *, groups=None):
             summary.get("benchmark_protocol_version") != BENCHMARK_PROTOCOL_VERSION
             or binary.get("feature_schema_version") != FEATURE_SCHEMA_VERSION
             or not subjects
-            or any(not isinstance(subject, str) or not subject.strip() for subject in subjects)
+            or any(
+                not isinstance(subject, str) or not subject.strip()
+                for subject in subjects
+            )
             or len(set(subjects)) != len(subjects)
             or set(subjects) != set(groups)
         ):
@@ -138,9 +145,15 @@ def _plot(tuned, defaults, path):
         return
     x = np.arange(len(names))
     plt.figure(figsize=(7, 4))
-    plt.bar(x - 0.2, [defaults[n] for n in names], 0.4, label="default", color="#95a5a6")
     plt.bar(
-        x + 0.2, [tuned[n]["accuracy_mean"] for n in names], 0.4, label="tuned", color="#3498db"
+        x - 0.2, [defaults[n] for n in names], 0.4, label="default", color="#95a5a6"
+    )
+    plt.bar(
+        x + 0.2,
+        [tuned[n]["accuracy_mean"] for n in names],
+        0.4,
+        label="tuned",
+        color="#3498db",
     )
     plt.xticks(x, names, rotation=20, ha="right")
     plt.ylabel("LOSO accuracy")
@@ -162,7 +175,9 @@ def run(synthetic=False, inner_splits=3):
         from src.synthetic import features
 
         print("Using synthetic data (demo only).")
-        features_df, x_raw, _ = features(n_subjects=6, block_sec=150, seed=SEED, cache=False)
+        features_df, x_raw, _ = features(
+            n_subjects=6, block_sec=150, seed=SEED, cache=False
+        )
     else:
         cached = load_cached()
         if cached is None:

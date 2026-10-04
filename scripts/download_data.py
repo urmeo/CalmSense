@@ -24,7 +24,10 @@ DOWNLOAD_TIMEOUT = 30
 NONEEG_FILES = tuple(
     f"Subject{subject}_{record}.{extension}"
     for subject in range(1, 21)
-    for record, extensions in (("AccTempEDA", ("hea", "dat", "atr")), ("SpO2HR", ("hea", "dat")))
+    for record, extensions in (
+        ("AccTempEDA", ("hea", "dat", "atr")),
+        ("SpO2HR", ("hea", "dat")),
+    )
     for extension in extensions
 )
 
@@ -82,7 +85,9 @@ def _download(url, dest):
     part = dest.with_suffix(dest.suffix + ".part")
     print(f"Downloading {url}")
     try:
-        with urlopen(url, timeout=DOWNLOAD_TIMEOUT) as response, part.open("wb") as stream:
+        with urlopen(url, timeout=DOWNLOAD_TIMEOUT) as response, part.open(
+            "wb"
+        ) as stream:
             if urlsplit(response.geturl()).scheme != "https":
                 raise ValueError("refusing a redirect to a non-HTTPS download")
             total = int(response.headers.get("Content-Length", 0))
@@ -109,7 +114,9 @@ def _safe_extract(zip_path, dest, max_bytes=MAX_UNCOMPRESSED):
                 raise RuntimeError(f"unsafe path in archive: {info.filename}")
             total += info.file_size
             if total > max_bytes:
-                raise RuntimeError("archive expands beyond the size cap; refusing to extract")
+                raise RuntimeError(
+                    "archive expands beyond the size cap; refusing to extract"
+                )
         z.extractall(dest)
 
 
@@ -193,16 +200,26 @@ def _check(url) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fetch CalmSense datasets.")
-    parser.add_argument("--wesad", action="store_true", help="fetch WESAD (~2 GB, primary dataset)")
     parser.add_argument(
-        "--noneeg", action="store_true", help="fetch PhysioNet Non-EEG (cross-dataset transfer)"
-    )
-    parser.add_argument("--check", action="store_true", help="only verify the download links")
-    parser.add_argument(
-        "--verify-wesad", action="store_true", help="check downloaded WESAD .pkl SHA-256 and exit"
+        "--wesad", action="store_true", help="fetch WESAD (~2 GB, primary dataset)"
     )
     parser.add_argument(
-        "--verify-noneeg", action="store_true", help="check Non-EEG SHA-256 manifest and exit"
+        "--noneeg",
+        action="store_true",
+        help="fetch PhysioNet Non-EEG (cross-dataset transfer)",
+    )
+    parser.add_argument(
+        "--check", action="store_true", help="only verify the download links"
+    )
+    parser.add_argument(
+        "--verify-wesad",
+        action="store_true",
+        help="check downloaded WESAD .pkl SHA-256 and exit",
+    )
+    parser.add_argument(
+        "--verify-noneeg",
+        action="store_true",
+        help="check Non-EEG SHA-256 manifest and exit",
     )
     args = parser.parse_args()
 

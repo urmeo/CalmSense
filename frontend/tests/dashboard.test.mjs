@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readDarkMode, saveDarkMode } from '../src/lib/preferences.ts';
-import { zoomRange, relayoutRange } from '../src/lib/viewport.ts';
+import { zoomRange, dataZoomRange } from '../src/lib/viewport.ts';
 import { requiresFreshBenchmark, benchmarkStatus, formatPercent, matchedGap } from '../src/lib/benchmarks.ts';
 import { readSignalRecording, recordingDuration, conditionSegments } from '../src/lib/signals.ts';
 import { containNavigationFocus } from '../src/lib/navigation.ts';
@@ -78,15 +78,18 @@ test('missing or nonfinite comparison metrics remain unavailable rather than zer
   assert.ok(Math.abs(matchedGap(0.9, 0.85) + 5) < 1e-10);
 });
 
-test('Plotly range events reject malformed values and clamp panning to the clip', () => {
-  for (const event of [null, 1, {}, { 'xaxis.range': '0,10' }, { 'xaxis.range': [0] },
-    { 'xaxis.range': [0, 10, 20] }, { 'xaxis.range': [0, Infinity] },
-    { 'xaxis.range': [10, 0] }, { 'xaxis.range': [120, 150] }]) {
-    assert.equal(relayoutRange(event, 120), null);
+test('chart zoom events reject malformed values and clamp panning to the clip', () => {
+  for (const event of [null, 1, {}, { start: '0', end: 10 }, { start: 0 },
+    { start: 0, end: Infinity }, { start: 10, end: 0 }, { start: 120, end: 150 },
+    { batch: [] }, { batch: [null] }, { startValue: 0, endValue: NaN }]) {
+    assert.equal(dataZoomRange(event, 120), null);
   }
-  assert.deepEqual(relayoutRange({ 'xaxis.range': [-10, 30] }, 120), [0, 30]);
-  assert.deepEqual(relayoutRange({ 'xaxis.range[0]': 100, 'xaxis.range[1]': 140 }, 120), [100, 120]);
-  assert.deepEqual(relayoutRange({ 'xaxis.autorange': true }, 120), [0, 120]);
+  assert.deepEqual(dataZoomRange({ start: -10, end: 25 }, 120), [0, 30]);
+  assert.deepEqual(dataZoomRange({ startValue: 100, endValue: 140 }, 120), [100, 120]);
+  assert.deepEqual(dataZoomRange({ batch: [{ start: 0, end: 100 }] }, 120), [0, 120]);
+  assert.deepEqual(dataZoomRange({ batch: [{ start: 25, end: 50 }] }, 120), [30, 60]);
+  assert.equal(dataZoomRange({ start: 0, end: 100 }, 0), null);
+  assert.equal(dataZoomRange({ start: 0, end: 100 }, NaN), null);
 });
 
 test('repeated zoom keeps at least one sample interval and recovers invalid ranges', () => {

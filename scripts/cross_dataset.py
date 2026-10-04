@@ -69,11 +69,16 @@ def _cache_schema(dataset):
                 "src/portable.py",
                 "src/config.py",
                 "src/preprocessing/filters.py",
-                "src/data/loader.py" if dataset == "wesad" else "src/datasets/non_eeg.py",
+                (
+                    "src/data/loader.py"
+                    if dataset == "wesad"
+                    else "src/datasets/non_eeg.py"
+                ),
+                *(() if dataset == "wesad" else ("src/datasets/records.py",)),
             )
         },
         "extraction_packages": {
-            name: version(name) for name in ("numpy", "scipy", "neurokit2", "wfdb")
+            name: version(name) for name in ("numpy", "scipy", "neurokit2")
         },
     }
 
@@ -94,8 +99,13 @@ def _validate_frame(frame):
         or frame["subject"].astype(str).str.strip().eq("").any()
         or not frame["label"].isin([0, 1]).all()
     ):
-        raise ValueError("Portable cache requires nonmissing subjects and binary labels")
-    if not all(pd.api.types.is_numeric_dtype(frame[column]) for column in PORTABLE_FEATURE_COLUMNS):
+        raise ValueError(
+            "Portable cache requires nonmissing subjects and binary labels"
+        )
+    if not all(
+        pd.api.types.is_numeric_dtype(frame[column])
+        for column in PORTABLE_FEATURE_COLUMNS
+    ):
         raise ValueError("Portable features must be numeric")
     if np.isinf(frame[PORTABLE_FEATURE_COLUMNS].to_numpy(dtype=float)).any():
         raise ValueError("Portable features may contain NaN, but not infinity")
@@ -103,18 +113,24 @@ def _validate_frame(frame):
 
 def _load_or_build_cache(dataset, builder, source_provenance=None, *, rebuild=False):
     PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    cache = PROCESSED_DATA_DIR / f"portable_{dataset}_v{PORTABLE_SCHEMA_VERSION}.parquet"
+    cache = (
+        PROCESSED_DATA_DIR / f"portable_{dataset}_v{PORTABLE_SCHEMA_VERSION}.parquet"
+    )
     sidecar = cache.with_suffix(".json")
     schema = _cache_schema(dataset)
     if cache.exists() and not rebuild:
         try:
             metadata = json.loads(sidecar.read_text())
         except (OSError, ValueError) as error:
-            raise ValueError(f"Missing or invalid portable cache metadata: {sidecar}") from error
+            raise ValueError(
+                f"Missing or invalid portable cache metadata: {sidecar}"
+            ) from error
         if not isinstance(metadata, dict) or any(
             metadata.get(key) != value for key, value in schema.items()
         ):
-            raise ValueError(f"Portable cache schema mismatch: {cache}; rebuild from raw data")
+            raise ValueError(
+                f"Portable cache schema mismatch: {cache}; rebuild from raw data"
+            )
         # Schema checks definitions; checksums check bytes.
         if metadata.get("cache_sha256") != sha256_file(cache):
             raise ValueError(f"Portable cache checksum mismatch: {cache}")
@@ -122,7 +138,11 @@ def _load_or_build_cache(dataset, builder, source_provenance=None, *, rebuild=Fa
     else:
         frame = builder()
         _validate_frame(frame)
-        source = source_provenance() if callable(source_provenance) else source_provenance or {}
+        source = (
+            source_provenance()
+            if callable(source_provenance)
+            else source_provenance or {}
+        )
         with TemporaryDirectory(dir=PROCESSED_DATA_DIR) as temporary:
             new_cache = Path(temporary) / cache.name
             new_sidecar = Path(temporary) / sidecar.name
@@ -163,6 +183,7 @@ def _generation_context():
     files = (
         "src/portable.py",
         "src/datasets/non_eeg.py",
+        "src/datasets/records.py",
         "scripts/cross_dataset.py",
         "scripts/run_experiment.py",
         "src/models/ml/classifiers.py",
@@ -170,7 +191,9 @@ def _generation_context():
     )
     return {
         **provenance(),
-        "source_file_sha256": {path: sha256_file(PROJECT_ROOT / path) for path in files},
+        "source_file_sha256": {
+            path: sha256_file(PROJECT_ROOT / path) for path in files
+        },
     }
 
 
@@ -181,7 +204,9 @@ def _xy(df, feature_cols):
         or len(feature_cols) != len(set(feature_cols))
         or not set(feature_cols).issubset(PORTABLE_FEATURE_COLUMNS)
     ):
-        raise ValueError("Select distinct portable feature columns, excluding subject and label")
+        raise ValueError(
+            "Select distinct portable feature columns, excluding subject and label"
+        )
     X = df[feature_cols].to_numpy(dtype=float)
     X[~np.isfinite(X)] = np.nan
     return X, df["label"].to_numpy(dtype=int), df["subject"].to_numpy()
@@ -196,7 +221,9 @@ def transfer(train_df, test_df, feature_cols):
     return {
         "accuracy": float(accuracy_score(yte, pred)),
         "balanced_accuracy": float(balanced_accuracy_score(yte, pred)),
-        "f1_macro": float(f1_score(yte, pred, labels=[0, 1], average="macro", zero_division=0)),
+        "f1_macro": float(
+            f1_score(yte, pred, labels=[0, 1], average="macro", zero_division=0)
+        ),
     }
 
 
@@ -240,7 +267,7 @@ def run(*, rebuild=False):
             "overlap": OVERLAP,
             "packages": {
                 name: version(name)
-                for name in ("numpy", "scipy", "pandas", "scikit-learn", "neurokit2", "wfdb")
+                for name in ("numpy", "scipy", "pandas", "scikit-learn", "neurokit2")
             },
         },
         "datasets": {
@@ -249,7 +276,10 @@ def run(*, rebuild=False):
                 "n_subjects": int(frame["subject"].nunique()),
                 "label_counts": {
                     str(label): int(count)
-                    for label, count in frame["label"].value_counts().sort_index().items()
+                    for label, count in frame["label"]
+                    .value_counts()
+                    .sort_index()
+                    .items()
                 },
                 "cache_sha256": metadata["cache_sha256"],
                 "source_provenance": metadata.get("source_provenance", {}),
@@ -275,7 +305,12 @@ def run(*, rebuild=False):
         f"Non-EEG        acc={out['within_noneeg']['accuracy']:.3f}     -> WESAD   f1={out['noneeg_to_wesad']['f1_macro']:.3f} (bal-acc {out['noneeg_to_wesad']['balanced_accuracy']:.3f})"
     )
 
-    labels = ["WESAD\n(within)", "WESAD→\nNon-EEG", "Non-EEG\n(within)", "Non-EEG→\nWESAD"]
+    labels = [
+        "WESAD\n(within)",
+        "WESAD→\nNon-EEG",
+        "Non-EEG\n(within)",
+        "Non-EEG→\nWESAD",
+    ]
     vals = [
         out["within_wesad"]["balanced_accuracy"],
         out["wesad_to_noneeg"]["balanced_accuracy"],
@@ -295,12 +330,16 @@ def run(*, rebuild=False):
     plt.tight_layout()
     plt.savefig(FIGURES_DIR / "cross_dataset.png", dpi=150)
     plt.close()
-    print(f"\nWrote {RESULTS_DIR / 'cross_dataset.json'} and {FIGURES_DIR / 'cross_dataset.png'}")
+    print(
+        f"\nWrote {RESULTS_DIR / 'cross_dataset.json'} and {FIGURES_DIR / 'cross_dataset.png'}"
+    )
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--rebuild", action="store_true", help="re-extract portable caches from raw data"
+        "--rebuild",
+        action="store_true",
+        help="re-extract portable caches from raw data",
     )
     run(rebuild=parser.parse_args().rebuild)

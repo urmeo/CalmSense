@@ -52,7 +52,9 @@ def run():
     for name, prefixes in SUBSETS.items():
         cols = [i for i, c in enumerate(feature_cols) if _group_of(c) in prefixes]
         if not cols:
-            raise ValueError(f"No feature columns available for ablation subset: {name}")
+            raise ValueError(
+                f"No feature columns available for ablation subset: {name}"
+            )
         res = loso_evaluate(lambda: build_pipeline("rf"), X[:, cols], y, groups)
         rows.append(
             {
@@ -70,8 +72,15 @@ def run():
 
     order = df.iloc[::-1]
     plt.figure(figsize=(7, 4))
-    plt.barh(order["subset"], order["accuracy_mean"], xerr=order["accuracy_std"], color="#3498db")
-    plt.axvline(df.iloc[0]["accuracy_mean"], color="#e74c3c", ls="--", label="all features")
+    plt.barh(
+        order["subset"],
+        order["accuracy_mean"],
+        xerr=order["accuracy_std"],
+        color="#3498db",
+    )
+    plt.axvline(
+        df.iloc[0]["accuracy_mean"], color="#e74c3c", ls="--", label="all features"
+    )
     plt.xlabel("LOSO accuracy (Random Forest, binary)")
     plt.title("Feature-group ablation")
     plt.xlim(0, 1)

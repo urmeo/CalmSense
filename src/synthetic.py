@@ -2,7 +2,7 @@
 
 import pickle
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Any, cast, Dict, Tuple
 
 import numpy as np
 
@@ -33,29 +33,37 @@ def _fixlen(x: np.ndarray, n: int) -> np.ndarray:
     return x[:n] if len(x) >= n else np.pad(x, (0, n - len(x)), mode="edge")
 
 
-def _chest_block(cond: str, seconds: int, rng: np.random.RandomState, seed: int) -> Dict:
+def _chest_block(
+    cond: str, seconds: int, rng: np.random.RandomState, seed: int
+) -> Dict:
     import neurokit2 as nk
 
     n = seconds * CHEST_FS
     hr = HR[cond] + rng.uniform(-6, 6)
     ecg = _fixlen(
-        nk.ecg_simulate(
-            duration=seconds,
-            sampling_rate=CHEST_FS,
-            heart_rate=hr,
-            noise=NOISE,
-            method="simple",
-            random_state=seed,
+        cast(
+            np.ndarray,
+            nk.ecg_simulate(
+                duration=seconds,
+                sampling_rate=CHEST_FS,
+                heart_rate=cast(Any, hr),
+                noise=NOISE,
+                method="simple",
+                random_state=seed,
+            ),
         ),
         n,
     )
     eda = EDA_LEVEL[cond] + _fixlen(
-        nk.eda_simulate(
-            duration=seconds,
-            sampling_rate=CHEST_FS,
-            scr_number=SCR[cond],
-            noise=NOISE,
-            random_state=seed,
+        cast(
+            np.ndarray,
+            nk.eda_simulate(
+                duration=seconds,
+                sampling_rate=CHEST_FS,
+                scr_number=SCR[cond],
+                noise=NOISE,
+                random_state=seed,
+            ),
         ),
         n,
     )
@@ -82,7 +90,9 @@ def _chest_block(cond: str, seconds: int, rng: np.random.RandomState, seed: int)
     }
 
 
-def _wrist_block(cond: str, seconds: int, chest: Dict, rng: np.random.RandomState) -> Dict:
+def _wrist_block(
+    cond: str, seconds: int, chest: Dict, rng: np.random.RandomState
+) -> Dict:
     """BVP is sinusoidal."""
     bvp_n = int(seconds * WRIST["BVP"])
     eda_n = int(seconds * WRIST["EDA"])
@@ -101,7 +111,9 @@ def _subject(seed: int, block_sec: int) -> Dict:
     rng = np.random.RandomState(seed)
     order = ["baseline", "stress", "amusement", "baseline", "stress"]
 
-    chest_parts: Dict[str, list] = {k: [] for k in ["ECG", "EDA", "Temp", "Resp", "EMG", "ACC"]}
+    chest_parts: Dict[str, list] = {
+        k: [] for k in ["ECG", "EDA", "Temp", "Resp", "EMG", "ACC"]
+    }
     wrist_parts: Dict[str, list] = {k: [] for k in WRIST}
     labels = []
 
@@ -123,7 +135,9 @@ def _subject(seed: int, block_sec: int) -> Dict:
     }
 
 
-def write_dataset(out_dir: Path, n_subjects: int = 4, block_sec: int = 120, seed: int = 0) -> Path:
+def write_dataset(
+    out_dir: Path, n_subjects: int = 4, block_sec: int = 120, seed: int = 0
+) -> Path:
     n_subjects = _positive_integer(n_subjects, "n_subjects")
     block_sec = _positive_integer(block_sec, "block_sec")
     if n_subjects > len(VALID_SUBJECTS):
@@ -142,7 +156,9 @@ def features(
     n_subjects: int = 4, block_sec: int = 120, seed: int = 0, cache: bool = False
 ) -> Tuple:
     if cache:
-        raise ValueError("Synthetic features cannot replace real-data caches; use cache=False")
+        raise ValueError(
+            "Synthetic features cannot replace real-data caches; use cache=False"
+        )
     import shutil
     import tempfile
 

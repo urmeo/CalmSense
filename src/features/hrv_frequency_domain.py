@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Tuple
+from typing import Any, cast, Dict, Optional, Tuple
 
 import numpy as np
 from scipy import signal as scipy_signal
@@ -26,10 +26,15 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
         self.vlf_band = vlf_band
         self.lf_band = lf_band
         self.hf_band = hf_band
-        self.interpolation_rate = _positive_number(interpolation_rate, "interpolation_rate")
+        self.interpolation_rate = _positive_number(
+            interpolation_rate, "interpolation_rate"
+        )
         self.min_rr_count = _positive_integer(min_rr_count, "min_rr_count")
         for band in (vlf_band, lf_band, hf_band):
-            if len(band) != 2 or not 0 <= band[0] < band[1] < self.interpolation_rate / 2:
+            if (
+                len(band) != 2
+                or not 0 <= band[0] < band[1] < self.interpolation_rate / 2
+            ):
                 raise ValueError(
                     "HRV frequency bands must be ordered below the interpolation Nyquist"
                 )
@@ -47,7 +52,11 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
 
         try:
             interpolator = interp1d(
-                t_rr, rr, kind=method, fill_value="extrapolate", bounds_error=False
+                t_rr,
+                rr,
+                kind=method,
+                fill_value=cast(Any, "extrapolate"),
+                bounds_error=False,
             )
             rr_interpolated = interpolator(t_uniform)
         except Exception as e:
@@ -109,7 +118,9 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
         angular_freqs = 2 * np.pi * freqs
 
         try:
-            psd = np.maximum(lombscargle(t, rr_centered, angular_freqs, normalize=False), 0.0)
+            psd = np.maximum(
+                lombscargle(t, rr_centered, angular_freqs, normalize=False), 0.0
+            )
             area = float(_trapz(psd, freqs))
             if not np.isfinite(area) or area <= 0:
                 return np.array([]), np.array([])
@@ -197,7 +208,9 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
         peak_idx = np.argmax(lf_psd)
         return float(lf_freqs[peak_idx])
 
-    def extract_all(self, rr_intervals: np.ndarray, method: str = "welch") -> Dict[str, float]:
+    def extract_all(
+        self, rr_intervals: np.ndarray, method: str = "welch"
+    ) -> Dict[str, float]:
         features = dict.fromkeys(self.get_feature_descriptions(), np.nan)
 
         freqs, psd = self.compute_psd(rr_intervals, method=method)
@@ -215,8 +228,12 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
             features["LF_HF_ratio"] = self.compute_lf_hf_ratio(
                 features["LF_power"], features["HF_power"]
             )
-            features["LFn"] = self.compute_lfn(features["LF_power"], features["HF_power"])
-            features["HFn"] = self.compute_hfn(features["LF_power"], features["HF_power"])
+            features["LFn"] = self.compute_lfn(
+                features["LF_power"], features["HF_power"]
+            )
+            features["HFn"] = self.compute_hfn(
+                features["LF_power"], features["HF_power"]
+            )
             features["LF_peak_freq"] = self.compute_lf_peak_freq(freqs, psd)
 
         except Exception as e:

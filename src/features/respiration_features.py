@@ -52,7 +52,9 @@ class RespirationFeatureExtractor(LoggerMixin):
 
                     std_interval = np.std(breath_intervals)
                     if mean_interval > FEATURE_PARAMS.EPSILON:
-                        features["RESP_variability"] = float(std_interval / mean_interval)
+                        features["RESP_variability"] = float(
+                            std_interval / mean_interval
+                        )
 
             if np.isnan(features["RESP_rate"]):
                 features["RESP_rate"] = self._estimate_breathing_rate(resp)
@@ -62,7 +64,9 @@ class RespirationFeatureExtractor(LoggerMixin):
                 breath_troughs = np.asarray(breath_troughs, dtype=float).flatten()
                 breath_peaks = np.unique(
                     breath_peaks[
-                        np.isfinite(breath_peaks) & (breath_peaks >= 0) & (breath_peaks < len(resp))
+                        np.isfinite(breath_peaks)
+                        & (breath_peaks >= 0)
+                        & (breath_peaks < len(resp))
                     ]
                 )
                 breath_troughs = np.unique(
@@ -93,7 +97,9 @@ class RespirationFeatureExtractor(LoggerMixin):
                     breath_peaks, breath_troughs
                 )
 
-            features["RESP_apnea_index"] = self._compute_apnea_index(resp, breath_intervals)
+            features["RESP_apnea_index"] = self._compute_apnea_index(
+                resp, breath_intervals
+            )
 
         except Exception as e:
             self.logger.error(f"Respiration feature extraction failed: {e}")
@@ -170,7 +176,9 @@ class RespirationFeatureExtractor(LoggerMixin):
             return float(100.0 * low_variance_count / n_windows)
 
         breath_intervals = np.asarray(breath_intervals)
-        breath_intervals = breath_intervals[np.isfinite(breath_intervals) & (breath_intervals > 0)]
+        breath_intervals = breath_intervals[
+            np.isfinite(breath_intervals) & (breath_intervals > 0)
+        ]
 
         if len(breath_intervals) == 0:
             return 0.0

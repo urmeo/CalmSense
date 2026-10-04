@@ -9,14 +9,18 @@ export function zoomRange(
   return [start, start + width];
 }
 
-export function relayoutRange(event: unknown, duration: number): [number, number] | null {
+export function dataZoomRange(event: unknown, duration: number): [number, number] | null {
   if (!event || typeof event !== 'object' || !Number.isFinite(duration) || duration <= 0) return null;
-  const change = event as Record<string, unknown>;
-  if (change['xaxis.autorange'] === true) return [0, duration];
-  const range = change['xaxis.range'] ?? [change['xaxis.range[0]'], change['xaxis.range[1]']];
-  if (!Array.isArray(range) || range.length !== 2
-    || !range.every((value) => typeof value === 'number' && Number.isFinite(value))) return null;
-  const start = Math.max(0, range[0]);
-  const end = Math.min(duration, range[1]);
-  return end > start ? [start, end] : null;
+  const action = event as Record<string, unknown>;
+  const change = Array.isArray(action.batch) ? action.batch[0] : action;
+  if (!change || typeof change !== 'object') return null;
+  const { startValue, endValue, start, end } = change as Record<string, unknown>;
+  const range = startValue !== undefined || endValue !== undefined
+    ? [startValue, endValue]
+    : [typeof start === 'number' ? start * duration / 100 : undefined,
+      typeof end === 'number' ? end * duration / 100 : undefined];
+  if (!range.every((value) => typeof value === 'number' && Number.isFinite(value))) return null;
+  const lower = Math.max(0, range[0] as number);
+  const upper = Math.min(duration, range[1] as number);
+  return upper > lower ? [lower, upper] : null;
 }

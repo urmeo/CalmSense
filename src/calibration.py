@@ -20,7 +20,9 @@ def _validated_predictions(y: Array, proba: Array) -> tuple[np.ndarray, np.ndarr
         raise ValueError("Probabilities must be finite and between zero and one")
     n_classes = 2 if proba.ndim == 1 else proba.shape[1]
     if not np.isin(y, np.arange(n_classes)).all():
-        raise ValueError("Labels must be zero-based class indices matching the probabilities")
+        raise ValueError(
+            "Labels must be zero-based class indices matching the probabilities"
+        )
     if proba.ndim == 2 and not np.allclose(proba.sum(axis=1), 1.0):
         raise ValueError("Class probabilities must sum to one in every row")
     return y.astype(np.intp, copy=False), proba
@@ -39,13 +41,19 @@ def _confidence_correct(y: Array, proba: Array):
 
 
 def _bin_index(conf: np.ndarray, n_bins: int) -> np.ndarray:
-    if isinstance(n_bins, bool) or not isinstance(n_bins, (int, np.integer)) or n_bins < 1:
+    if (
+        isinstance(n_bins, bool)
+        or not isinstance(n_bins, (int, np.integer))
+        or n_bins < 1
+    ):
         raise ValueError("n_bins must be a positive integer")
     edges = np.linspace(0.0, 1.0, n_bins + 1)
     return np.clip(np.digitize(conf, edges[1:-1]), 0, n_bins - 1)
 
 
-def reliability_curve(y: Array, proba: Array, n_bins: int = 15) -> List[Dict[str, float]]:
+def reliability_curve(
+    y: Array, proba: Array, n_bins: int = 15
+) -> List[Dict[str, float]]:
     conf, correct = _confidence_correct(y, proba)
     idx = _bin_index(conf, n_bins)
     rows = []

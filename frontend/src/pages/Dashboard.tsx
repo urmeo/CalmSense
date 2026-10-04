@@ -1,22 +1,13 @@
 import React from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from 'recharts';
 import { Activity, Brain, Layers, Award } from 'lucide-react';
 import results from '../data';
 import Panel from '../components/Panel';
+import Chart from '../components/Chart';
+import { barChartOption } from '../lib/charts';
 import { formatPercent as pct, matchedGap } from '../lib/benchmarks';
 
 const r = results;
 
-// Tailwind needs static classes.
 const CARD_COLORS: Record<string, string> = {
   blue: 'bg-blue-100 dark:bg-blue-900/30',
   green: 'bg-green-100 dark:bg-green-900/30',
@@ -51,20 +42,11 @@ const FeatureImportanceChart: React.FC = () => {
 
   return (
     <Panel title="Top features (binary XGBoost, full-data SHAP)">
-      {data.length === 0 ? <p role="status" className="text-sm text-gray-500 dark:text-gray-400">SHAP values are unavailable for this benchmark.</p> : <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
-          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-          <XAxis type="number" />
-          {/* Avoid clipping feature names. */}
-          <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={200} interval={0} />
-          <Tooltip />
-          <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-            {data.map((entry: { color: string }, index: number) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>}
+      {data.length === 0 ? <p role="status" className="text-sm text-gray-500 dark:text-gray-400">SHAP values are unavailable for this benchmark.</p> : <Chart
+        label="Top eight features by mean absolute SHAP contribution."
+        option={barChartOption({ labels: data.map((d) => d.name), values: data.map((d) => d.value),
+          colors: data.map((d) => d.color), horizontal: true, axisName: 'mean |SHAP|' })}
+      />}
     </Panel>
   );
 };
@@ -84,19 +66,12 @@ const OptimismGapChart: React.FC = () => {
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
         {hasMatched ? `Pooled subject-mixed minus LOSO accuracy: ${gap?.toFixed(1)} points on matched non-overlapping windows` : 'Matched-window comparison is unavailable for the selected benchmark model.'}
       </p>
-      {hasMatched && <ResponsiveContainer width="100%" height={250}>
-        <BarChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-          <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} />
-          <YAxis domain={[0, 1]} tickFormatter={(v) => `${(v * 100).toFixed(0)}%`} />
-          <Tooltip formatter={(v) => pct(Number(v))} />
-          <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>}
+      {hasMatched && <Chart height={250}
+        label={`Matched LOSO versus subject-mixed accuracy. Optimism gap: ${gap?.toFixed(1)} percentage points.`}
+        option={barChartOption({ labels: data.map((d) => d.name),
+          values: data.map((d) => typeof d.value === 'number' ? d.value * 100 : null),
+          colors: data.map((d) => d.color), maximum: 100, percent: true, precision: 1, axisName: 'Accuracy' })}
+      />}
     </Panel>
   );
 };

@@ -84,7 +84,10 @@ def provenance() -> dict:
         ).strip()
         dirty = bool(
             subprocess.check_output(
-                ["git", "status", "--porcelain"], cwd=root, text=True, stderr=subprocess.DEVNULL
+                ["git", "status", "--porcelain"],
+                cwd=root,
+                text=True,
+                stderr=subprocess.DEVNULL,
             ).strip()
         )
     except (OSError, subprocess.CalledProcessError):
@@ -143,7 +146,9 @@ def save_verified_joblib(bundle, path: Union[str, Path]) -> None:
         joblib.dump(bundle, temporary)
         digest = sha256_file(temporary)
         checksum.write_text(f"{digest}  {path.name}\n")
-        replace_verified_pair(temporary, checksum, path, path.with_name(path.name + ".sha256"))
+        replace_verified_pair(
+            temporary, checksum, path, path.with_name(path.name + ".sha256")
+        )
 
 
 def load_verified_joblib(path: Union[str, Path]):

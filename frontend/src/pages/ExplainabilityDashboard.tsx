@@ -1,5 +1,6 @@
 import React from 'react';
-import Plot from '../components/Plot';
+import Chart from '../components/Chart';
+import { barChartOption } from '../lib/charts';
 import { FileSearch, Info, AlertTriangle } from 'lucide-react';
 import results from '../data';
 import Panel from '../components/Panel';
@@ -50,23 +51,10 @@ const ExplainabilityDashboard: React.FC = () => {
         </Panel>
 
         <Panel title="Importance ranking">
-          {importance.length > 0 && <Plot
-            data={[
-              {
-                x: importance.map((d) => d.value),
-                y: importance.map((d) => d.feature),
-                type: 'bar',
-                orientation: 'h',
-                marker: { color: '#6366F1' },
-                hovertemplate: '%{y}: %{x:.3f}<extra></extra>',
-              },
-            ]}
-            layout={{
-              height: 360,
-              margin: { l: 150, r: 20, t: 10, b: 40 },
-              xaxis: { title: { text: 'mean |SHAP|' } },
-              yaxis: { autorange: 'reversed' },
-            }}
+          {importance.length > 0 && <Chart height={360}
+            label="Top twelve features ranked by mean absolute SHAP contribution."
+            option={barChartOption({ labels: importance.map((d) => d.feature), values: importance.map((d) => d.value),
+              colors: ['#6366F1'], horizontal: true, axisName: 'mean |SHAP|' })}
           />}
         </Panel>
       </div>

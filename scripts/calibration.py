@@ -92,7 +92,9 @@ def _fit_calibrator(raw, y, method):
     if method == "isotonic":
         return IsotonicRegression(out_of_bounds="clip").fit(raw, y)
     if len(np.unique(y)) == 1:
-        return DummyClassifier(strategy="constant", constant=y[0]).fit(raw.reshape(-1, 1), y)
+        return DummyClassifier(strategy="constant", constant=y[0]).fit(
+            raw.reshape(-1, 1), y
+        )
     return LogisticRegression().fit(raw.reshape(-1, 1), y)
 
 
@@ -114,7 +116,9 @@ def _pos_proba(estimator, X):
         or len(np.unique(classes)) != len(classes)
         or not np.isin(classes, [0, 1]).all()
     ):
-        raise ValueError("Binary calibration requires estimator classes drawn from {0, 1}")
+        raise ValueError(
+            "Binary calibration requires estimator classes drawn from {0, 1}"
+        )
     if (
         proba.shape != (len(X), len(classes))
         or not np.isfinite(proba).all()
@@ -135,7 +139,9 @@ def _global_calibrator(factory, Xtr, ytr, gtr, method):
         return None
     oof = np.zeros(len(ytr))
     inner = GroupKFold(n_splits=min(5, n_groups))
-    for held, positive in _probability_folds(factory, Xtr, ytr, inner.split(Xtr, ytr, gtr)):
+    for held, positive in _probability_folds(
+        factory, Xtr, ytr, inner.split(Xtr, ytr, gtr)
+    ):
         oof[held] = positive
     return _fit_calibrator(oof, ytr, method)
 
@@ -151,7 +157,11 @@ def loso_recalibrated_proba(factory, X, y, groups, method="isotonic"):
         raw_te = _pos_proba(base, X[test_idx])
 
         calibrator = _global_calibrator(factory, Xtr, ytr, gtr, method)
-        cal_pos = raw_te if calibrator is None else _apply_calibrator(calibrator, raw_te, method)
+        cal_pos = (
+            raw_te
+            if calibrator is None
+            else _apply_calibrator(calibrator, raw_te, method)
+        )
 
         pp.append(np.column_stack([1.0 - cal_pos, cal_pos]))
         yt.append(y[test_idx])
@@ -159,7 +169,7 @@ def loso_recalibrated_proba(factory, X, y, groups, method="isotonic"):
 
 
 def compute(X, y, groups, model="rf", n_bins=N_BINS):
-    factory = lambda: build_pipeline(model)  # noqa: E731
+    factory = lambda: build_pipeline(model)
 
     y_loso, p_loso, g_loso = loso_proba(factory, X, y, groups)
     y_iso, p_iso = loso_recalibrated_proba(factory, X, y, groups, "isotonic")
@@ -185,9 +195,15 @@ def compute(X, y, groups, model="rf", n_bins=N_BINS):
     prevalence = float(np.mean(y_loso == 1))
     decision = {
         "thresholds": thresholds.tolist(),
-        "net_benefit_uncalibrated": cal.net_benefit(y_loso, p_loso[:, 1], thresholds).tolist(),
-        "net_benefit_recalibrated": cal.net_benefit(y_loso, p_iso[:, 1], thresholds).tolist(),
-        "treat_all": [prevalence - (1 - prevalence) * (t / (1 - t)) for t in thresholds],
+        "net_benefit_uncalibrated": cal.net_benefit(
+            y_loso, p_loso[:, 1], thresholds
+        ).tolist(),
+        "net_benefit_recalibrated": cal.net_benefit(
+            y_loso, p_iso[:, 1], thresholds
+        ).tolist(),
+        "treat_all": [
+            prevalence - (1 - prevalence) * (t / (1 - t)) for t in thresholds
+        ],
     }
 
     return {
@@ -252,8 +268,12 @@ def _plot_decision(out, path):
     d = out["decision_curve"]
     t = d["thresholds"]
     plt.figure(figsize=(5.5, 4))
-    plt.plot(t, d["net_benefit_uncalibrated"], "o-", color="#3498db", label="uncalibrated")
-    plt.plot(t, d["net_benefit_recalibrated"], "o-", color="#2ecc71", label="recalibrated")
+    plt.plot(
+        t, d["net_benefit_uncalibrated"], "o-", color="#3498db", label="uncalibrated"
+    )
+    plt.plot(
+        t, d["net_benefit_recalibrated"], "o-", color="#2ecc71", label="recalibrated"
+    )
     plt.plot(t, d["treat_all"], "--", color="gray", label="alert everyone")
     plt.axhline(0, color="black", lw=0.8, label="alert no one")
     plt.xlabel("Alert threshold")
@@ -276,7 +296,9 @@ def run(synthetic=False, model="rf", n_bins=N_BINS):
         from src.synthetic import features
 
         print("Using synthetic data (demo only).")
-        features_df, x_raw, _ = features(n_subjects=6, block_sec=150, seed=SEED, cache=False)
+        features_df, x_raw, _ = features(
+            n_subjects=6, block_sec=150, seed=SEED, cache=False
+        )
     else:
         cached = load_cached()
         if cached is None:
@@ -316,7 +338,9 @@ def run(synthetic=False, model="rf", n_bins=N_BINS):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--synthetic", action="store_true", help="run on generated demo data")
+    parser.add_argument(
+        "--synthetic", action="store_true", help="run on generated demo data"
+    )
     parser.add_argument("--model", default="rf")
     parser.add_argument("--bins", type=int, default=N_BINS)
     args = parser.parse_args()

@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import cast, Dict, List, Optional
 
 import numpy as np
 from scipy import stats
@@ -26,7 +26,8 @@ class EDAFeatureExtractor(LoggerMixin):
 
     def _empty_features(self, prefix: str) -> Dict[str, float]:
         return dict.fromkeys(
-            (key for key in self.get_feature_descriptions() if key.startswith(prefix)), np.nan
+            (key for key in self.get_feature_descriptions() if key.startswith(prefix)),
+            np.nan,
         )
 
     def extract_tonic_features(self, scl: Optional[np.ndarray]) -> Dict[str, float]:
@@ -48,7 +49,7 @@ class EDAFeatureExtractor(LoggerMixin):
             x = np.arange(len(original))[np.isfinite(original)] / self.sampling_rate
             if len(x) > 1:
                 slope, _, _, _, _ = stats.linregress(x, scl)
-                features["SCL_slope"] = float(slope)
+                features["SCL_slope"] = float(cast(float, slope))
 
         except Exception as e:
             self.logger.warning(f"Tonic feature extraction failed: {e}")
@@ -68,14 +69,20 @@ class EDAFeatureExtractor(LoggerMixin):
             features["SCR_count"] = float(n_scr)
 
             duration_min = signal_duration / 60.0
-            features["SCR_rate"] = float(n_scr / duration_min) if duration_min > 0 else 0.0
+            features["SCR_rate"] = (
+                float(n_scr / duration_min) if duration_min > 0 else 0.0
+            )
 
-            amplitudes = [scr.get("amplitude", 0) for scr in scr_peaks if "amplitude" in scr]
+            amplitudes = [
+                scr.get("amplitude", 0) for scr in scr_peaks if "amplitude" in scr
+            ]
             if len(amplitudes) > 0:
                 features["SCR_amplitude_mean"] = float(np.mean(amplitudes))
                 features["SCR_amplitude_max"] = float(np.max(amplitudes))
 
-            rise_times = [scr.get("rise_time", 0) for scr in scr_peaks if "rise_time" in scr]
+            rise_times = [
+                scr.get("rise_time", 0) for scr in scr_peaks if "rise_time" in scr
+            ]
             if len(rise_times) > 0:
                 features["SCR_rise_time_mean"] = float(np.mean(rise_times))
 
@@ -102,7 +109,9 @@ class EDAFeatureExtractor(LoggerMixin):
 
         return features
 
-    def extract_statistical_features(self, eda: Optional[np.ndarray]) -> Dict[str, float]:
+    def extract_statistical_features(
+        self, eda: Optional[np.ndarray]
+    ) -> Dict[str, float]:
         features = self._empty_features("EDA_")
 
         validated = self._validate_signal(eda)
@@ -130,7 +139,9 @@ class EDAFeatureExtractor(LoggerMixin):
         features = self.extract_tonic_features(tonic)
         duration_source = tonic if tonic is not None else raw_eda
         signal_duration = (
-            len(duration_source) / self.sampling_rate if duration_source is not None else 60.0
+            len(duration_source) / self.sampling_rate
+            if duration_source is not None
+            else 60.0
         )
         features.update(self.extract_phasic_features(scr_peaks, signal_duration))
 
@@ -138,7 +149,9 @@ class EDAFeatureExtractor(LoggerMixin):
             tonic = eda_decomposed.get("tonic")
             phasic = eda_decomposed.get("phasic")
             if tonic is not None and phasic is not None:
-                raw_eda = np.asarray(tonic, dtype=float) + np.asarray(phasic, dtype=float)
+                raw_eda = np.asarray(tonic, dtype=float) + np.asarray(
+                    phasic, dtype=float
+                )
 
         features.update(self.extract_statistical_features(raw_eda))
 

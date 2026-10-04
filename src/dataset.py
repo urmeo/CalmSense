@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, cast, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -11,7 +11,11 @@ from .features.feature_pipeline import FEATURE_SCHEMA_VERSION, FeatureExtraction
 from .logging_config import LoggerMixin
 from .preprocessing.ecg_processor import ECGProcessor
 from .preprocessing.eda_processor import EDAProcessor
-from .preprocessing.filters import SignalProcessor, _positive_integer, _window_parameters
+from .preprocessing.filters import (
+    SignalProcessor,
+    _positive_integer,
+    _window_parameters,
+)
 
 CONDITION_LABELS = {1: "baseline", 2: "stress", 3: "amusement"}
 CNN_CHANNELS = ["ECG", "EDA", "Temp", "Resp", "ACC"]
@@ -57,12 +61,16 @@ class WindowedDataset(LoggerMixin):
         self.ecg = ECGProcessor(sampling_rate=fs)
         self.eda = EDAProcessor(sampling_rate=fs)
         self.sig = SignalProcessor(fs=fs)
-        self.features = FeatureExtractionPipeline(chest_fs=fs, wrist_eda_fs=fs, wrist_acc_fs=fs)
+        self.features = FeatureExtractionPipeline(
+            chest_fs=fs, wrist_eda_fs=fs, wrist_acc_fs=fs
+        )
 
     def _window_label(self, labels: np.ndarray) -> Optional[int]:
         return window_label(labels, self.purity)
 
-    def _process_subject(self, subject_id: str) -> Tuple[List[Dict], List[np.ndarray], List[int]]:
+    def _process_subject(
+        self, subject_id: str
+    ) -> Tuple[List[Dict], List[np.ndarray], List[int]]:
         data = self.loader.load_subject(subject_id)
         chest = data["chest"]
         labels = np.asarray(data["label"]).flatten()
@@ -125,7 +133,10 @@ class WindowedDataset(LoggerMixin):
         return windows, raws, ys
 
     def _raw_tensor(self, *channels: np.ndarray) -> np.ndarray:
-        stacked = [resample(np.asarray(c, dtype=np.float32), self.cnn_length) for c in channels]
+        stacked = [
+            cast(np.ndarray, resample(np.asarray(c, dtype=np.float32), self.cnn_length))
+            for c in channels
+        ]
         return np.stack(stacked).astype(np.float32)
 
     def build(
@@ -139,7 +150,9 @@ class WindowedDataset(LoggerMixin):
         for subject_id in subjects:
             windows, raws, ys = self._process_subject(subject_id)
             if windows:
-                frames.append(self.features.extract_all_features(windows, show_progress=True))
+                frames.append(
+                    self.features.extract_all_features(windows, show_progress=True)
+                )
             all_raw.extend(raws)
             all_y.extend(ys)
             # Release full-recording slice references.
@@ -150,7 +163,9 @@ class WindowedDataset(LoggerMixin):
             if frames
             else self.features.extract_all_features([], show_progress=False)
         )
-        features_df["label_name"] = features_df["label"].map(CONDITION_LABELS)
+        features_df["label_name"] = features_df["label"].map(
+            cast(Any, CONDITION_LABELS)
+        )
         features_df.attrs["feature_schema_version"] = FEATURE_SCHEMA_VERSION
         features_df.attrs["dataset_parameters"] = {
             "fs": self.fs,
@@ -160,7 +175,11 @@ class WindowedDataset(LoggerMixin):
             "cnn_length": self.cnn_length,
             "subjects": sorted(subjects),
         }
-        x_raw = np.stack(all_raw) if all_raw else np.empty((0, len(CNN_CHANNELS), self.cnn_length))
+        x_raw = (
+            np.stack(all_raw)
+            if all_raw
+            else np.empty((0, len(CNN_CHANNELS), self.cnn_length))
+        )
 
         if cache:
             self._save(features_df, x_raw)
@@ -190,7 +209,9 @@ def load_cached() -> Optional[Tuple[pd.DataFrame, np.ndarray]]:
         "fs": FS.CHEST,
         "window_samples": int(FEATURE_PARAMS.WINDOW_SIZE_SEC * FS.CHEST),
         "step": int(
-            FEATURE_PARAMS.WINDOW_SIZE_SEC * FS.CHEST * (1 - FEATURE_PARAMS.WINDOW_OVERLAP)
+            FEATURE_PARAMS.WINDOW_SIZE_SEC
+            * FS.CHEST
+            * (1 - FEATURE_PARAMS.WINDOW_OVERLAP)
         ),
         "purity": 0.9,
         "cnn_length": 1024,

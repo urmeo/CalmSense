@@ -17,7 +17,9 @@ class BaseHRVExtractor(LoggerMixin):
         rr = rr[np.isfinite(rr)]
 
         if len(rr) < self.min_rr_count:
-            self.logger.warning(f"Insufficient RR intervals: {len(rr)} < {self.min_rr_count}")
+            self.logger.warning(
+                f"Insufficient RR intervals: {len(rr)} < {self.min_rr_count}"
+            )
             return None
 
         rr = rr[(rr >= RR_MIN_MS) & (rr <= RR_MAX_MS)]

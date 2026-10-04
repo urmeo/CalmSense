@@ -211,11 +211,10 @@ Saved **58** exclude all-NaN `RESP_inhale_exhale_ratio` and `RESP_variability`.
 
 | Layer | Technologies |
 | :-- | :-- |
-| Signals & data | Python, NumPy, pandas, SciPy, NeuroKit2, WFDB |
+| Signals & data | Python, NumPy, pandas, SciPy, NeuroKit2 |
 | Models & explanation | scikit-learn, XGBoost, LightGBM, PyTorch, SHAP |
 | Figures | Matplotlib, Seaborn |
-| Dashboard | React, TypeScript, Vite, Tailwind CSS, Plotly, Recharts |
-| Quality | pytest, Ruff, mypy |
+| Dashboard | React, TypeScript, esbuild, CSS, Apache ECharts |
 
 ## Limitations
 

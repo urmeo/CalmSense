@@ -1,5 +1,6 @@
 import React from 'react';
-import Plot from '../components/Plot';
+import Chart, { type ChartOption } from '../components/Chart';
+import { barChartOption } from '../lib/charts';
 import { Gauge, Target, AlertTriangle, TrendingDown, Info } from 'lucide-react';
 import results from '../data';
 import Panel from '../components/Panel';
@@ -8,7 +9,6 @@ import SummaryCard from '../components/SummaryCard';
 const fmt = (v: number) => v.toFixed(3);
 const signed = (v: number) => `${v >= 0 ? '+' : ''}${v.toFixed(3)}`;
 
-const TRANSPARENT = 'rgba(0,0,0,0)';
 const COLORS = {
   loso: '#3182CE',
   recal: '#38A169',
@@ -16,15 +16,17 @@ const COLORS = {
   diagonal: '#9CA3AF',
 };
 
-const markerTrace = (x: number[], y: number[], name: string, color: string) => ({
-  x,
-  y,
-  type: 'scatter' as const,
-  mode: 'lines+markers' as const,
-  name,
-  line: { color },
-  marker: { color },
+const lineSeries = (x: number[], y: number[], name: string, color: string) => ({
+  name, type: 'line' as const, data: x.map((value, i) => [value, y[i]]),
+  symbolSize: 5, lineStyle: { color }, itemStyle: { color },
 });
+
+const calibrationAxes: ChartOption = {
+  grid: { left: 55, right: 20, top: 80, bottom: 55 },
+  xAxis: { type: 'value', name: 'Confidence', min: 0, max: 1, nameLocation: 'middle', nameGap: 30 },
+  yAxis: { type: 'value', name: 'Accuracy', min: 0, max: 1, nameLocation: 'middle', nameGap: 40 },
+  legend: { type: 'scroll', top: 5, textStyle: { fontSize: 10 } },
+};
 
 const CalibrationPanel: React.FC = () => {
   const cal = results.calibration;
@@ -84,51 +86,26 @@ const CalibrationPanel: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Panel title="Reliability · all windows">
-          <Plot
-            data={[
-              {
-                x: [0, 1],
-                y: [0, 1],
-                type: 'scatter',
-                mode: 'lines',
-                name: 'Perfectly calibrated',
-                line: { color: COLORS.diagonal, dash: 'dot' },
-              },
-              ...evaluations.map(({ name, summary, color }) => markerTrace(
-                summary.reliability.map((r) => r.confidence),
-                summary.reliability.map((r) => r.accuracy),
-                `${name} (ECE ${fmt(summary.ece)})`,
-                color
-              )),
-            ]}
-            layout={{
-              height: 380,
-              margin: { l: 50, r: 20, t: 10, b: 50 },
-              xaxis: { title: { text: 'Confidence' }, range: [0, 1] },
-              yaxis: { title: { text: 'Accuracy' }, range: [0, 1] },
-              legend: { x: 0.02, y: 0.98, bgcolor: TRANSPARENT, font: { size: 10 } },
+          <Chart height={380} label="Reliability curves for LOSO, isotonic and sigmoid calibration, against perfect calibration."
+            option={{
+              ...calibrationAxes,
+              series: [
+                { name: 'Perfectly calibrated', type: 'line', data: [[0, 0], [1, 1]],
+                  showSymbol: false, lineStyle: { color: COLORS.diagonal, type: 'dotted' } },
+                ...evaluations.map(({ name, summary, color }) => lineSeries(
+                  summary.reliability.map((r) => r.confidence),
+                  summary.reliability.map((r) => r.accuracy),
+                  `${name} (ECE ${fmt(summary.ece)})`, color)),
+              ],
             }}
           />
         </Panel>
 
         <Panel title="Expected calibration error · all windows">
-          <Plot
-            data={[
-              {
-                x: evaluations.map((e) => e.name),
-                y: evaluations.map((e) => e.summary.ece),
-                type: 'bar',
-                marker: { color: evaluations.map((e) => e.color) },
-                text: evaluations.map((e) => fmt(e.summary.ece)),
-                textposition: 'outside',
-                hovertemplate: '%{x}: %{y:.3f}<extra></extra>',
-              },
-            ]}
-            layout={{
-              height: 380,
-              margin: { l: 50, r: 20, t: 20, b: 50 },
-              yaxis: { title: { text: 'ECE' }, rangemode: 'tozero' },
-            }}
+          <Chart height={380} label="Expected calibration error for LOSO, isotonic and sigmoid calibration."
+            option={barChartOption({ labels: evaluations.map((e) => e.name),
+              values: evaluations.map((e) => e.summary.ece), colors: evaluations.map((e) => e.color),
+              axisName: 'ECE', showValues: true })}
           />
         </Panel>
       </div>
@@ -138,33 +115,20 @@ const CalibrationPanel: React.FC = () => {
           Exploratory net benefit on full-window LOSO predictions, versus alerting everyone
           or no one. No clinical deployment has been validated.
         </p>
-        <Plot
-          data={[
-            markerTrace(dc.thresholds, dc.net_benefit_uncalibrated, 'Uncalibrated', COLORS.loso),
-            markerTrace(dc.thresholds, dc.net_benefit_recalibrated, 'Recalibrated', COLORS.recal),
-            {
-              x: dc.thresholds,
-              y: dc.treat_all,
-              type: 'scatter',
-              mode: 'lines',
-              name: 'Alert everyone',
-              line: { color: COLORS.diagonal, dash: 'dash' },
-            },
-            {
-              x: dc.thresholds,
-              y: dc.thresholds.map(() => 0),
-              type: 'scatter',
-              mode: 'lines',
-              name: 'Alert no one',
-              line: { color: '#6B7280', dash: 'dot' },
-            },
-          ]}
-          layout={{
-            height: 360,
-            margin: { l: 60, r: 20, t: 10, b: 50 },
-            xaxis: { title: { text: 'Alert threshold' } },
-            yaxis: { title: { text: 'Net benefit' } },
-            legend: { orientation: 'h', y: -0.2, font: { size: 11 } },
+        <Chart height={360} label="Exploratory decision curves: uncalibrated and recalibrated net benefit versus alerting everyone or no one."
+          option={{
+            grid: { left: 60, right: 20, top: 20, bottom: 90 },
+            xAxis: { type: 'value', name: 'Alert threshold', nameLocation: 'middle', nameGap: 30 },
+            yAxis: { type: 'value', name: 'Net benefit', nameLocation: 'middle', nameGap: 45, scale: true },
+            legend: { type: 'scroll', bottom: 5, textStyle: { fontSize: 11 } },
+            series: [
+              lineSeries(dc.thresholds, dc.net_benefit_uncalibrated, 'Uncalibrated', COLORS.loso),
+              lineSeries(dc.thresholds, dc.net_benefit_recalibrated, 'Recalibrated', COLORS.recal),
+              { ...lineSeries(dc.thresholds, dc.treat_all, 'Alert everyone', COLORS.diagonal),
+                showSymbol: false, lineStyle: { color: COLORS.diagonal, type: 'dashed' } },
+              { ...lineSeries(dc.thresholds, dc.thresholds.map(() => 0), 'Alert no one', '#6B7280'),
+                showSymbol: false, lineStyle: { color: '#6B7280', type: 'dotted' } },
+            ],
           }}
         />
       </Panel>

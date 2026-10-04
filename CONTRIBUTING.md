@@ -8,10 +8,12 @@ Use Python 3.11+ from the repository root (macOS also needs `brew install libomp
 python -m venv .venv && source .venv/bin/activate
 python -m pip install -r requirements.txt
 python scripts/calibration.py --synthetic
-ruff format src/ tests/ scripts/
-ruff check src/ tests/ scripts/
-mypy src/ --ignore-missing-imports
-python -m pytest tests/ -q
+python -m black --check src/ tests/ scripts/
+python -m pyflakes src/ tests/ scripts/
+python -m pyright src/
+python -m coverage run --source=src -m unittest discover -s tests
+python -m coverage report --fail-under=60
+cd frontend && node tooling.mjs test && node tooling.mjs build
 ```
 
 ## Pull requests

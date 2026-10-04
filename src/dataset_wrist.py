@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, cast, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -15,7 +15,9 @@ from .preprocessing.filters import _window_parameters
 
 
 class WristDataset(LoggerMixin):
-    def __init__(self, window_sec: float = 60.0, overlap: float = 0.5, purity: float = 0.9):
+    def __init__(
+        self, window_sec: float = 60.0, overlap: float = 0.5, purity: float = 0.9
+    ):
         _window_parameters(window_sec, overlap, purity, FS.WRIST_EDA)
         self.window_sec = float(window_sec)
         self.overlap = float(overlap)
@@ -61,17 +63,25 @@ class WristDataset(LoggerMixin):
         t = 0.0
         while t + self.window_sec <= duration:
             lab = self._window_label(
-                labels[int(t * self.label_fs) : int((t + self.window_sec) * self.label_fs)]
+                labels[
+                    int(t * self.label_fs) : int((t + self.window_sec) * self.label_fs)
+                ]
             )
             if lab is not None:
-                b0, b1 = int(t * FS.WRIST_BVP), int((t + self.window_sec) * FS.WRIST_BVP)
+                b0, b1 = int(t * FS.WRIST_BVP), int(
+                    (t + self.window_sec) * FS.WRIST_BVP
+                )
                 in_win = (peaks >= b0) & (peaks < b1)
                 rr = self.rr.extract_rr_intervals(peaks[in_win], unit="ms")
                 _, valid = self.rr.remove_ectopic_beats(rr)
                 rr_clean = self.rr.interpolate_artifacts(rr, valid)
 
-                e0, e1 = int(t * FS.WRIST_EDA), int((t + self.window_sec) * FS.WRIST_EDA)
-                a0, a1 = int(t * FS.WRIST_ACC), int((t + self.window_sec) * FS.WRIST_ACC)
+                e0, e1 = int(t * FS.WRIST_EDA), int(
+                    (t + self.window_sec) * FS.WRIST_EDA
+                )
+                a0, a1 = int(t * FS.WRIST_ACC), int(
+                    (t + self.window_sec) * FS.WRIST_ACC
+                )
                 scr_in = [s for s, idx in zip(scr_features, scr_idx) if e0 <= idx < e1]
 
                 windows.append(
@@ -94,7 +104,9 @@ class WristDataset(LoggerMixin):
         self.logger.info(f"{subject_id} (wrist): {len(ys)} windows")
         return windows, ys
 
-    def build(self, subjects: Optional[List[str]] = None, cache: bool = True) -> pd.DataFrame:
+    def build(
+        self, subjects: Optional[List[str]] = None, cache: bool = True
+    ) -> pd.DataFrame:
         subjects = self.loader.subjects if subjects is None else subjects
         if not subjects or len(set(subjects)) != len(subjects):
             raise ValueError("subjects must be a nonempty list without duplicates")
@@ -102,14 +114,16 @@ class WristDataset(LoggerMixin):
         for s in subjects:
             windows, _ = self._process_subject(s)
             if windows:
-                frames.append(self.features.extract_all_features(windows, show_progress=False))
+                frames.append(
+                    self.features.extract_all_features(windows, show_progress=False)
+                )
             del windows
         df = (
             pd.concat(frames, ignore_index=True)
             if frames
             else self.features.extract_all_features([], show_progress=False)
         )
-        df["label_name"] = df["label"].map(CONDITION_LABELS)
+        df["label_name"] = df["label"].map(cast(Any, CONDITION_LABELS))
         df.attrs["feature_schema_version"] = FEATURE_SCHEMA_VERSION
         df.attrs["dataset_parameters"] = {
             "window_sec": self.window_sec,

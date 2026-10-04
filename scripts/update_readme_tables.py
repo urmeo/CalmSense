@@ -52,7 +52,10 @@ def _personalization_table() -> str:
     if d.get("brier_definition", BINARY_BRIER_DEFINITION) != BINARY_BRIER_DEFINITION:
         raise ValueError("Personalization Brier values must use positive-class MSE")
     head = "| Recalibration / requested enrollment budget | ECE | Brier |\n| --- | :-: | :-: |"
-    rows = [("None (LOSO)", d["uncalibrated"]), ("Global (training subjects)", d["global"])]
+    rows = [
+        ("None (LOSO)", d["uncalibrated"]),
+        ("Global (training subjects)", d["global"]),
+    ]
     for k in sorted(d["fewshot"], key=int):
         rows.append((f"Per-subject, budget {k}", d["fewshot"][k]))
     lines = [f"| {label} | {_f(s['ece'])} | {_f(s['brier'])} |" for label, s in rows]
@@ -64,7 +67,9 @@ def main() -> None:
         not (RESULTS / "calibration.json").exists()
         or not (RESULTS / "personalization.json").exists()
     ):
-        sys.exit("Missing results: run scripts/calibration.py and scripts/personalize.py first.")
+        sys.exit(
+            "Missing results: run scripts/calibration.py and scripts/personalize.py first."
+        )
     text = README.read_text()
     text = _replace(text, "calibration", _calibration_table())
     text = _replace(text, "personalization", _personalization_table())

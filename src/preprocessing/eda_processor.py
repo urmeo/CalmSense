@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import cast, Dict, List, Tuple
 
 import numpy as np
 from scipy import signal
@@ -51,7 +51,9 @@ class EDAProcessor(LoggerMixin):
     ) -> Tuple[np.ndarray, np.ndarray]:
         """cvxEDA failure uses median decomposition."""
         if method not in {"highpass", "median", "cvxeda"}:
-            raise ValueError("EDA decomposition method must be 'highpass', 'median', or 'cvxeda'")
+            raise ValueError(
+                "EDA decomposition method must be 'highpass', 'median', or 'cvxeda'"
+            )
         eda = np.asarray(eda, dtype=float).flatten()
         if not np.isfinite(eda).all():
             raise ValueError("EDA decomposition input must contain only finite samples")
@@ -72,7 +74,9 @@ class EDAProcessor(LoggerMixin):
         cutoff_norm = cutoff / nyq
 
         if cutoff_norm >= 1.0:
-            self.logger.warning("Cutoff too high for Nyquist, returning original as tonic")
+            self.logger.warning(
+                "Cutoff too high for Nyquist, returning original as tonic"
+            )
             return eda.copy(), np.zeros_like(eda)
 
         sos = signal.butter(2, cutoff_norm, btype="low", output="sos")
@@ -94,9 +98,11 @@ class EDAProcessor(LoggerMixin):
         try:
             import neurokit2 as nk
 
-            decomposed = nk.eda_phasic(eda, sampling_rate=int(self.sampling_rate), method="cvxeda")
-            tonic = decomposed["EDA_Tonic"].values
-            phasic = decomposed["EDA_Phasic"].values
+            decomposed = nk.eda_phasic(
+                eda, sampling_rate=int(self.sampling_rate), method="cvxeda"
+            )
+            tonic = cast(np.ndarray, decomposed["EDA_Tonic"].values)
+            phasic = cast(np.ndarray, decomposed["EDA_Phasic"].values)
             return tonic, phasic
         except ImportError:
             self.logger.debug("neurokit2 not available, using median decomposition")
@@ -161,7 +167,9 @@ class EDAProcessor(LoggerMixin):
             recovery_region = phasic[peak_idx:search_end]
 
             recovered = np.flatnonzero(recovery_region <= recovery_target)
-            recovery_time = float(recovered[0] / self.sampling_rate) if len(recovered) else None
+            recovery_time = (
+                float(recovered[0] / self.sampling_rate) if len(recovered) else None
+            )
 
             valid_peaks.append(peak_idx)
             scr_features.append(

@@ -18,7 +18,11 @@ def _positive_number(value, name: str) -> float:
 
 
 def _positive_integer(value, name: str) -> int:
-    if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)) or value < 1:
+    if (
+        isinstance(value, (bool, np.bool_))
+        or not isinstance(value, (int, np.integer))
+        or value < 1
+    ):
         raise ValueError(f"{name} must be a positive integer")
     return int(value)
 
@@ -69,11 +73,15 @@ class SignalProcessor(LoggerMixin):
         if isinstance(cutoff, tuple):
             normalized_cutoff = (cutoff[0] / nyq, cutoff[1] / nyq)
             if not 0 < normalized_cutoff[0] < normalized_cutoff[1] < 1.0:
-                raise ValueError(f"Cutoff frequencies {cutoff} exceed Nyquist frequency {nyq} Hz")
+                raise ValueError(
+                    f"Cutoff frequencies {cutoff} exceed Nyquist frequency {nyq} Hz"
+                )
         else:
             normalized_cutoff = cutoff / nyq
             if not np.isfinite(normalized_cutoff) or not 0 < normalized_cutoff < 1.0:
-                raise ValueError(f"Cutoff frequency {cutoff} exceeds Nyquist frequency {nyq} Hz")
+                raise ValueError(
+                    f"Cutoff frequency {cutoff} exceeds Nyquist frequency {nyq} Hz"
+                )
 
         if len(data) == 0:
             return data
@@ -82,7 +90,9 @@ class SignalProcessor(LoggerMixin):
 
         # Low cutoffs reduce order to two.
         low_norm = (
-            min(normalized_cutoff) if isinstance(normalized_cutoff, tuple) else normalized_cutoff
+            min(normalized_cutoff)
+            if isinstance(normalized_cutoff, tuple)
+            else normalized_cutoff
         )
         if low_norm < 0.01:
             order = min(order, 2)

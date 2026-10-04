@@ -78,7 +78,8 @@ def get_logger(name: str):
 
     return structlog.wrap_logger(
         logging.getLogger(name),
-        processors=_shared_processors + [structlog.stdlib.ProcessorFormatter.wrap_for_formatter],
+        processors=_shared_processors
+        + [structlog.stdlib.ProcessorFormatter.wrap_for_formatter],
         wrapper_class=structlog.stdlib.BoundLogger,
         cache_logger_on_first_use=True,
     )

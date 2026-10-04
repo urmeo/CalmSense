@@ -114,7 +114,9 @@ def cnn_loso(x_raw, y, groups):
     folds = []
     n_folds = len(np.unique(groups))
 
-    for fold, (train_idx, test_idx) in enumerate(LeaveOneGroupOut().split(x_raw, y, groups), 1):
+    for fold, (train_idx, test_idx) in enumerate(
+        LeaveOneGroupOut().split(x_raw, y, groups), 1
+    ):
         print(f"    1D-CNN fold {fold}/{n_folds}", flush=True)
         model = CNN1DClassifier(in_channels=x_raw.shape[1], random_state=SEED)
         model.fit(x_raw[train_idx], y[train_idx], groups=groups[train_idx])
@@ -150,7 +152,9 @@ def plot_confusion(result, names, title, path):
         result["y_true"], result["y_pred"], labels=result["classes"], normalize="true"
     )
     plt.figure(figsize=(5, 4))
-    sns.heatmap(cm, annot=True, fmt=".2f", cmap="Blues", xticklabels=names, yticklabels=names)
+    sns.heatmap(
+        cm, annot=True, fmt=".2f", cmap="Blues", xticklabels=names, yticklabels=names
+    )
     plt.xlabel("Predicted")
     plt.ylabel("True")
     plt.title(title)
@@ -249,7 +253,9 @@ def shap_analysis(X, y, feature_names, fig_dir):
     if shap_vals.ndim == 3:
         shap_vals = shap_vals[:, :, -1]
 
-    shap.summary_plot(shap_vals, Xt, feature_names=feature_names, show=False, max_display=15)
+    shap.summary_plot(
+        shap_vals, Xt, feature_names=feature_names, show=False, max_display=15
+    )
     plt.tight_layout()
     plt.savefig(fig_dir / "shap_beeswarm.png", dpi=150, bbox_inches="tight")
     plt.close()
@@ -270,7 +276,9 @@ def _prepare_features(features_df, keep, meta):
         raise ValueError("No feature windows match the task labels")
     feature_cols = [c for c in sub.columns if c not in meta]
     if not feature_cols or sub["subject_id"].isna().any():
-        raise ValueError("Task windows require features and nonmissing subject identifiers")
+        raise ValueError(
+            "Task windows require features and nonmissing subject identifiers"
+        )
     X = sub[feature_cols].to_numpy(dtype=float)
     X[~np.isfinite(X)] = np.nan
     keep_cols = ~np.isnan(X).all(axis=0)
@@ -300,7 +308,9 @@ def run():
     parser.add_argument("--subjects", nargs="+", default=None)
     parser.add_argument("--rebuild", action="store_true")
     parser.add_argument("--no-cnn", action="store_true")
-    parser.add_argument("--synthetic", action="store_true", help="run on generated data, no WESAD")
+    parser.add_argument(
+        "--synthetic", action="store_true", help="run on generated data, no WESAD"
+    )
     args = parser.parse_args()
     set_seed(SEED)
 
@@ -325,19 +335,27 @@ def run():
             print("Loaded cached dataset.")
             features_df, x_raw = cached
 
-    print(f"Windows: {len(features_df)} | subjects: {features_df['subject_id'].nunique()}")
+    print(
+        f"Windows: {len(features_df)} | subjects: {features_df['subject_id'].nunique()}"
+    )
     observed_labels = set(features_df["label"])
     for task, cfg in TASKS.items():
         missing = [
-            name for label, name in zip(cfg["keep"], cfg["names"]) if label not in observed_labels
+            name
+            for label, name in zip(cfg["keep"], cfg["names"])
+            if label not in observed_labels
         ]
         if missing:
-            raise ValueError(f"{task} benchmark is missing required classes: {', '.join(missing)}")
+            raise ValueError(
+                f"{task} benchmark is missing required classes: {', '.join(missing)}"
+            )
     summary = {}
 
     for task, cfg in TASKS.items():
         print(f"\n=== Task: {task} ===")
-        X, y, groups, feature_cols, x_raw_task = prepare_task(features_df, x_raw, cfg["keep"])
+        X, y, groups, feature_cols, x_raw_task = prepare_task(
+            features_df, x_raw, cfg["keep"]
+        )
         rows, results = [], {}
 
         for key in CLASSIFIERS:
@@ -377,15 +395,22 @@ def run():
 
         plot_model_comparison(rows, figures_dir / f"{task}_model_comparison.png")
         plot_confusion(
-            best[1], cfg["names"], f"{task} ({best_key})", figures_dir / f"{task}_confusion.png"
+            best[1],
+            cfg["names"],
+            f"{task} ({best_key})",
+            figures_dir / f"{task}_confusion.png",
         )
-        plot_per_subject(best[1]["per_subject"], figures_dir / f"{task}_per_subject.png")
+        plot_per_subject(
+            best[1]["per_subject"], figures_dir / f"{task}_per_subject.png"
+        )
         plot_embedding(X, y, cfg["names"], figures_dir / f"{task}_pca.png")
 
         if best[0] in CLASSIFIERS:
             m = nonoverlap_mask(groups)
-            gap_factory = lambda k=best[0]: build_pipeline(k)  # noqa: E731
-            loso_matched = loso_evaluate(gap_factory, X[m], y[m], groups[m])["pooled_accuracy"]
+            gap_factory = lambda k=best[0]: build_pipeline(k)
+            loso_matched = loso_evaluate(gap_factory, X[m], y[m], groups[m])[
+                "pooled_accuracy"
+            ]
             kf_acc = kfold_accuracy(gap_factory, X, y, groups)
             plot_gap(loso_matched, kf_acc, figures_dir / f"{task}_optimism_gap.png")
         else:
@@ -393,10 +418,12 @@ def run():
             kf_acc = None
 
         atomic_write_text(
-            results_dir / f"{task}_model_comparison.csv", pd.DataFrame(rows).to_csv(index=False)
+            results_dir / f"{task}_model_comparison.csv",
+            pd.DataFrame(rows).to_csv(index=False),
         )
         atomic_write_text(
-            results_dir / f"{task}_per_subject.csv", best[1]["per_subject"].to_csv(index=False)
+            results_dir / f"{task}_per_subject.csv",
+            best[1]["per_subject"].to_csv(index=False),
         )
 
         summary[task] = {

@@ -49,7 +49,9 @@ def run():
         temp = chest["Temp"].flatten()
         acc = np.asarray(chest["ACC"])
         if acc.shape != (len(labels), 3):
-            raise ValueError(f"{sid}: chest ACC must align with labels and contain three axes")
+            raise ValueError(
+                f"{sid}: chest ACC must align with labels and contain three axes"
+            )
 
         chans = {"ecg": [], "eda": [], "temp": [], "accX": [], "accY": [], "accZ": []}
         conditions = []

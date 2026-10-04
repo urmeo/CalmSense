@@ -41,7 +41,9 @@ def _validate_chest_comparison(chest, groups):
     if (
         chest.get("feature_schema_version") != FEATURE_SCHEMA_VERSION
         or not subjects
-        or any(not isinstance(subject, str) or not subject.strip() for subject in subjects)
+        or any(
+            not isinstance(subject, str) or not subject.strip() for subject in subjects
+        )
         or len(set(subjects)) != len(subjects)
         or set(subjects) != set(groups)
     ):
@@ -56,7 +58,9 @@ def _validate_chest_comparison(chest, groups):
 def run():
     chest_path = RESULTS_DIR / "metrics.json"
     if not chest_path.exists():
-        raise SystemExit("No chest benchmark results. Run scripts/run_experiment.py first.")
+        raise SystemExit(
+            "No chest benchmark results. Run scripts/run_experiment.py first."
+        )
     with open(chest_path) as f:
         chest = json.load(f)["binary"]
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
@@ -66,7 +70,9 @@ def run():
         df = WristDataset().build()
     X, y, groups = prepare_binary(df)
     _validate_chest_comparison(chest, groups)
-    print(f"Wrist: {len(y)} windows, {X.shape[1]} features, {len(np.unique(groups))} subjects")
+    print(
+        f"Wrist: {len(y)} windows, {X.shape[1]} features, {len(np.unique(groups))} subjects"
+    )
 
     rows = []
     for key in CLASSIFIERS:
@@ -84,19 +90,25 @@ def run():
 
     best = max(rows, key=lambda r: r["accuracy_mean"])
     chest_best = max(chest["models"], key=lambda r: r["accuracy_mean"])
-    chest_rf = next(m["accuracy_mean"] for m in chest["models"] if m["model"] == "Random Forest")
+    chest_rf = next(
+        m["accuracy_mean"] for m in chest["models"] if m["model"] == "Random Forest"
+    )
     wrist_rf = next(m["accuracy_mean"] for m in rows if m["model"] == "Random Forest")
 
     out = {
         "wrist_models": rows,
         "wrist_best": best,
-        "chest_best": {"model": chest_best["model"], "accuracy_mean": chest_best["accuracy_mean"]},
+        "chest_best": {
+            "model": chest_best["model"],
+            "accuracy_mean": chest_best["accuracy_mean"],
+        },
         "same_model_rf": {
             "chest": chest_rf,
             "wrist": wrist_rf,
             "drop_pts": (chest_rf - wrist_rf) * 100,
         },
-        "best_per_arm_drop_pts": (chest_best["accuracy_mean"] - best["accuracy_mean"]) * 100,
+        "best_per_arm_drop_pts": (chest_best["accuracy_mean"] - best["accuracy_mean"])
+        * 100,
     }
     out["provenance"] = provenance()
     write_json(RESULTS_DIR / "wrist.json", out)
@@ -111,7 +123,9 @@ def run():
         plt.text(b.get_x() + b.get_width() / 2, v + 0.01, f"{v:.3f}", ha="center")
     plt.ylabel("LOSO accuracy (Random Forest, binary)")
     plt.ylim(0, 1)
-    plt.title(f"Chest vs wrist (same model): {out['same_model_rf']['drop_pts']:.1f} pt drop")
+    plt.title(
+        f"Chest vs wrist (same model): {out['same_model_rf']['drop_pts']:.1f} pt drop"
+    )
     plt.tight_layout()
     plt.savefig(FIGURES_DIR / "chest_vs_wrist.png", dpi=150)
     plt.close()

@@ -21,7 +21,11 @@ POINT_MODEL = "rf"
 
 def loso_pos_proba(key, X, y, groups):
     true, proba, _ = _pooled_proba(
-        lambda: build_pipeline(key), X, y, groups, LeaveOneGroupOut().split(X, y, groups)
+        lambda: build_pipeline(key),
+        X,
+        y,
+        groups,
+        LeaveOneGroupOut().split(X, y, groups),
     )
     return true, proba[:, 1]
 
@@ -31,7 +35,9 @@ def operating_point(y_true, p1):
     p1 = np.asarray(p1, dtype=float)
     brier_score(y_true, p1)
     if len(np.unique(y_true)) != 2:
-        raise ValueError("An ROC operating point requires both baseline and stress labels")
+        raise ValueError(
+            "An ROC operating point requires both baseline and stress labels"
+        )
     fpr, tpr, thr = roc_curve(y_true, p1)
     candidates = np.flatnonzero(np.isfinite(thr))
     j = int(candidates[np.argmax((tpr - fpr)[candidates])])
@@ -41,7 +47,7 @@ def operating_point(y_true, p1):
     fp = int(np.sum((pred == 1) & (y_true == 0)))
     tn = int(np.sum((pred == 0) & (y_true == 0)))
     fn = int(np.sum((pred == 0) & (y_true == 1)))
-    safe = lambda num, den: float(num / den) if den else None  # noqa: E731
+    safe = lambda num, den: float(num / den) if den else None
     return {
         "rule": "Youden J (max sensitivity + specificity - 1)",
         "threshold": t,
@@ -66,7 +72,9 @@ def run():
             y_true, p1 = loso_pos_proba(key, X, y, groups)
             brier_score(y_true, p1)
             if len(np.unique(y_true)) != 2:
-                raise ValueError("AUROC and AUPRC require both baseline and stress labels")
+                raise ValueError(
+                    "AUROC and AUPRC require both baseline and stress labels"
+                )
             row = {
                 "model": name,
                 "available": True,
@@ -74,11 +82,15 @@ def run():
                 "auprc": float(average_precision_score(y_true, p1)),
             }
             if not np.isfinite([row["auroc"], row["auprc"]]).all():
-                raise ValueError("AUROC and AUPRC require finite scores and both binary classes")
+                raise ValueError(
+                    "AUROC and AUPRC require finite scores and both binary classes"
+                )
             if key == POINT_MODEL:
                 row["operating_point"] = operating_point(y_true, p1)
         except Exception as e:
-            out["models"].append({"model": name, "available": False, "reason": str(e)[:80]})
+            out["models"].append(
+                {"model": name, "available": False, "reason": str(e)[:80]}
+            )
             print(f"  {name:20s} skipped ({str(e)[:40]})")
             continue
         out["models"].append(row)

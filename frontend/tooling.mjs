@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
 import { delimiter, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
@@ -82,6 +82,12 @@ function runNpm(npmArgs) {
   }
 }
 
+function runNode(nodeArgs) {
+  const result = spawnSync(process.execPath, nodeArgs, { cwd: root, stdio: 'inherit' });
+  if (result.error) throw result.error;
+  if (result.status !== 0) process.exit(result.status ?? 1);
+}
+
 try {
   if (!['prepare', 'install', 'test', 'dev', 'build', 'preview', 'audit', 'update'].includes(command)) {
     throw new Error(usage);
@@ -89,7 +95,12 @@ try {
   if (command === 'prepare' && args.length) throw new Error(usage);
   prepare(command !== 'update');
   if (command === 'install') runNpm(['ci', ...args]);
-  if (['test', 'dev', 'build', 'preview'].includes(command)) runNpm(['run', command, ...(args.length ? ['--', ...args] : [])]);
+  if (command === 'test') {
+    const tests = readdirSync(join(root, 'tests')).filter((name) => name.endsWith('.test.mjs'));
+    runNode(['--experimental-strip-types', '--test', ...args, ...tests.map((name) => join('tests', name))]);
+  }
+  if (command === 'build') runNode(['node_modules/typescript/bin/tsc']);
+  if (['dev', 'build', 'preview'].includes(command)) runNode(['build.mjs', command, ...args]);
   if (command === 'audit') runNpm(['audit', '--audit-level=moderate', ...args]);
   if (command === 'update') {
     runNpm(['install', '--package-lock-only', '--ignore-scripts', ...args]);

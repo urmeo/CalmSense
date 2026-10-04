@@ -1,4 +1,4 @@
-from typing import Dict, Tuple
+from typing import Any, cast, Dict, Tuple
 
 import numpy as np
 from scipy import stats
@@ -13,7 +13,9 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
     def __init__(self, min_rr_count: int = 50):
         self.min_rr_count = _positive_integer(min_rr_count, "min_rr_count")
 
-    def compute_sample_entropy(self, rr: np.ndarray, m: int = 2, r: float = 0.2) -> float:
+    def compute_sample_entropy(
+        self, rr: np.ndarray, m: int = 2, r: float = 0.2
+    ) -> float:
         rr = np.asarray(rr, dtype=float).flatten()
         m = _positive_integer(m, "m")
         r = _positive_number(r, "r")
@@ -28,7 +30,9 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
         b = np.count_nonzero(
             np.triu(cdist(patterns[:, :m], patterns[:, :m], "chebyshev") <= r_val, 1)
         )
-        a = np.count_nonzero(np.triu(cdist(patterns, patterns, "chebyshev") <= r_val, 1))
+        a = np.count_nonzero(
+            np.triu(cdist(patterns, patterns, "chebyshev") <= r_val, 1)
+        )
 
         if b == 0:
             return np.nan
@@ -36,7 +40,9 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
             return np.inf
         return float(-np.log(a / b))
 
-    def compute_approximate_entropy(self, rr: np.ndarray, m: int = 2, r: float = 0.2) -> float:
+    def compute_approximate_entropy(
+        self, rr: np.ndarray, m: int = 2, r: float = 0.2
+    ) -> float:
         rr = np.asarray(rr, dtype=float).flatten()
         m = _positive_integer(m, "m")
         r = _positive_number(r, "r")
@@ -51,7 +57,9 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
             n_patterns = len(patterns)
 
             # ApEn includes self-matches.
-            counts = np.count_nonzero(cdist(patterns, patterns, "chebyshev") <= r_val, axis=1)
+            counts = np.count_nonzero(
+                cdist(patterns, patterns, "chebyshev") <= r_val, axis=1
+            )
             return float(np.mean(np.log(counts / n_patterns)))
 
         return float(_phi(m) - _phi(m + 1))
@@ -111,7 +119,9 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
         for low, high in ((4, 16), (16, 64)):
             mask = (scales_used >= low) & (scales_used <= high)
             alpha = (
-                float(stats.linregress(log_scales[mask], log_fluct[mask]).slope)
+                float(
+                    cast(Any, stats.linregress(log_scales[mask], log_fluct[mask])).slope
+                )
                 if np.sum(mask) >= 2
                 else np.nan
             )

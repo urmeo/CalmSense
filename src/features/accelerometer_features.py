@@ -27,7 +27,9 @@ class AccelerometerFeatureExtractor(LoggerMixin):
     def compute_magnitude(
         self, acc_x: np.ndarray, acc_y: np.ndarray, acc_z: np.ndarray
     ) -> np.ndarray:
-        acc_x, acc_y, acc_z = (np.asarray(axis, dtype=float) for axis in (acc_x, acc_y, acc_z))
+        acc_x, acc_y, acc_z = (
+            np.asarray(axis, dtype=float) for axis in (acc_x, acc_y, acc_z)
+        )
         return np.sqrt(acc_x**2 + acc_y**2 + acc_z**2)
 
     def extract_all(
@@ -59,12 +61,18 @@ class AccelerometerFeatureExtractor(LoggerMixin):
 
             mag_centered = original - np.mean(magnitude)
             pairs_finite = np.isfinite(original[:-1]) & np.isfinite(original[1:])
-            zero_crossings = np.count_nonzero(np.diff(np.signbit(mag_centered)) & pairs_finite)
+            zero_crossings = np.count_nonzero(
+                np.diff(np.signbit(mag_centered)) & pairs_finite
+            )
             duration = len(original) / self.sampling_rate
             features["ACC_zero_crossings"] = float(zero_crossings / duration)
             features["ACC_energy"] = float(np.sum(magnitude**2) / len(magnitude))
 
-            if len(magnitude) >= 64 and np.isfinite(original).all() and np.std(magnitude) > 1e-10:
+            if (
+                len(magnitude) >= 64
+                and np.isfinite(original).all()
+                and np.std(magnitude) > 1e-10
+            ):
                 nperseg = int(min(len(magnitude), max(256, self.sampling_rate * 4)))
                 freqs, psd = scipy_signal.welch(
                     mag_centered,

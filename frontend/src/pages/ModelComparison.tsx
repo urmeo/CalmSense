@@ -1,18 +1,9 @@
 import React, { useState } from 'react';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
 import { Trophy, AlertTriangle, Activity } from 'lucide-react';
 import results from '../data';
 import Panel from '../components/Panel';
+import Chart from '../components/Chart';
+import { barChartOption } from '../lib/charts';
 import SummaryCard from '../components/SummaryCard';
 import { formatPercent as pct, matchedGap } from '../lib/benchmarks';
 
@@ -142,20 +133,11 @@ const ModelComparison: React.FC = () => {
 
       <div className={`grid grid-cols-1 ${task === 'binary' ? 'lg:grid-cols-2' : ''} gap-6`}>
         <Panel title="LOSO accuracy">
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={barData} margin={{ top: 10, right: 20, left: 0, bottom: 60 }}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-              <XAxis dataKey="name" angle={-30} textAnchor="end" height={80} tick={{ fontSize: 11 }} />
-              <YAxis domain={[0, 100]} unit="%" />
-              <Tooltip formatter={(v) => `${v}%`} />
-              <Legend />
-              <Bar dataKey="accuracy" name="Accuracy" radius={[4, 4, 0, 0]}>
-                {barData.map((_, i) => (
-                  <Cell key={i} fill={i === 0 ? '#38A169' : '#3182CE'} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          <Chart label={`${task} LOSO accuracy by model, from highest to lowest.`}
+            option={barChartOption({ labels: barData.map((d) => d.name), values: barData.map((d) => d.accuracy),
+              colors: barData.map((_, i) => i === 0 ? '#38A169' : '#3182CE'),
+              axisName: 'Accuracy', maximum: 100, percent: true, precision: 1 })}
+          />
         </Panel>
 
         {task === 'binary' && (
@@ -164,15 +146,10 @@ const ModelComparison: React.FC = () => {
               Descriptive mean |SHAP| on the training data; not held-out or causal evidence.
             </p>
             {shap.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={shap} layout="vertical" margin={{ left: 40, right: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                  <XAxis type="number" tick={{ fontSize: 11 }} />
-                  <YAxis type="category" dataKey="feature" width={175} tick={{ fontSize: 10 }} />
-                  <Tooltip />
-                  <Bar dataKey="mean_abs_shap" name="mean |SHAP|" fill="#805AD5" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <Chart label="Binary XGBoost full-data mean absolute SHAP contributions."
+                option={barChartOption({ labels: shap.map((d) => d.feature), values: shap.map((d) => d.mean_abs_shap),
+                  colors: ['#805AD5'], horizontal: true, axisName: 'mean |SHAP|' })}
+              />
             ) : (
               <p className="text-sm text-gray-500">Run the experiment to populate SHAP values.</p>
             )}

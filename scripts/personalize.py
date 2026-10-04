@@ -13,7 +13,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.model_selection import LeaveOneGroupOut
 
-from scripts.calibration import _apply_calibrator, _fit_calibrator, _global_calibrator, _pos_proba
+from scripts.calibration import (
+    _apply_calibrator,
+    _fit_calibrator,
+    _global_calibrator,
+    _pos_proba,
+)
 from scripts.run_experiment import (
     _fit_params,
     build_pipeline,
@@ -31,7 +36,9 @@ METHOD = "isotonic"
 def _stratified_split(y, frac, rng):
     y = np.asarray(y)
     if y.ndim != 1 or not len(y) or not 0 < frac < 1:
-        raise ValueError("Enrollment split requires labels and an evaluation fraction in (0, 1)")
+        raise ValueError(
+            "Enrollment split requires labels and an evaluation fraction in (0, 1)"
+        )
     ev, pool = [], []
     for c in np.unique(y):
         idx = np.where(y == c)[0]
@@ -74,7 +81,7 @@ def compute(X, y, groups, model="rf", k_values=K_VALUES):
         raise ValueError("Provide at least one distinct positive enrollment budget")
     for k in k_values:
         _sample_k(np.array([], dtype=int), k, np.random.RandomState(SEED))
-    factory = lambda: build_pipeline(model)  # noqa: E731
+    factory = lambda: build_pipeline(model)
     logo = LeaveOneGroupOut()
     rng = np.random.RandomState(SEED)
     acc = {"uncalibrated": [], "global": [], **{k: [] for k in k_values}}
@@ -130,10 +137,18 @@ def compute(X, y, groups, model="rf", k_values=K_VALUES):
 def _plot(out, path):
     ks = out["k_values"]
     plt.figure(figsize=(6, 4))
-    plt.axhline(out["uncalibrated"]["ece"], color="#95a5a6", ls=":", label="uncalibrated")
-    plt.axhline(out["global"]["ece"], color="#3498db", ls="--", label="global recalibration")
+    plt.axhline(
+        out["uncalibrated"]["ece"], color="#95a5a6", ls=":", label="uncalibrated"
+    )
+    plt.axhline(
+        out["global"]["ece"], color="#3498db", ls="--", label="global recalibration"
+    )
     plt.plot(
-        ks, [out["fewshot"][str(k)]["ece"] for k in ks], "o-", color="#2ecc71", label="few-shot"
+        ks,
+        [out["fewshot"][str(k)]["ece"] for k in ks],
+        "o-",
+        color="#2ecc71",
+        label="few-shot",
     )
     plt.xlabel("Requested enrollment budget (windows)")
     plt.ylabel("ECE (mean over subjects)")
@@ -154,7 +169,9 @@ def run(synthetic=False, model="rf"):
         from src.synthetic import features
 
         print("Using synthetic data (demo only).")
-        features_df, x_raw, _ = features(n_subjects=8, block_sec=150, seed=SEED, cache=False)
+        features_df, x_raw, _ = features(
+            n_subjects=8, block_sec=150, seed=SEED, cache=False
+        )
     else:
         cached = load_cached()
         if cached is None:

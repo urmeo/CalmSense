@@ -23,7 +23,9 @@ class _ResidualBlock(nn.Module):
         self.drop = nn.Dropout(dropout)
         self.pool = nn.MaxPool1d(2)
         self.shortcut = (
-            nn.Conv1d(in_ch, out_ch, 1, bias=False) if in_ch != out_ch else nn.Identity()
+            nn.Conv1d(in_ch, out_ch, 1, bias=False)
+            if in_ch != out_ch
+            else nn.Identity()
         )
 
     def forward(self, x):
@@ -94,14 +96,18 @@ class CNN1DClassifier(LoggerMixin):
             or not np.isfinite(self._std).all()
             or np.any(self._std <= 0)
         ):
-            raise ValueError("CNN normalization requires finite means and positive finite scales")
+            raise ValueError(
+                "CNN normalization requires finite means and positive finite scales"
+            )
         with np.errstate(over="ignore", invalid="ignore"):
             standardized = (x - self._mean) / self._std
         if not np.isfinite(standardized).all():
             raise ValueError("CNN normalization produced nonfinite windows")
         return standardized
 
-    def _validate_windows(self, X: np.ndarray, *, allow_empty: bool = False) -> np.ndarray:
+    def _validate_windows(
+        self, X: np.ndarray, *, allow_empty: bool = False
+    ) -> np.ndarray:
         X = np.asarray(X, dtype=np.float32)
         if X.ndim != 3 or X.shape[1] != self.in_channels or X.shape[2] < 61:
             raise ValueError(
@@ -116,11 +122,16 @@ class CNN1DClassifier(LoggerMixin):
         if groups is None:
             # Ungrouped callers use sample holdouts.
             return train_test_split(
-                indices, test_size=self.val_fraction, stratify=y, random_state=self.random_state
+                indices,
+                test_size=self.val_fraction,
+                stratify=y,
+                random_state=self.random_state,
             )
         groups = np.asarray(groups)
         if groups.ndim != 1 or len(groups) != len(y) or len(np.unique(groups)) < 2:
-            raise ValueError("CNN subject validation requires at least two training subjects")
+            raise ValueError(
+                "CNN subject validation requires at least two training subjects"
+            )
         classes = np.unique(y)
         splitter = GroupShuffleSplit(
             n_splits=20, test_size=self.val_fraction, random_state=self.random_state
@@ -164,10 +175,16 @@ class CNN1DClassifier(LoggerMixin):
         """Grouped validation subjects stay disjoint."""
         for name in ("in_channels", "max_epochs", "batch_size", "patience"):
             value = getattr(self, name)
-            if isinstance(value, bool) or not isinstance(value, (int, np.integer)) or value < 1:
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, np.integer))
+                or value < 1
+            ):
                 raise ValueError(f"{name} must be a positive integer")
         if not 0 < self.val_fraction < 1 or not np.isfinite(self.lr) or self.lr <= 0:
-            raise ValueError("val_fraction must be in (0, 1) and lr must be finite and positive")
+            raise ValueError(
+                "val_fraction must be in (0, 1) and lr must be finite and positive"
+            )
         if not np.isfinite(self.weight_decay) or self.weight_decay < 0:
             raise ValueError("weight_decay must be finite and nonnegative")
         torch.manual_seed(self.random_state)
@@ -186,14 +203,18 @@ class CNN1DClassifier(LoggerMixin):
 
         train, validation = self._validation_split(y_idx, groups)
         if len(train) < 2:
-            raise ValueError("CNN fitting requires at least two windows after validation splitting")
+            raise ValueError(
+                "CNN fitting requires at least two windows after validation splitting"
+            )
         # Training windows set normalization and weights.
         self._mean = X[train].mean(axis=(0, 2), keepdims=True)
         self._std = X[train].std(axis=(0, 2), keepdims=True) + 1e-8
         x_tr, x_val = self._standardize(X[train]), self._standardize(X[validation])
         y_tr, y_val = y_idx[train], y_idx[validation]
 
-        weights = compute_class_weight("balanced", classes=np.arange(len(self.classes_)), y=y_tr)
+        weights = compute_class_weight(
+            "balanced", classes=np.arange(len(self.classes_)), y=y_tr
+        )
         criterion = nn.CrossEntropyLoss(
             weight=torch.tensor(weights, dtype=torch.float32, device=self.device)
         )
@@ -202,9 +223,13 @@ class CNN1DClassifier(LoggerMixin):
         optimizer = torch.optim.AdamW(
             self.model.parameters(), lr=self.lr, weight_decay=self.weight_decay
         )
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, self.max_epochs)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, self.max_epochs
+        )
 
-        tr = torch.utils.data.TensorDataset(torch.from_numpy(x_tr), torch.from_numpy(y_tr).long())
+        tr = torch.utils.data.TensorDataset(
+            torch.from_numpy(x_tr), torch.from_numpy(y_tr).long()
+        )
         gen = torch.Generator().manual_seed(self.random_state)
         loader = torch.utils.data.DataLoader(
             tr, batch_size=self.batch_size, shuffle=True, generator=gen
@@ -236,7 +261,9 @@ class CNN1DClassifier(LoggerMixin):
             if val_loss < best_loss - 1e-4:
                 best_loss = val_loss
                 # Clone checkpoint tensors before updates.
-                best_state = {k: v.cpu().clone() for k, v in self.model.state_dict().items()}
+                best_state = {
+                    k: v.cpu().clone() for k, v in self.model.state_dict().items()
+                }
                 stale = 0
             else:
                 stale += 1

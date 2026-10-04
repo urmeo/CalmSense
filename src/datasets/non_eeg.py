@@ -1,16 +1,19 @@
 """Exclude physical stress."""
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, cast, Optional
 
 import numpy as np
 import pandas as pd
 
 from ..config import EXTERNAL_DATA_DIR
 from ..portable import OVERLAP, PORTABLE_FEATURE_COLUMNS, WINDOW_SEC, portable_features
+from .records import read_annotations, read_record
 
 DATA_DIR = (
-    EXTERNAL_DATA_DIR / "noneeg" / "non-eeg-dataset-for-assessment-of-neurological-status-1.0.0"
+    EXTERNAL_DATA_DIR
+    / "noneeg"
+    / "non-eeg-dataset-for-assessment-of-neurological-status-1.0.0"
 )
 ACC_FS = 8
 EDA_FS = 8
@@ -21,23 +24,21 @@ RELAX = {"Relax"}
 
 
 def _segments(record: str):
-    import wfdb
-
-    ann = wfdb.rdann(record, "atr")
+    ann = read_annotations(record, "atr")
     if (
         len(ann.sample) != len(ann.aux_note)
         or np.any(np.asarray(ann.sample) < 0)
         or np.any(np.diff(ann.sample) <= 0)
     ):
-        raise ValueError("Non-EEG annotations require aligned notes and increasing sample indices")
+        raise ValueError(
+            "Non-EEG annotations require aligned notes and increasing sample indices"
+        )
     bounds = list(ann.sample) + [None]
     for i, note in enumerate(ann.aux_note):
         yield int(ann.sample[i]), bounds[i + 1], note.strip("\x00 \t\r\n")
 
 
 def build(subjects: Optional[list] = None) -> pd.DataFrame:
-    import wfdb
-
     valid_subjects = [f"Subject{i}" for i in range(1, 21)]
     subjects = valid_subjects if subjects is None else subjects
     if (
@@ -45,7 +46,9 @@ def build(subjects: Optional[list] = None) -> pd.DataFrame:
         or len(set(subjects)) != len(subjects)
         or not set(subjects) <= set(valid_subjects)
     ):
-        raise ValueError("subjects must contain distinct Non-EEG IDs from Subject1 to Subject20")
+        raise ValueError(
+            "subjects must contain distinct Non-EEG IDs from Subject1 to Subject20"
+        )
     win = int(WINDOW_SEC * ACC_FS)
     step = int(win * (1 - OVERLAP))
     rows = []
@@ -55,8 +58,8 @@ def build(subjects: Optional[list] = None) -> pd.DataFrame:
         hr_rec = str(DATA_DIR / f"{sid}_SpO2HR")
         if not Path(acc_rec + ".hea").exists():
             continue
-        sensor_record = wfdb.rdrecord(acc_rec)
-        hr_record = wfdb.rdrecord(hr_rec)
+        sensor_record = read_record(acc_rec)
+        hr_record = read_record(hr_rec)
         if sensor_record.fs != ACC_FS or hr_record.fs != HR_FS:
             raise ValueError(f"Unexpected Non-EEG sampling rates for {sid}")
         if (
@@ -74,7 +77,9 @@ def build(subjects: Optional[list] = None) -> pd.DataFrame:
         for s0, s1, note in _segments(acc_rec):
             s1 = s1 if s1 is not None else len(eda)
             if not 0 <= s0 < s1 <= len(eda):
-                raise ValueError(f"Non-EEG annotation interval outside the sensor record for {sid}")
+                raise ValueError(
+                    f"Non-EEG annotation interval outside the sensor record for {sid}"
+                )
             if note in STRESS:
                 label = 1
             elif note in RELAX:
@@ -103,4 +108,6 @@ def build(subjects: Optional[list] = None) -> pd.DataFrame:
                 row["label"] = label
                 rows.append(row)
 
-    return pd.DataFrame(rows, columns=[*PORTABLE_FEATURE_COLUMNS, "subject", "label"])
+    return pd.DataFrame(
+        rows, columns=cast(Any, [*PORTABLE_FEATURE_COLUMNS, "subject", "label"])
+    )

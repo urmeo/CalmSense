@@ -25,7 +25,9 @@ def per_subject_acc(res) -> dict:
         raise ValueError("Statistics require one nonmissing score per subject")
     values = df["accuracy"].to_numpy(dtype=float)
     if not np.isfinite(values).all() or np.any((values < 0) | (values > 1)):
-        raise ValueError("Subject accuracy scores must be finite values between zero and one")
+        raise ValueError(
+            "Subject accuracy scores must be finite values between zero and one"
+        )
     return dict(zip(df["subject"], df["accuracy"]))
 
 
@@ -77,7 +79,9 @@ def run():
 
     scores = {}
     for key in CLASSIFIERS:
-        scores[key] = per_subject_acc(loso_evaluate(lambda k=key: build_pipeline(k), X, y, groups))
+        scores[key] = per_subject_acc(
+            loso_evaluate(lambda k=key: build_pipeline(k), X, y, groups)
+        )
 
     subject_sets = [set(scores[k]) for k in CLASSIFIERS]
     if any(subjects != subject_sets[0] for subjects in subject_sets[1:]):
@@ -115,7 +119,9 @@ def run():
         "provenance": provenance(),
     }
 
-    print(f"Best: {CLF_NAMES[best]}  acc={vecs[best].mean():.3f}  95% CI [{lo:.3f}, {hi:.3f}]")
+    print(
+        f"Best: {CLF_NAMES[best]}  acc={vecs[best].mean():.3f}  95% CI [{lo:.3f}, {hi:.3f}]"
+    )
     print(f"Friedman omnibus: chi2={chi2:.2f}  p={omnibus_p:.3f}")
     print("Pairwise Wilcoxon (Holm-corrected):")
     for a, b in combinations(CLASSIFIERS, 2):

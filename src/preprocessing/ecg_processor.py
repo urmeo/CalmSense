@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Any, cast, Optional, Tuple
 
 import numpy as np
 from scipy import signal
@@ -35,7 +35,9 @@ class ECGProcessor(LoggerMixin):
         high_norm = high / nyq
 
         if not 0 < low_norm < high_norm < 1:
-            raise ValueError(f"ECG cutoffs must satisfy 0 < low < high < Nyquist ({nyq} Hz)")
+            raise ValueError(
+                f"ECG cutoffs must satisfy 0 < low < high < Nyquist ({nyq} Hz)"
+            )
 
         # SOS avoids low-cutoff instability.
         sos = signal.butter(order, [low_norm, high_norm], btype="band", output="sos")
@@ -80,7 +82,9 @@ class ECGProcessor(LoggerMixin):
         squared = diff_ecg**2
 
         window_size = max(1, int(0.150 * self.sampling_rate))
-        integrated = np.convolve(squared, np.ones(window_size) / window_size, mode="same")
+        integrated = np.convolve(
+            squared, np.ones(window_size) / window_size, mode="same"
+        )
 
         init_samples = int(2 * self.sampling_rate)
         threshold = 0.5 * np.max(integrated[: min(init_samples, len(integrated))])
@@ -91,12 +95,16 @@ class ECGProcessor(LoggerMixin):
         search_start = 0
 
         while search_start < len(integrated) - min_rr:
-            search_window = integrated[search_start : search_start + int(self.sampling_rate)]
+            search_window = integrated[
+                search_start : search_start + int(self.sampling_rate)
+            ]
 
             if len(search_window) == 0:
                 break
 
-            peaks, _ = signal.find_peaks(search_window, height=threshold, distance=min_rr)
+            peaks, _ = signal.find_peaks(
+                search_window, height=threshold, distance=min_rr
+            )
 
             if len(peaks) > 0:
                 peak_idx = search_start + peaks[0]
@@ -122,8 +130,14 @@ class ECGProcessor(LoggerMixin):
             raise ValueError(f"unit must be 'ms', 's', or 'samples', got {unit!r}")
 
         r_peaks = np.asarray(r_peaks, dtype=float).flatten()
-        if not np.isfinite(r_peaks).all() or np.any(r_peaks < 0) or np.any(np.diff(r_peaks) <= 0):
-            raise ValueError("R-peak indices must be finite, nonnegative, and strictly increasing")
+        if (
+            not np.isfinite(r_peaks).all()
+            or np.any(r_peaks < 0)
+            or np.any(np.diff(r_peaks) <= 0)
+        ):
+            raise ValueError(
+                "R-peak indices must be finite, nonnegative, and strictly increasing"
+            )
 
         if len(r_peaks) < 2:
             self.logger.warning("Less than 2 R-peaks, cannot compute RR intervals")
@@ -185,7 +199,9 @@ class ECGProcessor(LoggerMixin):
             raise ValueError("valid_mask must contain only boolean values")
 
         if len(valid_mask) != len(rr):
-            raise ValueError(f"Mask length {len(valid_mask)} doesn't match RR length {len(rr)}")
+            raise ValueError(
+                f"Mask length {len(valid_mask)} doesn't match RR length {len(rr)}"
+            )
         valid_mask = valid_mask.astype(bool) & np.isfinite(rr) & (rr > 0)
 
         if np.all(valid_mask):
@@ -208,7 +224,7 @@ class ECGProcessor(LoggerMixin):
             x_valid,
             rr[valid_mask],
             kind=method,
-            fill_value="extrapolate",
+            fill_value=cast(Any, "extrapolate"),
             bounds_error=False,
         )
 

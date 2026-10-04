@@ -47,7 +47,9 @@ class WESADLoader(LoggerMixin):
 
         return subjects
 
-    def load_subject(self, subject_id: str, signals: Optional[List[str]] = None) -> Dict:
+    def load_subject(
+        self, subject_id: str, signals: Optional[List[str]] = None
+    ) -> Dict:
         if subject_id not in self.VALID_SUBJECTS:
             raise ValueError(
                 f"Invalid subject ID: {subject_id}. Valid subjects: {self.VALID_SUBJECTS}"
@@ -79,7 +81,9 @@ class WESADLoader(LoggerMixin):
             or not np.issubdtype(labels.dtype, np.number)
             or not np.isfinite(labels).all()
         ):
-            raise ValueError(f"{subject_id}: labels must be a nonempty finite numeric vector")
+            raise ValueError(
+                f"{subject_id}: labels must be a nonempty finite numeric vector"
+            )
         duration = len(labels) / self.CHEST_FS
         wrist_rates = {
             "ACC": self.WRIST_ACC_FS,
@@ -99,8 +103,14 @@ class WESADLoader(LoggerMixin):
                     or (values.ndim == 2 and values.shape[1] != expected_axes)
                     or not np.issubdtype(values.dtype, np.number)
                 ):
-                    raise ValueError(f"{subject_id}: invalid {device}/{name} signal shape or dtype")
-                rate = self.CHEST_FS if device == "chest" else wrist_rates.get(name.upper())
+                    raise ValueError(
+                        f"{subject_id}: invalid {device}/{name} signal shape or dtype"
+                    )
+                rate = (
+                    self.CHEST_FS
+                    if device == "chest"
+                    else wrist_rates.get(name.upper())
+                )
                 if rate is None:
                     raise ValueError(f"{subject_id}: unknown wrist channel {name}")
                 if abs(len(values) - duration * rate) > 1.01:
@@ -110,8 +120,12 @@ class WESADLoader(LoggerMixin):
 
         if signals is not None:
             signals_upper = {s.upper() for s in signals}
-            chest_signals = {k: v for k, v in chest_signals.items() if k.upper() in signals_upper}
-            wrist_signals = {k: v for k, v in wrist_signals.items() if k.upper() in signals_upper}
+            chest_signals = {
+                k: v for k, v in chest_signals.items() if k.upper() in signals_upper
+            }
+            wrist_signals = {
+                k: v for k, v in wrist_signals.items() if k.upper() in signals_upper
+            }
 
         result = {
             "subject": subject_id,
