@@ -4,7 +4,9 @@
 
 [Live demo](https://urmeo.github.io/CalmSense/) · [Colab](https://colab.research.google.com/github/urmeo/CalmSense/blob/main/notebooks/CalmSense.ipynb) · [Code](#architecture) · [Model](#shipped-model)
 
-[![CalmSense dashboard](outputs/figures/demo.gif)](https://urmeo.github.io/CalmSense/)
+<p align="center">
+<a href="https://urmeo.github.io/CalmSense/"><img src="outputs/figures/demo.gif" width="390" alt="CalmSense dashboard"></a>
+</p>
 
 ## Overview
 
@@ -65,28 +67,76 @@ Matched subject-mixed gaps: binary **+5.7 pp**; three-class **0.658 → 0.792 (+
 
 <table width="100%">
 <tr>
-<td align="center" valign="top" width="50%"><strong>Binary accuracy · LOSO</strong><br><a href="outputs/figures/binary_model_comparison.png"><img src="outputs/figures/binary_model_comparison.png" width="390" alt="Feature-model binary LOSO accuracy with subject standard deviation error bars"></a><br><sub>RF <b>0.913</b> · four feature models</sub></td>
-<td align="center" valign="top" width="50%"><strong>Three-class accuracy · LOSO</strong><br><a href="outputs/figures/multiclass_model_comparison.png"><img src="outputs/figures/multiclass_model_comparison.png" width="390" alt="Feature-model three-class LOSO accuracy with subject standard deviation error bars"></a><br><sub>LR <b>0.670</b> · four feature models</sub></td>
+<td align="center" width="50%"><strong>Binary accuracy · LOSO</strong></td>
+<td align="center" width="50%"><strong>Three-class accuracy · LOSO</strong></td>
 </tr>
 <tr>
-<td align="center" valign="top" width="50%"><strong>Subject leakage</strong><br><a href="outputs/figures/binary_optimism_gap.png"><img src="outputs/figures/binary_optimism_gap.png" width="390" alt="Binary accuracy on matched non-overlapping windows under LOSO and subject-mixed testing"></a><br><sub><b>0.907 → 0.964</b> · +5.7 pp</sub></td>
-<td align="center" valign="top" width="50%"><strong>Across the 15 subjects</strong><br><a href="outputs/figures/binary_per_subject.png"><img src="outputs/figures/binary_per_subject.png" width="390" alt="Binary Random Forest LOSO accuracy for each held-out subject"></a><br><sub><b>0.712 to 1.000</b> · RF accuracy</sub></td>
+<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/binary_model_comparison.png"><img src="outputs/figures/binary_model_comparison.png" width="390" alt="Feature-model binary LOSO accuracy with subject standard deviation error bars"></a></td>
+<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/multiclass_model_comparison.png"><img src="outputs/figures/multiclass_model_comparison.png" width="390" alt="Feature-model three-class LOSO accuracy with subject standard deviation error bars"></a></td>
 </tr>
 <tr>
-<td align="center" valign="top" width="50%"><strong>Feature ablation</strong><br><a href="outputs/figures/ablation.png"><img src="outputs/figures/ablation.png" width="390" alt="Random Forest binary LOSO accuracy for feature subsets"></a><br><sub>All <b>0.913</b> · no motion <b>0.901</b></sub></td>
-<td align="center" valign="top" width="50%"><strong>Chest vs wrist</strong><br><a href="outputs/figures/chest_vs_wrist.png"><img src="outputs/figures/chest_vs_wrist.png" width="390" alt="Same-model Random Forest binary LOSO accuracy for chest and wrist"></a><br><sub>RF: <b>0.913 vs 0.893</b></sub></td>
+<td align="center"><sub>RF <b>0.913</b> · four feature models</sub></td>
+<td align="center"><sub>LR <b>0.670</b> · four feature models</sub></td>
 </tr>
 <tr>
-<td align="center" valign="top" width="50%"><strong>Cross-dataset transfer</strong><br><a href="outputs/figures/cross_dataset.png"><img src="outputs/figures/cross_dataset.png" width="390" alt="Within-dataset and cross-dataset balanced accuracy on 18 shared features"></a><br><sub>Balanced accuracy: <b>0.557 / 0.494</b></sub></td>
-<td align="center" valign="top" width="50%"><strong>SHAP explainability</strong><br><a href="outputs/figures/shap_beeswarm.png"><img src="outputs/figures/shap_beeswarm.png" width="390" alt="Global signed SHAP contributions and feature values for the full-data gradient-boosted model"></a><br><sub>Full-data fit: motion · heart rate · EDA · respiration</sub></td>
+<td align="center" width="50%"><strong>Subject leakage</strong></td>
+<td align="center" width="50%"><strong>Across the 15 subjects</strong></td>
 </tr>
 <tr>
-<td align="center" valign="top" width="50%"><strong>Probability calibration</strong><br><a href="outputs/figures/calibration_reliability.png"><img src="outputs/figures/calibration_reliability.png" width="390" alt="Confidence versus accuracy before and after training-subject isotonic recalibration"></a><br><sub>Full LOSO ECE: <b>0.070 → 0.025</b></sub></td>
-<td align="center" valign="top" width="50%"><strong>Few-shot personalization</strong><br><a href="outputs/figures/personalization.png"><img src="outputs/figures/personalization.png" width="390" alt="Mean per-subject calibration error against requested enrollment budget"></a><br><sub>ECE: <b>0.146 → 0.069</b> · requested 20</sub></td>
+<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/binary_optimism_gap.png"><img src="outputs/figures/binary_optimism_gap.png" width="390" alt="Binary accuracy on matched non-overlapping windows under LOSO and subject-mixed testing"></a></td>
+<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/binary_per_subject.png"><img src="outputs/figures/binary_per_subject.png" width="390" alt="Binary Random Forest LOSO accuracy for each held-out subject"></a></td>
 </tr>
 <tr>
-<td align="center" valign="top" width="50%"><strong>Binary confusion · RF</strong><br><a href="outputs/figures/binary_confusion.png"><img src="outputs/figures/binary_confusion.png" width="390" alt="Pooled row-normalized binary Random Forest confusion matrix at default classifier decisions"></a><br><sub>Stress recall <b>≈0.87</b> · default decisions</sub></td>
-<td align="center" valign="top" width="50%"><strong>Three-class confusion · LR</strong><br><a href="outputs/figures/multiclass_confusion.png"><img src="outputs/figures/multiclass_confusion.png" width="390" alt="Pooled row-normalized three-class Logistic Regression confusion matrix"></a><br><sub>Baseline ↔ amusement confusion</sub></td>
+<td align="center"><sub><b>0.907 → 0.964</b> · +5.7 pp</sub></td>
+<td align="center"><sub><b>0.712 to 1.000</b> · RF accuracy</sub></td>
+</tr>
+<tr>
+<td align="center" width="50%"><strong>Feature ablation</strong></td>
+<td align="center" width="50%"><strong>Chest vs wrist</strong></td>
+</tr>
+<tr>
+<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/ablation.png"><img src="outputs/figures/ablation.png" width="390" alt="Random Forest binary LOSO accuracy for feature subsets"></a></td>
+<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/chest_vs_wrist.png"><img src="outputs/figures/chest_vs_wrist.png" width="390" alt="Same-model Random Forest binary LOSO accuracy for chest and wrist"></a></td>
+</tr>
+<tr>
+<td align="center"><sub>All <b>0.913</b> · no motion <b>0.901</b></sub></td>
+<td align="center"><sub>RF: <b>0.913 vs 0.893</b></sub></td>
+</tr>
+<tr>
+<td align="center" width="50%"><strong>Cross-dataset transfer</strong></td>
+<td align="center" width="50%"><strong>SHAP explainability</strong></td>
+</tr>
+<tr>
+<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/cross_dataset.png"><img src="outputs/figures/cross_dataset.png" width="390" alt="Within-dataset and cross-dataset balanced accuracy on 18 shared features"></a></td>
+<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/shap_beeswarm.png"><img src="outputs/figures/shap_beeswarm.png" width="390" alt="Global signed SHAP contributions and feature values for the full-data gradient-boosted model"></a></td>
+</tr>
+<tr>
+<td align="center"><sub>Balanced accuracy: <b>0.557 / 0.494</b></sub></td>
+<td align="center"><sub>Full-data fit: motion · heart rate · EDA · respiration</sub></td>
+</tr>
+<tr>
+<td align="center" width="50%"><strong>Probability calibration</strong></td>
+<td align="center" width="50%"><strong>Few-shot personalization</strong></td>
+</tr>
+<tr>
+<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/calibration_reliability.png"><img src="outputs/figures/calibration_reliability.png" width="293" alt="Confidence versus accuracy before and after training-subject isotonic recalibration"></a></td>
+<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/personalization.png"><img src="outputs/figures/personalization.png" width="390" alt="Mean per-subject calibration error against requested enrollment budget"></a></td>
+</tr>
+<tr>
+<td align="center"><sub>Full LOSO ECE: <b>0.070 → 0.025</b></sub></td>
+<td align="center"><sub>ECE: <b>0.146 → 0.069</b> · requested 20</sub></td>
+</tr>
+<tr>
+<td align="center" width="50%"><strong>Binary confusion · RF</strong></td>
+<td align="center" width="50%"><strong>Three-class confusion · LR</strong></td>
+</tr>
+<tr>
+<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/binary_confusion.png"><img src="outputs/figures/binary_confusion.png" width="390" alt="Pooled row-normalized binary Random Forest confusion matrix at default classifier decisions"></a></td>
+<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/multiclass_confusion.png"><img src="outputs/figures/multiclass_confusion.png" width="390" alt="Pooled row-normalized three-class Logistic Regression confusion matrix"></a></td>
+</tr>
+<tr>
+<td align="center"><sub>Stress recall <b>≈0.87</b> · default decisions</sub></td>
+<td align="center"><sub>Baseline ↔ amusement confusion</sub></td>
 </tr>
 </table>
 
