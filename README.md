@@ -274,4 +274,4 @@ Saved **58** exclude all-NaN `RESP_inhale_exhale_ratio` and `RESP_variability`.
 
 ## License
 
-[MIT](LICENSE) · © 2025 Urme Bose · [Citation](CITATION.cff)
+[MIT](LICENSE) · © 2025-2026 Urme Bose · [Citation](CITATION.cff)
