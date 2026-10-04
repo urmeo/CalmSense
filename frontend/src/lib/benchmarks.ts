@@ -20,7 +20,7 @@ export function benchmarkStatus(metadata: BenchmarkMetadata) {
   const present = Object.entries(SECTION_LABELS)
     .filter(([name]) => metadata[name as keyof typeof SECTION_LABELS] != null)
     .map(([name]) => name);
-  // Older exports cannot certify ancillary runs through the primary protocol alone.
+  // Primary protocol alone cannot certify ancillary runs.
   const sections = [...new Set(metadata.unverified_sections ?? (historical ? [] : present))];
   return {
     historical,

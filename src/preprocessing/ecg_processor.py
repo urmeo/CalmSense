@@ -10,7 +10,7 @@ from .filters import _positive_integer, _positive_number
 
 
 class ECGProcessor(LoggerMixin):
-    """Filter ECG and correct RR intervals; use NeuroKit2 or the Pan-Tompkins fallback."""
+    """NeuroKit2 peaks; Pan-Tompkins fallback."""
 
     def __init__(self, sampling_rate: float = FS.CHEST):
         self.sampling_rate = _positive_number(sampling_rate, "sampling_rate")
@@ -37,12 +37,11 @@ class ECGProcessor(LoggerMixin):
         if not 0 < low_norm < high_norm < 1:
             raise ValueError(f"ECG cutoffs must satisfy 0 < low < high < Nyquist ({nyq} Hz)")
 
-        # SOS avoids polynomial-coefficient instability at low normalized ECG cutoffs.
+        # SOS avoids low-cutoff instability.
         sos = signal.butter(order, [low_norm, high_norm], btype="band", output="sos")
         return signal.sosfiltfilt(sos, ecg)
 
     def detect_r_peaks(self, ecg: np.ndarray) -> np.ndarray:
-        """Detect R-peaks (NeuroKit2 if available, else Pan-Tompkins). Returns sample indices."""
         ecg = np.asarray(ecg, dtype=float).flatten()
         if not np.isfinite(ecg).all():
             raise ValueError("R-peak input must contain only finite samples")
@@ -80,14 +79,12 @@ class ECGProcessor(LoggerMixin):
         diff_ecg = np.diff(ecg)
         squared = diff_ecg**2
 
-        # 150ms integration window
         window_size = max(1, int(0.150 * self.sampling_rate))
         integrated = np.convolve(squared, np.ones(window_size) / window_size, mode="same")
 
         init_samples = int(2 * self.sampling_rate)
         threshold = 0.5 * np.max(integrated[: min(init_samples, len(integrated))])
 
-        # 300 BPM max
         min_rr = max(1, int(0.2 * self.sampling_rate))
 
         r_peaks = []
@@ -111,7 +108,6 @@ class ECGProcessor(LoggerMixin):
                 refined_peak = start + np.argmax(ecg[start:end])
                 r_peaks.append(refined_peak)
 
-                # Adaptive threshold
                 threshold = 0.5 * (threshold + 0.25 * integrated[peak_idx])
 
                 search_start = refined_peak + min_rr
@@ -122,7 +118,6 @@ class ECGProcessor(LoggerMixin):
         return np.array(r_peaks, dtype=int)
 
     def extract_rr_intervals(self, r_peaks: np.ndarray, unit: str = "ms") -> np.ndarray:
-        """Convert ascending peak indices to RR intervals in ms, s, or samples."""
         if unit not in ("ms", "s", "samples"):
             raise ValueError(f"unit must be 'ms', 's', or 'samples', got {unit!r}")
 
@@ -140,7 +135,7 @@ class ECGProcessor(LoggerMixin):
             rr_intervals = (rr_samples / self.sampling_rate) * 1000
         elif unit == "s":
             rr_intervals = rr_samples / self.sampling_rate
-        else:  # "samples"
+        else:
             rr_intervals = rr_samples.astype(float)
 
         return rr_intervals
@@ -202,11 +197,10 @@ class ECGProcessor(LoggerMixin):
         x_valid = np.where(valid_mask)[0]
         x_all = np.arange(len(rr))
 
-        # A single valid beat cannot be interpolated; fall back to that value
         if len(x_valid) == 1:
             return np.full_like(rr, float(rr[valid_mask][0]))
 
-        # Drop to an order the valid points can support (cubic needs >=4, quadratic >=3)
+        # Cubic needs four valid points.
         if method == "cubic" and len(x_valid) < 4:
             method = "quadratic" if len(x_valid) >= 3 else "linear"
 

@@ -1,8 +1,3 @@
-"""Compare binary calibration under LOSO, subject-mixed CV, and recalibration.
-
-Fit calibrators on out-of-fold training probabilities and report decision curves.
-"""
-
 import argparse
 import sys
 from pathlib import Path
@@ -37,7 +32,6 @@ N_BINS = 15
 
 
 def _probability_folds(factory, X, y, splits):
-    """Fit each training split and return P(stress) for its held-out rows."""
     for train_idx, test_idx in splits:
         pipe = factory()
         pipe.fit(X[train_idx], y[train_idx], **_fit_params(pipe, y[train_idx]))
@@ -55,7 +49,6 @@ def loso_proba(factory, X, y, groups):
 
 
 def within_subject_proba(factory, X, y, groups):
-    """Predict non-overlapping windows with subject-mixed stratified five-fold CV."""
     keep = nonoverlap_mask(groups)
     Xk, yk, gk = X[keep], y[keep], groups[keep]
 
@@ -68,7 +61,6 @@ def _subject_brier(y, proba, g):
 
 
 def gap_significance(loso, within):
-    """Compare subject-paired Brier scores with a two-sided Wilcoxon test."""
     if len(loso) < 3 or set(loso) != set(within):
         raise ValueError(
             "Paired calibration scores require the same set of at least three subjects"
@@ -96,7 +88,6 @@ def _fit_calibrator(raw, y, method):
         raise ValueError(f"Unknown calibration method: {method}")
     raw = np.asarray(raw, dtype=float)
     y = np.asarray(y)
-    # Validate the calibration targets as binary probabilities and labels.
     cal.brier_score(y, raw)
     if method == "isotonic":
         return IsotonicRegression(out_of_bounds="clip").fit(raw, y)
@@ -115,7 +106,6 @@ def _apply_calibrator(model, raw, method):
 
 
 def _pos_proba(estimator, X):
-    """P(class==1), robust to single-class folds where proba has one column."""
     proba = np.asarray(estimator.predict_proba(X))
     classes = np.asarray(estimator.classes_)
     if (
@@ -151,7 +141,7 @@ def _global_calibrator(factory, Xtr, ytr, gtr, method):
 
 
 def loso_recalibrated_proba(factory, X, y, groups, method="isotonic"):
-    """LOSO with a calibrator fit on out-of-fold training probabilities only."""
+    """Training-subject OOF probabilities fit calibrators."""
     logo = LeaveOneGroupOut()
     yt, pp = [], []
     for train_idx, test_idx in logo.split(X, y, groups):
@@ -171,12 +161,11 @@ def loso_recalibrated_proba(factory, X, y, groups, method="isotonic"):
 def compute(X, y, groups, model="rf", n_bins=N_BINS):
     factory = lambda: build_pipeline(model)  # noqa: E731
 
-    # Full-window LOSO supplies the calibration and decision-curve summaries.
     y_loso, p_loso, g_loso = loso_proba(factory, X, y, groups)
     y_iso, p_iso = loso_recalibrated_proba(factory, X, y, groups, "isotonic")
     y_sig, p_sig = loso_recalibrated_proba(factory, X, y, groups, "sigmoid")
 
-    # Use the same non-overlapping windows to compare the two CV schemes.
+    # Match non-overlapping windows across CV schemes.
     m = nonoverlap_mask(groups)
     y_within, p_within, g_within = within_subject_proba(factory, X, y, groups)
     y_lm, p_lm, g_lm = loso_proba(factory, X[m], y[m], groups[m])
@@ -191,7 +180,6 @@ def compute(X, y, groups, model="rf", n_bins=N_BINS):
         _subject_brier(y_within, p_within, g_within),
     )
 
-    # Decision curves require labels and probabilities in the same outer-fold order.
     assert np.array_equal(y_loso, y_iso), "LOSO label order diverged across passes"
     thresholds = np.round(np.arange(0.05, 0.61, 0.05), 2)
     prevalence = float(np.mean(y_loso == 1))
@@ -279,7 +267,6 @@ def _plot_decision(out, path):
 
 def run(synthetic=False, model="rf", n_bins=N_BINS):
     set_seed(SEED)
-    # Synthetic runs never overwrite the committed real-WESAD snapshot.
     results_dir = DEMO_DIR / "results" if synthetic else RESULTS_DIR
     figures_dir = DEMO_DIR / "figures" if synthetic else FIGURES_DIR
     results_dir.mkdir(parents=True, exist_ok=True)

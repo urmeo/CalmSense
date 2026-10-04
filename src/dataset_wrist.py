@@ -1,5 +1,3 @@
-"""Build WESAD wrist (Empatica E4) features for the wrist-only LOSO benchmark."""
-
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -22,10 +20,10 @@ class WristDataset(LoggerMixin):
         self.window_sec = float(window_sec)
         self.overlap = float(overlap)
         self.purity = float(purity)
-        self.label_fs = FS.CHEST  # labels sampled at 700 Hz
+        self.label_fs = FS.CHEST
         self.loader = WESADLoader()
         self.eda = EDAProcessor(sampling_rate=FS.WRIST_EDA)
-        self.rr = ECGProcessor(sampling_rate=FS.WRIST_BVP)  # reuse RR/ectopic helpers
+        self.rr = ECGProcessor(sampling_rate=FS.WRIST_BVP)
         self.features = FeatureExtractionPipeline(
             chest_fs=FS.CHEST, wrist_eda_fs=FS.WRIST_EDA, wrist_acc_fs=FS.WRIST_ACC
         )
@@ -62,7 +60,6 @@ class WristDataset(LoggerMixin):
         windows, ys = [], []
         t = 0.0
         while t + self.window_sec <= duration:
-            # Labels use chest time; each wrist modality is sliced at its own sampling rate.
             lab = self._window_label(
                 labels[int(t * self.label_fs) : int((t + self.window_sec) * self.label_fs)]
             )

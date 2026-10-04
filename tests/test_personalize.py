@@ -1,5 +1,3 @@
-"""Enrollment split is leak-free and keeps both classes."""
-
 import json
 
 import numpy as np
@@ -55,7 +53,6 @@ def test_tiny_personalization_pool_falls_back_without_crashing(monkeypatch):
     monkeypatch.setattr(
         personalize, "build_pipeline", lambda model: Pipeline([("clf", DummyClassifier())])
     )
-    # Each target has only two non-overlapping windows: one per class, both needed for evaluation.
     y = np.tile([0, 0, 1, 1], 3)
     groups = np.repeat(["S0", "S1", "S2"], 4)
     result = personalize.compute(np.zeros((12, 1)), y, groups, k_values=[5])

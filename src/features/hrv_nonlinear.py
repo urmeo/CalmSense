@@ -23,7 +23,7 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
 
         r_val = r * np.std(rr)
 
-        # Both counts use the same template starts, each with an available next sample.
+        # Equal template starts; exclude self-matches.
         patterns = np.lib.stride_tricks.sliding_window_view(rr, m + 1)
         b = np.count_nonzero(
             np.triu(cdist(patterns[:, :m], patterns[:, :m], "chebyshev") <= r_val, 1)
@@ -50,7 +50,7 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
             patterns = np.lib.stride_tricks.sliding_window_view(rr, template_len)
             n_patterns = len(patterns)
 
-            # ApEn includes self-matches, so every probability is positive.
+            # ApEn includes self-matches.
             counts = np.count_nonzero(cdist(patterns, patterns, "chebyshev") <= r_val, axis=1)
             return float(np.mean(np.log(counts / n_patterns)))
 
@@ -129,8 +129,7 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
         diff = rr_n1 - rr_n
 
         sd1 = float(np.std(diff, ddof=1) / np.sqrt(2))
-        # Measure the paired points along the identity line; the full-series SDNN
-        # identity is only approximate for a finite or trending RR series.
+        # Paired-point covariance matters in finite series.
         sd2 = float(np.std((rr_n + rr_n1) / np.sqrt(2), ddof=1))
 
         if sd2 > FEATURE_PARAMS.EPSILON:
@@ -143,7 +142,7 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
         else:
             csi = np.nan
 
-        # Toichi's ellipse dimensions are 4*SD1 and 4*SD2.
+        # Ellipse axes are four standard deviations.
         if sd1 > 0 and sd2 > 0:
             cvi = float(np.log10(16 * sd1 * sd2))
         else:
@@ -199,7 +198,7 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
 
             diagonal_points += np.sum(run_lengths[run_lengths >= min_line_length])
 
-        diagonal_points *= 2  # both sides of diagonal
+        diagonal_points *= 2
 
         return float(diagonal_points / total_recurrence)
 
@@ -218,7 +217,7 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
             features["DFA_alpha1"], features["DFA_alpha2"] = self.compute_dfa(rr)
             features.update(self.compute_poincare(rr))
 
-            rr_sample = rr[: min(200, len(rr))]  # limit for speed
+            rr_sample = rr[: min(200, len(rr))]
             features["RQA_DET"] = self.compute_rqa_determinism(rr_sample)
 
         except Exception as e:

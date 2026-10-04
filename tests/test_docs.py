@@ -1,5 +1,3 @@
-"""Documentation describes implemented models and references existing artifacts."""
-
 import re
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -10,7 +8,6 @@ ROOT = Path(__file__).resolve().parent.parent
 README = (ROOT / "README.md").read_text()
 
 
-# These models are not implemented by the project.
 PHANTOM_MODELS = ["Transformer", "BiLSTM", "CatBoost", "EfficientNet", "cross-modal attention"]
 
 
@@ -21,12 +18,10 @@ def test_readme_names_no_untrained_models():
 
 
 def test_docs_make_no_best_overall_ranking_claim():
-    # No significant difference was detected among the four feature models.
     assert "best overall" not in README.lower(), "README makes a 'Best overall' ranking claim"
 
 
 def test_readme_local_links_and_images_exist():
-    """Check the overview's Markdown destinations and HTML image sources."""
     refs = re.findall(r"\]\(([^\s)]+)\)", README) + re.findall(r'(?:src|href)="([^"]+)"', README)
     for ref in refs:
         url = urlsplit(ref)
@@ -36,7 +31,6 @@ def test_readme_local_links_and_images_exist():
 
 
 def test_readme_table_update_is_idempotent(tmp_path, monkeypatch):
-    """Updating the overview must preserve its prose and use the committed results."""
     from scripts import update_readme_tables as tables
 
     path = tmp_path / "README.md"
@@ -62,14 +56,12 @@ def test_referenced_notebooks_exist():
 
 
 def test_no_nonexistent_numbered_notebook_series():
-    # The numbered 01-08 notebook series does not exist.
     assert not re.search(r"notebooks/0[1-8]_", README), (
         "README references a nonexistent numbered 01-08 notebook series"
     )
 
 
 def test_no_em_or_en_dashes_anywhere():
-    """Guard documentation and source punctuation."""
     targets = (
         sorted(ROOT.glob("src/**/*.py"))
         + sorted(ROOT.glob("scripts/*.py"))
@@ -84,7 +76,7 @@ def test_no_em_or_en_dashes_anywhere():
             ROOT / "CONTRIBUTING.md",
         ]
     )
-    en_dash, em_dash = chr(0x2013), chr(0x2014)  # by codepoint, so this guard never flags itself
+    en_dash, em_dash = chr(0x2013), chr(0x2014)
     offenders = [
         str(p.relative_to(ROOT))
         for p in targets

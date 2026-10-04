@@ -1,5 +1,3 @@
-"""Archive extraction refuses path traversal and oversized archives."""
-
 import hashlib
 import io
 import zipfile

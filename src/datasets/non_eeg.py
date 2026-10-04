@@ -1,9 +1,4 @@
-"""PhysioNet Non-EEG dataset -> shared feature space for cross-dataset transfer.
-
-20 subjects, wrist EDA/TEMP/ACC (8 Hz) + HR (1 Hz), with .atr annotations marking
-relaxation and physical/cognitive/emotional stress blocks. We use psychological
-stress (cognitive + emotional) vs relaxation, excluding the motion-heavy physical block.
-"""
+"""Exclude physical stress."""
 
 from pathlib import Path
 from typing import Any, Optional
@@ -26,7 +21,6 @@ RELAX = {"Relax"}
 
 
 def _segments(record: str):
-    """Yield annotation intervals in the 8 Hz sensor record's sample indices."""
     import wfdb
 
     ann = wfdb.rdann(record, "atr")
@@ -72,8 +66,8 @@ def build(subjects: Optional[list] = None) -> pd.DataFrame:
             or hr_record.p_signal.shape[1] < 2
         ):
             raise ValueError(f"Unexpected Non-EEG channel shapes for {sid}")
-        sig = sensor_record.p_signal  # ax, ay, az, temp, EDA @ 8 Hz
-        hr = hr_record.p_signal[:, 1]  # hr @ 1 Hz
+        sig = sensor_record.p_signal  # ax, ay, az, temp, EDA
+        hr = hr_record.p_signal[:, 1]  # SpO2, HR
         acc_mag = np.sqrt(np.sum(sig[:, 0:3] ** 2, axis=1))
         temp, eda = sig[:, 3], sig[:, 4]
 
@@ -86,11 +80,10 @@ def build(subjects: Optional[list] = None) -> pd.DataFrame:
             elif note in RELAX:
                 label = 0
             else:
-                continue  # skip physical stress
-            # Keep windows inside one annotation interval; no window spans condition changes.
+                continue
             for w0 in range(s0, s1 - win + 1, step):
                 w1 = w0 + win
-                # Include HR timestamps in [start, end); annotations can fall between seconds.
+                # HR timestamps stay inside [start, end).
                 h0 = (w0 * HR_FS + ACC_FS - 1) // ACC_FS
                 h1 = (w1 * HR_FS + ACC_FS - 1) // ACC_FS
                 hr_win = hr[h0:h1]

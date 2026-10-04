@@ -10,8 +10,6 @@ from .filters import _positive_integer, _positive_number
 
 
 class EDAProcessor(LoggerMixin):
-    """Filter EDA, separate tonic/phasic components, and detect skin conductance responses."""
-
     def __init__(self, sampling_rate: float = FS.WRIST_EDA):
         self.sampling_rate = _positive_number(sampling_rate, "sampling_rate")
 
@@ -51,7 +49,7 @@ class EDAProcessor(LoggerMixin):
     def decompose_eda(
         self, eda: np.ndarray, method: str = "highpass"
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """Return tonic/phasic arrays; cvxEDA falls back to median decomposition."""
+        """cvxEDA failure uses median decomposition."""
         if method not in {"highpass", "median", "cvxeda"}:
             raise ValueError("EDA decomposition method must be 'highpass', 'median', or 'cvxeda'")
         eda = np.asarray(eda, dtype=float).flatten()
@@ -158,7 +156,6 @@ class EDAProcessor(LoggerMixin):
             if amplitude < min_amplitude:
                 continue
 
-            # Half-recovery point
             recovery_target = phasic[peak_idx] - amplitude / 2
             search_end = min(len(phasic), peak_idx + max_rise_samples * 2)
             recovery_region = phasic[peak_idx:search_end]

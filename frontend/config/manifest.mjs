@@ -1,4 +1,3 @@
-// Native module source; generated tool files are ignored.
 export default {
   "short_name": "CalmSense",
   "name": "CalmSense - Stress Detection Dashboard",

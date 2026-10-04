@@ -1,9 +1,4 @@
-"""18 EDA, temperature, motion, and heart-rate features shared by both wrist datasets.
-
-EDA and temperature slopes use units per second despite different sampling rates.
-Native signal units differ between datasets; shared columns do not harmonize them.
-The chest extraction schema has 60 columns; the saved benchmark used 58.
-"""
+"""Native units; EDA/TEMP slopes per second."""
 
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -19,7 +14,6 @@ WINDOW_SEC = 60.0
 OVERLAP = 0.5
 PURITY = 0.9
 PORTABLE_SCHEMA_VERSION = 3
-# Empatica E4's native ACC ticks are 1/64 g; Non-EEG headers declare ACC/EDA as NU.
 PORTABLE_SIGNAL_UNITS = {
     "wesad": {"EDA": "uS", "TEMP": "degC", "ACC": "1/64 g", "HR": "bpm"},
     "noneeg": {"EDA": "NU", "TEMP": "degC", "ACC": "NU", "HR": "bpm"},
@@ -40,7 +34,7 @@ def _stats(
 ) -> Dict[str, float]:
     sampling_rate = _positive_number(sampling_rate, "sampling_rate")
     x = np.asarray(x, dtype=float).ravel()
-    # Build timestamps before masking NaNs so gaps do not change the estimated slope.
+    # Preserve missing-sample timestamps.
     t = np.arange(len(x), dtype=float) / sampling_rate
     finite = np.isfinite(x)
     x, t = x[finite], t[finite]
@@ -62,10 +56,6 @@ def _stats(
 
 
 def portable_features(eda, temp, acc_mag, hr, *, eda_fs: float, temp_fs: float) -> Dict[str, float]:
-    """18 shared features; EDA/TEMP slopes use seconds at explicit channel rates.
-
-    Invalid signal samples are omitted without compressing their timestamps.
-    """
     feats = {}
     feats.update(_stats(eda, "EDA", FEATURE_KEYS["EDA"], eda_fs))
     feats.update(_stats(temp, "TEMP", FEATURE_KEYS["TEMP"], temp_fs))
@@ -89,7 +79,6 @@ def _window_label(labels: np.ndarray, keep: set) -> Optional[int]:
 def wesad_portable(
     subjects: Optional[List[str]] = None, data_path: Optional[Union[str, Path]] = None
 ) -> pd.DataFrame:
-    """WESAD wrist signals -> shared feature space, binary baseline(0)/stress(1)."""
     import neurokit2 as nk
 
     loader = WESADLoader(data_path=data_path)
@@ -114,7 +103,7 @@ def wesad_portable(
             )["PPG_Peaks"]
         )
         beat_hr = 60.0 / (np.diff(peaks) / FS.WRIST_BVP)
-        # Assign each interbeat HR value to the later peak's time in seconds.
+        # Assign HR to the later peak.
         beat_t = peaks[1:] / FS.WRIST_BVP
 
         duration = len(labels) / FS.CHEST
@@ -124,7 +113,6 @@ def wesad_portable(
                 labels[int(t * FS.CHEST) : int((t + WINDOW_SEC) * FS.CHEST)], {1, 2}
             )
             if lab is not None:
-                # Slice each modality by elapsed time; wrist sample indices are not interchangeable.
                 e0, e1 = int(t * FS.WRIST_EDA), int((t + WINDOW_SEC) * FS.WRIST_EDA)
                 t0, t1 = int(t * FS.WRIST_TEMP), int((t + WINDOW_SEC) * FS.WRIST_TEMP)
                 a0, a1 = int(t * FS.WRIST_ACC), int((t + WINDOW_SEC) * FS.WRIST_ACC)
@@ -138,7 +126,7 @@ def wesad_portable(
                     temp_fs=FS.WRIST_TEMP,
                 )
                 row["subject"] = sid
-                row["label"] = 0 if lab == 1 else 1  # baseline=0, stress=1
+                row["label"] = 0 if lab == 1 else 1
                 rows.append(row)
             t += step
 

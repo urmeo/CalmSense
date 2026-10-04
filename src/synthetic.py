@@ -1,10 +1,4 @@
-"""Generate WESAD-format recordings for smoke tests and demos.
-
-NeuroKit2 simulates chest ECG, EDA, and respiration; other channels use simplified
-signals. Fixed condition differences and shared subject distributions make this
-task easier than real WESAD. Synthetic scores do not estimate real accuracy,
-calibration, or cross-subject generalization.
-"""
+"""Synthetic scores are not real performance."""
 
 import pickle
 from pathlib import Path
@@ -89,10 +83,7 @@ def _chest_block(cond: str, seconds: int, rng: np.random.RandomState, seed: int)
 
 
 def _wrist_block(cond: str, seconds: int, chest: Dict, rng: np.random.RandomState) -> Dict:
-    """Mirror WESAD's wrist layout with simplified sinusoidal BVP.
-
-    BVP is not a physiological PPG simulation; the chest pipeline does not read it.
-    """
+    """BVP is sinusoidal."""
     bvp_n = int(seconds * WRIST["BVP"])
     eda_n = int(seconds * WRIST["EDA"])
     acc_n = int(seconds * WRIST["ACC"])
@@ -133,7 +124,6 @@ def _subject(seed: int, block_sec: int) -> Dict:
 
 
 def write_dataset(out_dir: Path, n_subjects: int = 4, block_sec: int = 120, seed: int = 0) -> Path:
-    """Write valid WESAD subject IDs as generated pickles under out_dir/WESAD."""
     n_subjects = _positive_integer(n_subjects, "n_subjects")
     block_sec = _positive_integer(block_sec, "block_sec")
     if n_subjects > len(VALID_SUBJECTS):
@@ -151,7 +141,6 @@ def write_dataset(out_dir: Path, n_subjects: int = 4, block_sec: int = 120, seed
 def features(
     n_subjects: int = 4, block_sec: int = 120, seed: int = 0, cache: bool = False
 ) -> Tuple:
-    """Build a small feature matrix from freshly generated synthetic subjects."""
     if cache:
         raise ValueError("Synthetic features cannot replace real-data caches; use cache=False")
     import shutil

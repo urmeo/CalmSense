@@ -1,5 +1,3 @@
-"""Ablate feature groups to test whether stress detection is physiology- or motion-driven."""
-
 import sys
 from pathlib import Path
 
@@ -20,12 +18,8 @@ from scripts.run_experiment import (
 from src.config import FIGURES_DIR, RESULTS_DIR
 from src.utils import atomic_write_text
 
-# Canonical feature-group prefixes; every feature column is named "<GROUP>_...".
-# Subsets below are defined against these, so a prefix rename is caught by the
-# coverage guard in run() instead of silently dropping features from a subset.
 FEATURE_GROUPS = ["HRV", "EDA", "TEMP", "RESP", "ACC"]
 
-# Feature-group subsets (by name prefix)
 SUBSETS = {
     "All features": FEATURE_GROUPS,
     "No motion (HRV+EDA+TEMP+RESP)": ["HRV", "EDA", "TEMP", "RESP"],
@@ -50,8 +44,6 @@ def run():
 
     X, y, groups, feature_cols, _ = prepare_task(features_df, x_raw, [1, 2])
 
-    # Fail loudly if any feature is unaccounted for: the "All features" subset must
-    # cover every column, or the ablation would silently compare the wrong sets.
     unknown = sorted({_group_of(c) for c in feature_cols} - set(FEATURE_GROUPS))
     if unknown:
         raise SystemExit(f"Feature groups not in FEATURE_GROUPS: {unknown}")

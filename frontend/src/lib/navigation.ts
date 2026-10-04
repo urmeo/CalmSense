@@ -1,4 +1,4 @@
-// Mobile navigation behaves as a modal; the desktop sidebar stays ordinary navigation.
+// Mobile modal only.
 export function containNavigationFocus(sidebar: HTMLElement, background: HTMLElement, onClose: () => void) {
   const document = sidebar.ownerDocument;
   const previousFocus = document.activeElement;

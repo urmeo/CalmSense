@@ -1,5 +1,3 @@
-"""Wrist-only (Empatica E4) LOSO model and chest-vs-wrist comparison."""
-
 import json
 import sys
 from pathlib import Path
@@ -86,7 +84,6 @@ def run():
 
     best = max(rows, key=lambda r: r["accuracy_mean"])
     chest_best = max(chest["models"], key=lambda r: r["accuracy_mean"])
-    # Hold the classifier family fixed when comparing chest and wrist feature sets.
     chest_rf = next(m["accuracy_mean"] for m in chest["models"] if m["model"] == "Random Forest")
     wrist_rf = next(m["accuracy_mean"] for m in rows if m["model"] == "Random Forest")
 

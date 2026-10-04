@@ -1,4 +1,3 @@
-// Native module source; generated tool files are ignored.
 export default {
   "name": "calmsense-dashboard",
   "version": "1.0.0",

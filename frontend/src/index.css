@@ -20,7 +20,7 @@
   }
 }
 
-/* Preserve Tailwind v3 defaults: gray-200 border color, pointer cursor on buttons */
+/* Tailwind v3 defaults. */
 @layer base {
   *,
   ::after,

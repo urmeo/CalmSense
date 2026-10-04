@@ -111,7 +111,6 @@ class RespirationFeatureExtractor(LoggerMixin):
 
         freqs, psd = scipy_signal.welch(resp, fs=self.sampling_rate, nperseg=nperseg)
 
-        # Respiratory range: 0.1-0.5 Hz
         mask = (freqs >= 0.1) & (freqs <= 0.5)
         if not np.any(mask):
             return np.nan
@@ -176,7 +175,6 @@ class RespirationFeatureExtractor(LoggerMixin):
         if len(breath_intervals) == 0:
             return 0.0
 
-        # Apnea = a breath interval longer than apnea_threshold seconds
         apnea_threshold = 10.0
         n_apnea = np.sum(breath_intervals > apnea_threshold)
 

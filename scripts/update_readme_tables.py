@@ -1,9 +1,3 @@
-"""Update the README calibration and personalization tables from committed results.
-
-Run after scripts/calibration.py and scripts/personalize.py so the project overview
-reflects the committed JSON. This updates documentation only; it does not fit models.
-"""
-
 import json
 import math
 import re
@@ -59,7 +53,6 @@ def _personalization_table() -> str:
         raise ValueError("Personalization Brier values must use positive-class MSE")
     head = "| Recalibration / requested enrollment budget | ECE | Brier |\n| --- | :-: | :-: |"
     rows = [("None (LOSO)", d["uncalibrated"]), ("Global (training subjects)", d["global"])]
-    # k values are whatever personalize.py used (K_VALUES), not hard-coded
     for k in sorted(d["fewshot"], key=int):
         rows.append((f"Per-subject, budget {k}", d["fewshot"][k]))
     lines = [f"| {label} | {_f(s['ece'])} | {_f(s['brier'])} |" for label, s in rows]

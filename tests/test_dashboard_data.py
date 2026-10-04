@@ -1,5 +1,3 @@
-"""The dashboard exports matched comparisons without modifying research sources."""
-
 import json
 from types import SimpleNamespace
 

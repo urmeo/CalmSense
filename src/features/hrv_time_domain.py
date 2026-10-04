@@ -74,7 +74,7 @@ class HRVTimeDomainExtractor(BaseHRVExtractor):
         rr = np.asarray(rr, dtype=float).flatten()
         if not len(rr) or not np.isfinite(rr).all():
             return np.nan
-        # Fixed 1/128-second bins anchored at zero match the stated histogram convention.
+        # Fixed bins start at zero.
         _, counts = np.unique(np.floor(rr / bin_width), return_counts=True)
         return float(len(rr) / counts.max())
 

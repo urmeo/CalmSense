@@ -7,11 +7,7 @@ from typing import Generator, Union
 
 
 def set_seed(seed: int = 42, deterministic: bool = True) -> None:
-    """Seed Python, NumPy, and PyTorch (CPU + CUDA).
-
-    Deterministic mode warns when an operation lacks a deterministic kernel.
-    ``PYTHONHASHSEED`` applies to new child processes.
-    """
+    """PYTHONHASHSEED affects child processes."""
     os.environ["PYTHONHASHSEED"] = str(seed)
     random.seed(seed)
 
@@ -54,7 +50,7 @@ def ensure_directory(path: Union[str, Path]) -> Path:
 
 
 def atomic_write_text(path: Union[str, Path], text: str) -> None:
-    """Replace UTF-8 text only after a complete write; preserve existing permissions."""
+    """Replace complete text; preserve permissions."""
     from stat import S_IMODE
     from tempfile import TemporaryDirectory
 
@@ -69,14 +65,13 @@ def atomic_write_text(path: Union[str, Path], text: str) -> None:
 
 
 def write_json(path: Union[str, Path], value) -> None:
-    """Serialize finite JSON before replacing an existing result."""
+    """Reject nonfinite JSON before replacement."""
     import json
 
     atomic_write_text(path, json.dumps(value, indent=2, allow_nan=False))
 
 
 def provenance() -> dict:
-    """Record Git HEAD, dirty state, feature schema, and UTC time."""
     import subprocess
     from datetime import datetime, timezone
 
@@ -104,7 +99,6 @@ def provenance() -> dict:
 
 
 def sha256_file(path: Union[str, Path]) -> str:
-    """Hash a file without loading the entire recording into memory."""
     import hashlib
 
     with Path(path).open("rb") as stream:
@@ -112,10 +106,7 @@ def sha256_file(path: Union[str, Path]) -> str:
 
 
 def replace_verified_pair(new_primary, new_sidecar, primary, sidecar) -> None:
-    """Publish a prepared pair; restore prior files if the sidecar replacement fails.
-
-    A simultaneous rollback failure or process termination cannot be made atomic across two files.
-    """
+    """Best-effort rollback across two files."""
     from shutil import copy2
     from tempfile import TemporaryDirectory
 
@@ -140,14 +131,12 @@ def replace_verified_pair(new_primary, new_sidecar, primary, sidecar) -> None:
 
 
 def save_verified_joblib(bundle, path: Union[str, Path]) -> None:
-    """Write a joblib bundle and the SHA-256 sidecar used to verify its bytes."""
     from tempfile import TemporaryDirectory
 
     import joblib
 
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    # Finish serialization before replacing any existing verified model.
     with TemporaryDirectory(dir=path.parent) as directory:
         temporary = Path(directory) / path.name
         checksum = temporary.with_name(path.name + ".sha256")
@@ -158,11 +147,7 @@ def save_verified_joblib(bundle, path: Union[str, Path]) -> None:
 
 
 def load_verified_joblib(path: Union[str, Path]):
-    """Load a joblib bundle only after its bytes match the committed SHA-256 sidecar.
-
-    Unpickling executes arbitrary code, so the shipped model is checked against
-    ``<path>.sha256`` before loading; a mismatch raises instead of trusting the file.
-    """
+    """Hash-check trusted bundles before deserialization."""
     import hashlib
     import io
     import re
@@ -180,15 +165,12 @@ def load_verified_joblib(path: Union[str, Path]):
         raise ValueError(
             f"SHA-256 mismatch for {path.name}: refusing to load an unverified pickle."
         )
-    # Deserialize the checked snapshot, even if the original path is replaced meanwhile.
+    # Deserialize the verified snapshot.
     return joblib.load(io.BytesIO(payload))
 
 
 def paired_effect_size(a, b) -> dict:
-    """Return paired d_z and g_z for at least three finite, aligned observations.
-
-    Constant nonzero differences have undefined standardized effects, returned as None.
-    """
+    """Paired effects; constant nonzero differences are undefined."""
     from math import exp, lgamma, log
 
     import numpy as np
@@ -206,13 +188,12 @@ def paired_effect_size(a, b) -> dict:
     magnitude = float(np.abs(diff).max())
     if magnitude == 0:
         return {"cohens_d": 0.0, "hedges_g": 0.0, "n": int(n)}
-    # Scaling cancels from d_z and avoids squared-difference underflow or overflow.
+    # Scaling prevents underflow and overflow.
     scaled = diff / magnitude
     sd = scaled.std(ddof=1)
     if sd <= np.finfo(float).eps:
         return {"cohens_d": None, "hedges_g": None, "n": int(n)}
     d = float(scaled.mean() / sd)
-    # Paired differences estimate their SD with n-1 degrees of freedom.
     df = n - 1
     correction = exp(lgamma(df / 2) - 0.5 * log(df / 2) - lgamma((df - 1) / 2))
     g = d * correction

@@ -6,7 +6,7 @@ import Panel from '../components/Panel';
 
 const prettify = (f: string) => f.replace(/_/g, ' ');
 
-// Descriptive mean |SHAP| from a binary XGBoost fit on the full dataset.
+// Descriptive full-data SHAP.
 const shap = results.shap ?? [];
 const importance = shap
   .slice()

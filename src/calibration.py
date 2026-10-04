@@ -1,5 +1,3 @@
-"""Calibration metrics for classifier probabilities (Guo et al., 2017)."""
-
 from copy import deepcopy
 from typing import Dict, List, Union
 
@@ -29,11 +27,10 @@ def _validated_predictions(y: Array, proba: Array) -> tuple[np.ndarray, np.ndarr
 
 
 def _confidence_correct(y: Array, proba: Array):
-    """Use confidence in the predicted class, paired with prediction correctness."""
     y, proba = _validated_predictions(y, proba)
     if proba.ndim == 1:
         conf = np.maximum(proba, 1.0 - proba)
-        # Match argmax on [P(0), P(1)]: a tie chooses the first class.
+        # Ties select class zero.
         pred = (proba > 0.5).astype(int)
     else:
         conf = proba.max(axis=1)
@@ -49,7 +46,6 @@ def _bin_index(conf: np.ndarray, n_bins: int) -> np.ndarray:
 
 
 def reliability_curve(y: Array, proba: Array, n_bins: int = 15) -> List[Dict[str, float]]:
-    """Return confidence, accuracy, and count for nonempty equal-width bins."""
     conf, correct = _confidence_correct(y, proba)
     idx = _bin_index(conf, n_bins)
     rows = []
@@ -85,10 +81,7 @@ def maximum_calibration_error(y: Array, proba: Array, n_bins: int = 15) -> float
 
 
 def brier_score(y: Array, proba: Array) -> float:
-    """Binary positive-class MSE, independent of vector/two-column representation.
-
-    For three or more classes, return the summed multiclass Brier score.
-    """
+    """Binary MSE; multiclass summed Brier."""
     y, proba = _validated_predictions(y, proba)
     if proba.ndim == 1:
         return float(np.mean((proba - y) ** 2))
@@ -100,18 +93,13 @@ def brier_score(y: Array, proba: Array) -> float:
 
 
 def normalize_binary_calibration(result: dict) -> dict:
-    """Copy binary Brier values onto the positive-class MSE scale.
-
-    Missing ``brier_definition`` means ``two_class_sum``; halve scores and paired gaps.
-    Preserve ECE, p-values, timestamps, and the source dictionary.
-    """
+    """Missing definitions mean legacy two-class sums."""
     out = deepcopy(result)
     definition = out.get("brier_definition", "two_class_sum")
     if definition == BINARY_BRIER_DEFINITION:
         return out
     if definition != "two_class_sum":
         raise ValueError(f"Unknown binary Brier definition: {definition}")
-    # Binary class errors are equal, so their sum is twice the positive-class MSE.
     for key in (
         "loso",
         "loso_matched",
@@ -145,7 +133,6 @@ def summary(y: Array, proba: Array, n_bins: int = 15) -> Dict[str, object]:
 
 
 def net_benefit(y: Array, p_pos: Array, thresholds: np.ndarray) -> np.ndarray:
-    """Decision-curve net benefit at each probability threshold."""
     y, p_pos = _validated_predictions(y, p_pos)
     if p_pos.ndim != 1:
         raise ValueError("net_benefit requires a positive-class probability vector")
@@ -160,7 +147,7 @@ def net_benefit(y: Array, p_pos: Array, thresholds: np.ndarray) -> np.ndarray:
     out = []
     for pt in thresholds:
         if pt >= 1.0:
-            out.append(0.0)  # Boundary convention avoids infinite false-positive weight at 1.
+            out.append(0.0)  # Threshold one uses zero net benefit.
             continue
         flagged = p_pos >= pt
         tp = np.sum(flagged & (y == 1))

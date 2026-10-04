@@ -1,5 +1,3 @@
-"""The full pipeline runs end-to-end on synthetic data, no WESAD download needed."""
-
 import weakref
 
 import numpy as np

@@ -1,5 +1,3 @@
-"""Provenance stamping, artifact verification, and effect-size helpers."""
-
 import hashlib
 import math
 from pathlib import Path
@@ -22,7 +20,7 @@ def test_provenance_has_sha_and_timestamp():
     p = provenance()
     assert set(p) == {"git_sha", "working_tree_dirty", "feature_schema_version", "generated_at"}
     assert isinstance(p["git_sha"], str) and len(p["git_sha"]) >= 7
-    assert "T" in p["generated_at"]  # ISO-8601
+    assert "T" in p["generated_at"]
     assert isinstance(p["working_tree_dirty"], bool)
     assert p["feature_schema_version"] == 2
 
@@ -32,7 +30,6 @@ def test_paired_effect_size_matches_hand_calc():
     b = [0.85, 0.78, 0.90, 0.72]
     es = paired_effect_size(a, b)
     assert es["n"] == 4
-    # mean diff 0.025 over sd of diffs -> positive, small-sample g < d
     assert es["cohens_d"] > 0
     assert abs(es["hedges_g"]) < abs(es["cohens_d"])
 
@@ -46,7 +43,7 @@ def test_paired_hedges_correction_uses_difference_degrees_of_freedom():
     es = paired_effect_size([1.0, 2.0, 3.0, 4.0], [0.0] * 4)
     d = 2.5 / math.sqrt(5 / 3)
     assert es["cohens_d"] == pytest.approx(d)
-    # With four pairs, df=3 and the exact correction is sqrt(pi/6).
+    # Exact correction: sqrt(pi/6) at df=3.
     assert es["hedges_g"] == pytest.approx(d * math.sqrt(math.pi / 6))
 
 

@@ -1,5 +1,4 @@
-"""Fetch the public datasets. Non-EEG downloads directly; WESAD needs a one-time
-agreement, so we resolve its download link and unpack what you hand it."""
+"""WESAD requires its source research agreement."""
 
 import argparse
 import sys
@@ -20,7 +19,7 @@ NONEEG_URL = (
 )
 NONEEG_DIR = EXTERNAL_DATA_DIR / "noneeg"
 WESAD_URL = "https://uni-siegen.sciebo.de/s/HGdUkoNlW1Ub0Gx/download"
-MAX_UNCOMPRESSED = 10 * 1024**3  # zip-bomb guard
+MAX_UNCOMPRESSED = 10 * 1024**3
 DOWNLOAD_TIMEOUT = 30
 NONEEG_FILES = tuple(
     f"Subject{subject}_{record}.{extension}"
@@ -29,7 +28,7 @@ NONEEG_FILES = tuple(
     for extension in extensions
 )
 
-# SHA-256 of the official WESAD S*.pkl files (verification instructions in README.md).
+# Repository reference hashes; not publisher-issued.
 WESAD_SHA256 = {
     "S2": "36ef5e8afc0f91998eefba7c12fc9fa97b7b07198cbec0126917d7abb436ca23",
     "S3": "5c8bd4a82af029c082e610bca28a011fca2ae3b23e14a18458ebb5990be4015e",
@@ -50,7 +49,6 @@ WESAD_SHA256 = {
 
 
 def verify_wesad(target=None) -> None:
-    """Check each downloaded WESAD S*.pkl against its known SHA-256; fail loudly on mismatch."""
     root = Path(target) if target is not None else RAW_DATA_DIR / "WESAD"
     problems = []
     for sid, expected in WESAD_SHA256.items():
@@ -95,14 +93,13 @@ def _download(url, dest):
                 _progress(downloaded, 1, total)
             if total > 0 and downloaded != total:
                 raise RuntimeError("incomplete dataset download; retry the command")
-        part.replace(dest)  # only a complete download lands on the final path
+        part.replace(dest)
     finally:
         part.unlink(missing_ok=True)
     print()
 
 
 def _safe_extract(zip_path, dest, max_bytes=MAX_UNCOMPRESSED):
-    """Extract, rejecting members that escape dest (zip-slip) or balloon (zip-bomb)."""
     dest = Path(dest).resolve()
     with zipfile.ZipFile(zip_path) as z:
         total = 0
@@ -117,7 +114,6 @@ def _safe_extract(zip_path, dest, max_bytes=MAX_UNCOMPRESSED):
 
 
 def _install_archive(zip_path, target, verify):
-    """Publish a dataset directory only after extraction and integrity checks succeed."""
     target = Path(target)
     with TemporaryDirectory(dir=target.parent) as directory:
         staging = Path(directory)
@@ -142,7 +138,6 @@ def download_noneeg() -> None:
 
 
 def verify_noneeg(target=None) -> None:
-    """Check required WFDB files against the publisher's accompanying manifest."""
     import re
 
     target = (
@@ -219,7 +214,7 @@ if __name__ == "__main__":
         _check(NONEEG_URL)
         _check(WESAD_URL)
     elif not args.wesad and not args.noneeg:
-        download_noneeg()  # No flags selects Non-EEG; --wesad selects the primary dataset.
+        download_noneeg()
     else:
         if args.noneeg:
             download_noneeg()

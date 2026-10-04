@@ -1,5 +1,3 @@
-"""Window WESAD chest signals into features and raw CNN tensors."""
-
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -15,13 +13,11 @@ from .preprocessing.ecg_processor import ECGProcessor
 from .preprocessing.eda_processor import EDAProcessor
 from .preprocessing.filters import SignalProcessor, _positive_integer, _window_parameters
 
-# Conditions kept for classification
 CONDITION_LABELS = {1: "baseline", 2: "stress", 3: "amusement"}
 CNN_CHANNELS = ["ECG", "EDA", "Temp", "Resp", "ACC"]
 
 
 def window_label(labels: np.ndarray, purity: float) -> Optional[int]:
-    """Dominant condition of a window, or None if out-of-set or below `purity`."""
     if not np.isfinite(purity) or not 0 < purity <= 1:
         raise ValueError("purity must be finite and in (0, 1]")
     labels = np.asarray(labels).flatten()
@@ -37,12 +33,6 @@ def window_label(labels: np.ndarray, purity: float) -> Optional[int]:
 
 
 class WindowedDataset(LoggerMixin):
-    """Build chest features and aligned CNN tensors from each subject's signals.
-
-    Filter each recording before windowing. Keep baseline, stress, or amusement
-    windows meeting ``purity`` and preserve subject IDs for grouped evaluation.
-    """
-
     def __init__(
         self,
         window_sec: float = FEATURE_PARAMS.WINDOW_SIZE_SEC,
@@ -67,7 +57,6 @@ class WindowedDataset(LoggerMixin):
         self.ecg = ECGProcessor(sampling_rate=fs)
         self.eda = EDAProcessor(sampling_rate=fs)
         self.sig = SignalProcessor(fs=fs)
-        # All chest modalities share 700 Hz
         self.features = FeatureExtractionPipeline(chest_fs=fs, wrist_eda_fs=fs, wrist_acc_fs=fs)
 
     def _window_label(self, labels: np.ndarray) -> Optional[int]:
@@ -100,7 +89,7 @@ class WindowedDataset(LoggerMixin):
                 continue
 
             mask = (r_peaks >= start) & (r_peaks < end)
-            # Both peaks must lie inside the window; do not include a boundary-spanning RR interval.
+            # Both RR peaks must lie inside the window.
             rr = self.ecg.extract_rr_intervals(r_peaks[mask], unit="ms")
             _, valid = self.ecg.remove_ectopic_beats(rr)
             rr_clean = self.ecg.interpolate_artifacts(rr, valid)
@@ -136,7 +125,6 @@ class WindowedDataset(LoggerMixin):
         return windows, raws, ys
 
     def _raw_tensor(self, *channels: np.ndarray) -> np.ndarray:
-        """Resample the same window across channels into a channels-by-time CNN input."""
         stacked = [resample(np.asarray(c, dtype=np.float32), self.cnn_length) for c in channels]
         return np.stack(stacked).astype(np.float32)
 
@@ -154,7 +142,7 @@ class WindowedDataset(LoggerMixin):
                 frames.append(self.features.extract_all_features(windows, show_progress=True))
             all_raw.extend(raws)
             all_y.extend(ys)
-            # Window slices keep their full filtered recording alive until released.
+            # Release full-recording slice references.
             del windows
 
         features_df = (
@@ -179,7 +167,6 @@ class WindowedDataset(LoggerMixin):
         return features_df, x_raw, np.asarray(all_y)
 
     def _save(self, features_df: pd.DataFrame, x_raw: np.ndarray) -> None:
-        # Feature rows and raw tensors use the same ordering for task filtering.
         PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
         features_df.to_parquet(PROCESSED_DATA_DIR / "features.parquet", index=False)
         np.savez_compressed(

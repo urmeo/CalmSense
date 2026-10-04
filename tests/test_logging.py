@@ -1,5 +1,3 @@
-"""Project logging preserves host configuration and supports destination changes."""
-
 import json
 import logging
 

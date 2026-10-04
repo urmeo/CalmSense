@@ -1,5 +1,3 @@
-"""Residual 1D-CNN for raw multichannel windows."""
-
 from typing import Any, Optional
 
 import numpy as np
@@ -39,7 +37,6 @@ class _ResidualBlock(nn.Module):
 class _Net(nn.Module):
     def __init__(self, in_ch: int, n_classes: int, widths=(32, 64, 128)):
         super().__init__()
-        # Strided stem downsamples long windows
         self.stem = nn.Sequential(
             nn.Conv1d(in_ch, widths[0], kernel_size=7, stride=4, padding=3, bias=False),
             nn.BatchNorm1d(widths[0]),
@@ -64,8 +61,6 @@ class _Net(nn.Module):
 
 
 class CNN1DClassifier(LoggerMixin):
-    """Sklearn-style residual 1D-CNN trained on raw windows."""
-
     def __init__(
         self,
         in_channels: int = 5,
@@ -119,7 +114,7 @@ class CNN1DClassifier(LoggerMixin):
     def _validation_split(self, y: np.ndarray, groups=None):
         indices = np.arange(len(y))
         if groups is None:
-            # Direct callers without subject IDs get a stratified sample holdout.
+            # Ungrouped callers use sample holdouts.
             return train_test_split(
                 indices, test_size=self.val_fraction, stratify=y, random_state=self.random_state
             )
@@ -134,7 +129,6 @@ class CNN1DClassifier(LoggerMixin):
             if np.array_equal(np.unique(y[train]), classes):
                 return train, validation
 
-        # Rare classes can make random attempts miss a valid group-disjoint split.
         subjects, group_index = np.unique(groups, return_inverse=True)
         n_train = len(subjects) - int(np.ceil(self.val_fraction * len(subjects)))
         class_index = np.searchsorted(classes, y)
@@ -167,7 +161,7 @@ class CNN1DClassifier(LoggerMixin):
         return indices[training], indices[~training]
 
     def fit(self, X: np.ndarray, y: np.ndarray, groups=None) -> "CNN1DClassifier":
-        """Fit on windows; subject groups make the early-stopping split disjoint."""
+        """Grouped validation subjects stay disjoint."""
         for name in ("in_channels", "max_epochs", "batch_size", "patience"):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, (int, np.integer)) or value < 1:
@@ -193,7 +187,7 @@ class CNN1DClassifier(LoggerMixin):
         train, validation = self._validation_split(y_idx, groups)
         if len(train) < 2:
             raise ValueError("CNN fitting requires at least two windows after validation splitting")
-        # The validation and outer test windows do not determine normalization or class weights.
+        # Training windows set normalization and weights.
         self._mean = X[train].mean(axis=(0, 2), keepdims=True)
         self._std = X[train].std(axis=(0, 2), keepdims=True) + 1e-8
         x_tr, x_val = self._standardize(X[train]), self._standardize(X[validation])
@@ -234,7 +228,6 @@ class CNN1DClassifier(LoggerMixin):
                 optimizer.step()
             scheduler.step()
 
-            # Validation chooses the checkpoint; the outer test subject is scored after fit().
             self.model.eval()
             with torch.no_grad():
                 val_loss = criterion(self.model(x_val_t), y_val_t).item()
@@ -242,7 +235,7 @@ class CNN1DClassifier(LoggerMixin):
                 raise ValueError("CNN validation produced a nonfinite loss")
             if val_loss < best_loss - 1e-4:
                 best_loss = val_loss
-                # Clone tensors so later optimizer updates cannot alter the saved checkpoint.
+                # Clone checkpoint tensors before updates.
                 best_state = {k: v.cpu().clone() for k, v in self.model.state_dict().items()}
                 stale = 0
             else:

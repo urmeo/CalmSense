@@ -1,5 +1,3 @@
-"""Portable caches must never silently reuse sample-based slope features."""
-
 import json
 from pathlib import Path
 from unittest.mock import Mock

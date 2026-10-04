@@ -1,8 +1,4 @@
-"""Compare global calibration with labeled enrollment from the held-out subject.
-
-Use non-overlapping target windows and one fixed evaluation half for every budget.
-Enrollment labels fit the subject calibrator, never the base classifier.
-"""
+"""Enrollment labels calibrate probabilities; evaluation windows remain separate."""
 
 import argparse
 import sys
@@ -47,7 +43,7 @@ def _stratified_split(y, frac, rng):
 
 
 def _sample_k(y_pool, k, rng):
-    """Sample equally by class; rounding and available windows can yield fewer than k."""
+    """Balanced enrollment may yield fewer than k windows."""
     if isinstance(k, bool) or not isinstance(k, (int, np.integer)) or k < 1:
         raise ValueError("Enrollment budgets must be positive integers")
     y_pool = np.asarray(y_pool)
@@ -89,12 +85,10 @@ def compute(X, y, groups, model="rf", k_values=K_VALUES):
         base.fit(Xtr, ytr, **_fit_params(base, ytr))
         raw = _pos_proba(base, X[test_idx])
         y_s = y[test_idx]
-        # Alternating chronological windows remove direct overlap at the default 50% stride.
         raw, y_s = raw[::2], y_s[::2]
         if len(np.unique(y_s)) < 2:
             continue
 
-        # Reuse this evaluation set for every enrollment budget in the subject.
         ev, pool = _stratified_split(y_s, 0.5, rng)
         raw_ev, y_ev = raw[ev], y_s[ev]
         glob = _global_calibrator(factory, Xtr, ytr, gtr, METHOD)
@@ -107,7 +101,6 @@ def compute(X, y, groups, model="rf", k_values=K_VALUES):
         for k in k_values:
             pick = _sample_k(y_s[pool], k, rng)
             if len(np.unique(y_s[pool][pick])) < 2:
-                # A one-class enrollment cannot estimate the baseline/stress calibration map.
                 acc[k].append(_metrics(y_ev, raw_ev))
                 continue
             calib = _fit_calibrator(raw[pool][pick], y_s[pool][pick], METHOD)

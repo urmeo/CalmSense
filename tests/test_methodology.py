@@ -1,5 +1,3 @@
-"""Subject-independent evaluation, metric conventions, and export contracts."""
-
 import numpy as np
 import pytest
 
@@ -36,7 +34,6 @@ def test_cnn_loso_reports_window_weighted_accuracy(monkeypatch):
     groups = np.array(["S0"] * 2 + ["S1"] * 6)
     y = np.tile([0, 1], 4)
     x_raw = np.zeros((8, 1, 2))
-    # S0 predictions are correct; S1 predictions are wrong. Subject sizes differ.
     x_raw[:, 0, 0] = [0, 1, 1, 0, 1, 0, 1, 0]
     x_raw[:, 0, 1] = np.arange(8)
     train_sizes = []
@@ -77,7 +74,6 @@ def test_loso_splits_have_disjoint_subjects():
 
 
 def test_nonoverlap_mask_keeps_every_other_window_per_subject():
-    # uneven per-subject block sizes (5 and 4) to catch off-by-one slicing
     groups = np.array(["S0", "S0", "S0", "S0", "S0", "S1", "S1", "S1", "S1"])
     mask = nonoverlap_mask(groups)
     assert list(np.where(mask)[0]) == [0, 2, 4, 5, 7]
@@ -87,11 +83,9 @@ def test_nonoverlap_mask_keeps_every_other_window_per_subject():
 
 
 def test_kfold_gap_uses_non_overlapping_windows():
-    # the gap baseline must drop every other (overlapping) window per subject
     rng = np.random.RandomState(0)
     groups = np.repeat(["S0", "S1"], 40)
     X = rng.randn(len(groups), 5)
-    # class blocks per subject so both classes survive the every-other-window subset
     y = np.tile(np.concatenate([np.zeros(20), np.ones(20)]).astype(int), 2)
     assert int(nonoverlap_mask(groups).sum()) == 40
     acc = kfold_accuracy(lambda: build_pipeline("lr"), X, y, groups)
@@ -102,23 +96,21 @@ def test_window_label_rejects_impure_and_out_of_set_windows():
     ds = WindowedDataset.__new__(WindowedDataset)
     ds.purity = 0.9
 
-    assert ds._window_label(np.full(100, 2)) == 2  # pure stress
+    assert ds._window_label(np.full(100, 2)) == 2
     assert ds._window_label(np.concatenate([np.full(85, 2), np.full(15, 1)])) is None
     assert ds._window_label(np.concatenate([np.full(95, 2), np.full(5, 1)])) == 2
-    # dominant label outside {baseline, stress, amusement} -> rejected
     assert ds._window_label(np.full(100, 4)) is None
 
 
 def test_scaler_imputer_fit_per_fold_never_on_held_out_subject():
-    """Held-out subject shifts must not influence scaler or imputer statistics."""
     from sklearn.model_selection import LeaveOneGroupOut
 
     rng = np.random.RandomState(0)
     subjects = ["S0", "S1", "S2"]
-    shifts = {"S0": 0.0, "S1": 50.0, "S2": 200.0}  # asymmetric so no fold mean == global
+    shifts = {"S0": 0.0, "S1": 50.0, "S2": 200.0}
     groups = np.repeat(subjects, 30)
     X = np.vstack([rng.randn(30, 4) + shifts[s] for s in subjects])
-    y = np.tile([0, 1], 45)  # both classes present in every subject block
+    y = np.tile([0, 1], 45)
 
     logo = LeaveOneGroupOut()
     fold_scaler_means = {}
@@ -179,7 +171,7 @@ def test_recalibration_predictions_hold_out_outer_and_inner_subjects():
 
     true, proba = loso_recalibrated_proba(RecordingEstimator, X, y, groups, method="sigmoid")
     np.testing.assert_array_equal(true, y)
-    assert len(predictions) == 16  # Four outer predictions and three inner predictions per fold.
+    assert len(predictions) == 16
     assert proba.shape == (24, 2) and np.isfinite(proba).all()
 
 

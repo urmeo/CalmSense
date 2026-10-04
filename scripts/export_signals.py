@@ -1,5 +1,3 @@
-"""Export real WESAD signal slices as a TypeScript module for the dashboard."""
-
 import json
 import sys
 from pathlib import Path
@@ -15,8 +13,8 @@ from src.utils import atomic_write_text
 
 SUBJECTS = ["S2", "S3", "S4"]
 CONDITIONS = {1: "Baseline", 2: "Stress", 3: "Amusement"}
-SECONDS = 40  # per condition
-OUT_FS = 30  # display rate
+SECONDS = 40
+OUT_FS = 30
 DASHBOARD_SIGNALS = OUTPUT_DIR / "dashboard" / "signals.ts"
 
 
@@ -26,7 +24,7 @@ def _slice(signal, labels, label, want):
     idx = np.flatnonzero(labels == label)
     if len(idx) == 0:
         return None
-    # A label can occur in separate blocks; never bridge intervening conditions.
+    # Never bridge separate condition blocks.
     runs = np.split(idx, np.flatnonzero(np.diff(idx) > 1) + 1)
     run = max(runs, key=len)
     if len(run) < want:

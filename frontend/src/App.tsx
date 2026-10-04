@@ -15,7 +15,6 @@ const SignalExplorer = lazy(() => import('./pages/SignalExplorer'));
 const ExplainabilityDashboard = lazy(() => import('./pages/ExplainabilityDashboard'));
 const CalibrationPanel = lazy(() => import('./pages/CalibrationPanel'));
 
-// The calibration section is optional; only show it once the experiment has produced it.
 const hasCalibration = Boolean(results.calibration);
 const status = benchmarkStatus(results);
 

@@ -34,7 +34,6 @@ def setup_logging(
     if _logging_configured and settings == _configured_settings:
         return
 
-    # JSON formatter
     formatter = structlog.stdlib.ProcessorFormatter(
         processor=structlog.processors.JSONRenderer(),
         foreign_pre_chain=_shared_processors,
@@ -54,7 +53,7 @@ def setup_logging(
             handler.close()
         raise
 
-    # Keep the working destination until every replacement handler is ready.
+    # Prepare handlers before replacing them.
     project_logger = logging.getLogger("calmsense")
     for existing in project_logger.handlers[:]:
         project_logger.removeHandler(existing)
@@ -77,7 +76,6 @@ def get_logger(name: str):
     elif name != "calmsense" and not name.startswith("calmsense."):
         name = f"calmsense.{name}"
 
-    # Configure only this logger; preserve the host application's logging setup.
     return structlog.wrap_logger(
         logging.getLogger(name),
         processors=_shared_processors + [structlog.stdlib.ProcessorFormatter.wrap_for_formatter],

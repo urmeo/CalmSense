@@ -32,7 +32,7 @@ function validateLock(manifest, lock) {
 
 function prepare(validate = true) {
   if (validate) validateLock(packageConfig, packageLock);
-  // npm and TypeScript require JSON; keep these generated copies out of Git.
+  // Required tool JSON.
   for (const [name, value] of [
     ['package.json', packageConfig],
     ['package-lock.json', packageLock],
@@ -84,7 +84,6 @@ try {
   if (['test', 'dev', 'build', 'preview'].includes(command)) runNpm(['run', command, ...(args.length ? ['--', ...args] : [])]);
   if (command === 'audit') runNpm(['audit', '--audit-level=moderate', ...args]);
   if (command === 'update') {
-    // Explicit maintenance only: retain npm's exact resolved versions and integrity hashes.
     runNpm(['install', '--package-lock-only', '--ignore-scripts', ...args]);
     const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
     const lock = JSON.parse(readFileSync(join(root, 'package-lock.json'), 'utf8'));

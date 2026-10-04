@@ -1,4 +1,3 @@
-// Native module source; generated tool files are ignored.
 export default {
   "compilerOptions": {
     "target": "ES2022",

@@ -1,5 +1,3 @@
-"""Reproduce the full CalmSense LOSO benchmark from raw WESAD data."""
-
 import argparse
 import sys
 from pathlib import Path
@@ -54,7 +52,6 @@ CLF_NAMES = {
 
 
 def build_pipeline(clf_key: str) -> Pipeline:
-    """Keep imputation and scaling inside the estimator fitted for each CV fold."""
     estimator = get_classifier(clf_key)
     return Pipeline(
         [
@@ -66,14 +63,12 @@ def build_pipeline(clf_key: str) -> Pipeline:
 
 
 def _fit_params(pipe, y_train):
-    """Balance XGBoost (others balance via class_weight)."""
     if pipe.named_steps["clf"].__class__.__name__ == "XGBClassifier":
         return {"clf__sample_weight": compute_sample_weight("balanced", y_train)}
     return {}
 
 
 def _loso_result(y, groups, folds):
-    """Summarize the same held-out predictions by subject and by window."""
     classes = np.unique(y)
     indices, predictions = zip(*folds)
     pooled_true = y[np.concatenate(indices)]
@@ -89,7 +84,7 @@ def _loso_result(y, groups, folds):
         }
         for test_idx, pred in folds
     )
-    # Subject means weight people equally; pooled metrics weight their window counts.
+    # Subject means weight people; pooled metrics weight windows.
     return {
         "accuracy_mean": float(subj_df["accuracy"].mean()),
         "accuracy_std": float(subj_df["accuracy"].std()),
@@ -105,7 +100,6 @@ def _loso_result(y, groups, folds):
 
 
 def loso_evaluate(pipeline_factory, X, y, groups):
-    """Fit preprocessing on training subjects and predict the held-out subject."""
     folds = []
     for train_idx, test_idx in LeaveOneGroupOut().split(X, y, groups):
         pipe = pipeline_factory()
@@ -129,7 +123,7 @@ def cnn_loso(x_raw, y, groups):
 
 
 def nonoverlap_mask(groups):
-    """Keep alternating chronological windows per subject at the default 50% overlap."""
+    """Alternating windows remove direct overlap at the default 50%."""
     keep = np.zeros(len(groups), dtype=bool)
     for g in np.unique(groups):
         idx = np.where(groups == g)[0]
@@ -138,11 +132,6 @@ def nonoverlap_mask(groups):
 
 
 def kfold_accuracy(pipeline_factory, X, y, groups) -> float:
-    """Subject-mixed 5-fold pooled accuracy for the optimism gap.
-
-    Keep alternating windows to remove direct signal overlap; the same subjects
-    can still appear in training and validation folds.
-    """
     keep = nonoverlap_mask(groups)
     Xk, yk = X[keep], y[keep]
 
@@ -218,7 +207,7 @@ def plot_gap(loso_acc, kfold_acc, path):
 
 
 def plot_embedding(X, y, names, path):
-    """Fit a descriptive PCA on all windows; it is not used to score classifiers."""
+    """Descriptive full-data PCA; excluded from classifier scoring."""
     from sklearn.decomposition import PCA
 
     classes = np.unique(y)
@@ -246,7 +235,7 @@ def plot_embedding(X, y, names, path):
 
 
 def shap_analysis(X, y, feature_names, fig_dir):
-    """Explain an XGBoost fit on all available windows, separate from LOSO scoring."""
+    """Full-data explanatory fit; separate from LOSO scoring."""
     import shap
 
     pipe = build_pipeline("xgb")
@@ -255,9 +244,9 @@ def shap_analysis(X, y, feature_names, fig_dir):
     explainer = shap.TreeExplainer(pipe.named_steps["clf"])
     values = explainer.shap_values(Xt)
     if isinstance(values, list):
-        values = values[-1]  # last (positive) class; for binary values[-1] == values[1]
+        values = values[-1]
     shap_vals = np.asarray(values)
-    if shap_vals.ndim == 3:  # (samples, features, classes)
+    if shap_vals.ndim == 3:
         shap_vals = shap_vals[:, :, -1]
 
     shap.summary_plot(shap_vals, Xt, feature_names=feature_names, show=False, max_display=15)
@@ -284,13 +273,11 @@ def _prepare_features(features_df, keep, meta):
         raise ValueError("Task windows require features and nonmissing subject identifiers")
     X = sub[feature_cols].to_numpy(dtype=float)
     X[~np.isfinite(X)] = np.nan
-    # Omit columns with no observed values; median imputation remains inside each fold.
     keep_cols = ~np.isnan(X).all(axis=0)
     X = X[:, keep_cols]
     feature_cols = [c for c, k in zip(feature_cols, keep_cols) if k]
     if not feature_cols:
         raise ValueError("Task contains no finite feature values")
-    # 0-indexed labels in `keep` order
     remap = {label: i for i, label in enumerate(keep)}
     y = sub["label"].map(remap).to_numpy()
     groups = sub["subject_id"].to_numpy()
@@ -317,7 +304,6 @@ def run():
     args = parser.parse_args()
     set_seed(SEED)
 
-    # Synthetic runs share a separate output root and never overwrite real-WESAD results.
     results_dir = DEMO_DIR / "results" if args.synthetic else RESULTS_DIR
     figures_dir = DEMO_DIR / "figures" if args.synthetic else FIGURES_DIR
     models_dir = DEMO_DIR / "models" if args.synthetic else MODELS_DIR
@@ -329,7 +315,6 @@ def run():
         from src.synthetic import features as synth_features
 
         print("Building synthetic dataset (demo only)...")
-        # Never cache: synthetic features must not overwrite a real WESAD cache.
         features_df, x_raw, _ = synth_features(n_subjects=8, block_sec=150, cache=False)
     else:
         cached = None if (args.rebuild or args.subjects) else load_cached()
@@ -398,7 +383,6 @@ def run():
         plot_embedding(X, y, cfg["names"], figures_dir / f"{task}_pca.png")
 
         if best[0] in CLASSIFIERS:
-            # Same non-overlapping windows on both bars: only the CV scheme differs.
             m = nonoverlap_mask(groups)
             gap_factory = lambda k=best[0]: build_pipeline(k)  # noqa: E731
             loso_matched = loso_evaluate(gap_factory, X[m], y[m], groups[m])["pooled_accuracy"]
@@ -435,7 +419,7 @@ def run():
             "per_subject": best[1]["per_subject"].to_dict("records"),
         }
 
-        # Refit for inference after evaluation; this full-data fit supplies no LOSO scores.
+        # Full-data inference refit supplies no LOSO scores.
         if task == "binary":
             top_clf = max(
                 [(k, results[k]) for k in CLASSIFIERS],

@@ -20,8 +20,6 @@ FEATURE_SCHEMA_VERSION = 2
 
 
 class FeatureExtractionPipeline(LoggerMixin):
-    """Extract enabled signal groups; missing groups keep their registered NaN columns."""
-
     _GROUPS = {
         "hrv_time": ("HRV_", "HRV Time-Domain"),
         "hrv_frequency": ("HRV_", "HRV Frequency-Domain"),
@@ -56,9 +54,7 @@ class FeatureExtractionPipeline(LoggerMixin):
             "hrv_frequency": HRVFrequencyDomainExtractor(),
             "hrv_nonlinear": HRVNonlinearExtractor(),
             "eda": EDAFeatureExtractor(sampling_rate=wrist_eda_fs),
-            "temperature": TemperatureFeatureExtractor(
-                sampling_rate=wrist_eda_fs
-            ),  # wrist TEMP and EDA share 4 Hz
+            "temperature": TemperatureFeatureExtractor(sampling_rate=wrist_eda_fs),
             "respiration": RespirationFeatureExtractor(sampling_rate=chest_fs),
             "accelerometer": AccelerometerFeatureExtractor(sampling_rate=wrist_acc_fs),
         }
@@ -66,7 +62,6 @@ class FeatureExtractionPipeline(LoggerMixin):
         self._feature_names: Optional[List[str]] = None
 
     def extract_window_features(self, window_data: Dict[str, Any]) -> Dict[str, float]:
-        """Return prefixed features from one preprocessed window without reading labels."""
         rr = window_data.get("rr_intervals")
 
         features: Dict[str, float] = {}

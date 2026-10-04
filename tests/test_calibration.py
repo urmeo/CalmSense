@@ -1,5 +1,3 @@
-"""Calibration metrics behave correctly on known inputs."""
-
 import numpy as np
 import pytest
 
@@ -54,7 +52,6 @@ def test_unknown_brier_scale_is_rejected():
 
 
 def test_net_benefit_at_impossible_threshold_is_zero():
-    # At threshold 1.0 nobody is flagged, so net benefit must be 0, not NaN.
     y = np.array([1, 0, 1, 0])
     p = np.array([0.6, 0.3, 0.8, 0.2])
     nb = net_benefit(y, p, np.array([0.5, 1.0]))
@@ -63,7 +60,6 @@ def test_net_benefit_at_impossible_threshold_is_zero():
 
 
 def test_perfect_calibration_has_zero_ece():
-    # confidence exactly matches accuracy in every bin
     y = np.array([1, 0, 1, 0, 1, 0, 1, 0, 1, 0])
     proba = np.full(10, 0.5)
     assert expected_calibration_error(y, proba, n_bins=5) < 1e-9

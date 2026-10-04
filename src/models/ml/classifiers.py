@@ -1,15 +1,9 @@
-"""Fixed benchmark classifiers; keyword arguments override their defaults.
-
-``scripts/tuning.py`` evaluates separate grouped nested-CV searches and records
-their chosen parameters. It does not replace the defaults in this module.
-"""
+"""Fixed defaults; tuning runs are separate."""
 
 from typing import Any, Callable, Dict
 
 from ...config import SEED
 
-# Fixed benchmark hyperparameters. scripts/tuning.py tunes a subset; the rest are defaults.
-# random_state and n_jobs are added by the builders below (they are wiring, not tuning).
 HYPERPARAMS: Dict[str, Dict[str, Any]] = {
     "lr": {
         "C": 1.0,
@@ -99,7 +93,6 @@ _REGISTRY: Dict[str, Callable[..., Any]] = {
 
 
 def get_classifier(name: str, **kwargs: Any) -> Any:
-    """Build a configured estimator by short name (e.g. ``"rf"``, ``"xgb"``)."""
     key = name.lower()
     if key not in _REGISTRY:
         raise ValueError(f"Unknown classifier: {name}. Available: {sorted(_REGISTRY)}")

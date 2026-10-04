@@ -1,5 +1,3 @@
-"""The shared cross-dataset feature space is consistent and robust."""
-
 import sys
 from types import SimpleNamespace
 
@@ -47,7 +45,7 @@ def test_same_columns_both_datasets():
     b = portable_features(
         rng.rand(480), rng.rand(480), rng.rand(480), rng.rand(60), eda_fs=8, temp_fs=8
     )
-    assert set(a) == set(b)  # device-agnostic, identical feature names
+    assert set(a) == set(b)
 
 
 @pytest.mark.parametrize("missing", [False, True])

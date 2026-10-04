@@ -10,6 +10,6 @@ export function saveDarkMode(darkMode: boolean): void {
   try {
     window.localStorage.setItem('darkMode', String(darkMode));
   } catch {
-    // A browser can block storage; the current session still changes theme.
+    // Storage is optional.
   }
 }

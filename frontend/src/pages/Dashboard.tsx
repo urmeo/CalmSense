@@ -16,7 +16,7 @@ import { formatPercent as pct, matchedGap } from '../lib/benchmarks';
 
 const r = results;
 
-// Static color classes (dynamic `bg-${color}-100` would be purged by Tailwind)
+// Tailwind needs static classes.
 const CARD_COLORS: Record<string, string> = {
   blue: 'bg-blue-100 dark:bg-blue-900/30',
   green: 'bg-green-100 dark:bg-green-900/30',
@@ -55,8 +55,7 @@ const FeatureImportanceChart: React.FC = () => {
         <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
           <XAxis type="number" />
-          {/* width fits the longest feature name (e.g. EDA_SCR_recovery_time_mean); a narrow
-              axis clips the leftmost characters and makes real features look corrupted. */}
+          {/* Avoid clipping feature names. */}
           <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={200} interval={0} />
           <Tooltip />
           <Bar dataKey="value" radius={[0, 4, 4, 0]}>

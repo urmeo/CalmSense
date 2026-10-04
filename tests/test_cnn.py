@@ -1,5 +1,3 @@
-"""The 1D-CNN learns a signal and separates training from validation subjects."""
-
 import numpy as np
 import pytest
 
@@ -12,7 +10,7 @@ def test_cnn_generalizes_to_held_out_split():
     n, c, length = 160, 5, 256
     X = rng.randn(n, c, length).astype("float32")
     y = (rng.randn(n) > 0).astype(int)
-    X[y == 1, 0, :] += 2.0  # class signal in channel 0
+    X[y == 1, 0, :] += 2.0
 
     X_tr, y_tr = X[:120], y[:120]
     X_te, y_te = X[120:], y[120:]
@@ -23,7 +21,6 @@ def test_cnn_generalizes_to_held_out_split():
 
     assert proba.shape == (len(y_te), 2)
     assert np.allclose(proba.sum(axis=1), 1.0, atol=1e-4)
-    # accuracy on data the model never saw
     assert (model.predict(X_te) == y_te).mean() > 0.7
 
 
@@ -104,7 +101,7 @@ def test_cnn_rejects_nonfinite_normalization_or_inference(failure):
     model._std = np.full((1, 1, 1), 1e-8, dtype="float32")
     X = np.zeros((2, 1, 61), dtype="float32")
     if failure == "overflow":
-        X.fill(1e38)  # Finite before scaling; float32 cannot represent the normalized values.
+        X.fill(1e38)  # Scaling finite input can overflow float32.
     elif failure == "invalid_scale":
         model._std.fill(np.inf)
     with pytest.raises(ValueError, match="CNN (normalization|inference)"):

@@ -51,8 +51,6 @@ def _window_parameters(window_sec, overlap, purity, fs):
 
 
 class SignalProcessor(LoggerMixin):
-    """Butterworth filters for chest temperature and respiration."""
-
     def __init__(self, fs: float = FS.CHEST):
         self.fs = _positive_number(fs, "fs")
 
@@ -82,8 +80,7 @@ class SignalProcessor(LoggerMixin):
         if not np.isfinite(data).all():
             raise ValueError("Filter input must contain only finite samples")
 
-        # Very low normalized cutoffs make high-order IIR filters unstable;
-        # drop the order and use second-order sections for numerical stability.
+        # Low cutoffs reduce order to two.
         low_norm = (
             min(normalized_cutoff) if isinstance(normalized_cutoff, tuple) else normalized_cutoff
         )

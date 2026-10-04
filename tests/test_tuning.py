@@ -1,5 +1,3 @@
-"""Nested tuning validates subject splits and isolates synthetic outputs."""
-
 import json
 
 import numpy as np

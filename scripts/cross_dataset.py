@@ -102,7 +102,6 @@ def _validate_frame(frame):
 
 
 def _load_or_build_cache(dataset, builder, source_provenance=None, *, rebuild=False):
-    """Reuse caches only when their protocol metadata and file checksum match."""
     PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
     cache = PROCESSED_DATA_DIR / f"portable_{dataset}_v{PORTABLE_SCHEMA_VERSION}.parquet"
     sidecar = cache.with_suffix(".json")
@@ -116,7 +115,7 @@ def _load_or_build_cache(dataset, builder, source_provenance=None, *, rebuild=Fa
             metadata.get(key) != value for key, value in schema.items()
         ):
             raise ValueError(f"Portable cache schema mismatch: {cache}; rebuild from raw data")
-        # Schema equality checks feature units; the checksum detects modified cached values.
+        # Schema checks definitions; checksums check bytes.
         if metadata.get("cache_sha256") != sha256_file(cache):
             raise ValueError(f"Portable cache checksum mismatch: {cache}")
         frame = pd.read_parquet(cache)
@@ -124,7 +123,6 @@ def _load_or_build_cache(dataset, builder, source_provenance=None, *, rebuild=Fa
         frame = builder()
         _validate_frame(frame)
         source = source_provenance() if callable(source_provenance) else source_provenance or {}
-        # Prepare both files and retain the previous pair until publication succeeds.
         with TemporaryDirectory(dir=PROCESSED_DATA_DIR) as temporary:
             new_cache = Path(temporary) / cache.name
             new_sidecar = Path(temporary) / sidecar.name
@@ -190,11 +188,9 @@ def _xy(df, feature_cols):
 
 
 def transfer(train_df, test_df, feature_cols):
-    """Fit the source dataset's pipeline and evaluate it on all target windows."""
     Xtr, ytr, _ = _xy(train_df, feature_cols)
     Xte, yte, _ = _xy(test_df, feature_cols)
     pipe = build_pipeline("rf")
-    # Target values do not set imputation medians, scaling, or classifier parameters.
     pipe.fit(Xtr, ytr)
     pred = pipe.predict(Xte)
     return {

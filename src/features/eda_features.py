@@ -44,7 +44,7 @@ class EDAFeatureExtractor(LoggerMixin):
             features["SCL_min"] = float(np.min(scl))
             features["SCL_max"] = float(np.max(scl))
 
-            # Missing samples leave time gaps rather than compressing the slope's time axis.
+            # Preserve missing-sample timestamps.
             x = np.arange(len(original))[np.isfinite(original)] / self.sampling_rate
             if len(x) > 1:
                 slope, _, _, _, _ = stats.linregress(x, scl)

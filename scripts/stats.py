@@ -1,5 +1,3 @@
-"""Omnibus and corrected pairwise significance tests across per-subject LOSO scores."""
-
 import sys
 from itertools import combinations
 from pathlib import Path
@@ -43,7 +41,6 @@ def bootstrap_ci(values, n=10000, seed=SEED):
 
 
 def holm_bonferroni(pairs):
-    """Holm-Bonferroni step-down correction over a list of (key, raw_p)."""
     if len({key for key, _ in pairs}) != len(pairs) or any(
         not np.isfinite(p) or not 0 <= p <= 1 for _, p in pairs
     ):
@@ -65,7 +62,6 @@ def _friedman(vecs):
         raise ValueError(
             "Friedman comparison requires at least three models and three finite paired subjects"
         )
-    # With every model tied for every subject, scipy divides by a zero tie correction.
     if np.all(scores == scores[0]):
         return 0.0, 1.0
     chi2, p_value = friedmanchisquare(*scores)
@@ -89,10 +85,8 @@ def run():
     subjects = sorted(subject_sets[0])
     vecs = {k: np.array([scores[k][s] for s in subjects]) for k in CLASSIFIERS}
 
-    # Omnibus: are the models different at all?
     chi2, omnibus_p = _friedman([vecs[k] for k in CLASSIFIERS])
 
-    # All pairwise Wilcoxon with Holm correction (no winner pre-selection)
     raw = {}
     for a, b in combinations(CLASSIFIERS, 2):
         if np.array_equal(vecs[a], vecs[b]):

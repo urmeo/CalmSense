@@ -1,5 +1,3 @@
-"""Reproducibility: set_seed makes the RNGs and CNN training deterministic."""
-
 import random
 
 import numpy as np
@@ -17,7 +15,6 @@ def test_set_seed_makes_rngs_reproducible():
 
 
 def test_feature_extraction_is_deterministic():
-    """The synthetic signal and feature pipeline repeats for a fixed seed."""
     import numpy as np
 
     from src.synthetic import features

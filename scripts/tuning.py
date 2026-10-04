@@ -1,5 +1,3 @@
-"""Tune binary classifiers with grouped inner CV and score outer LOSO subjects."""
-
 import argparse
 import json
 import sys
@@ -65,7 +63,6 @@ def tune_model(key, X, y, groups, inner_splits=3):
     for train_idx, test_idx in logo.split(X, y, groups):
         gtr = groups[train_idx]
         k = min(inner_splits, len(np.unique(gtr)))
-        # GridSearchCV refits the entire pipeline within each inner subject split.
         search = GridSearchCV(
             build_pipeline(key),
             GRIDS[key],
@@ -89,7 +86,7 @@ def tune_model(key, X, y, groups, inner_splits=3):
         )
         chosen.append(tuple(sorted(search.best_params_.items())))
     df = pd.DataFrame(rows)
-    # Report the modal choice across outer folds; it is not an additional full-data search.
+    # Modal outer-fold choice; no additional full-data search.
     mode_params = dict(Counter(chosen).most_common(1)[0][0])
     return df, mode_params
 

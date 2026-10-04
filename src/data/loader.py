@@ -9,7 +9,7 @@ from ..logging_config import LoggerMixin
 
 
 class WESADLoader(LoggerMixin):
-    """Load trusted WESAD pickles without resampling chest or wrist channels."""
+    """Trusted pickles; native sampling rates."""
 
     VALID_SUBJECTS = VALID_SUBJECTS
     LABELS = LABEL_NAMES
@@ -48,7 +48,6 @@ class WESADLoader(LoggerMixin):
         return subjects
 
     def load_subject(self, subject_id: str, signals: Optional[List[str]] = None) -> Dict:
-        """Return requested signals and labels, which retain the 700 Hz chest timebase."""
         if subject_id not in self.VALID_SUBJECTS:
             raise ValueError(
                 f"Invalid subject ID: {subject_id}. Valid subjects: {self.VALID_SUBJECTS}"
@@ -62,7 +61,7 @@ class WESADLoader(LoggerMixin):
 
         try:
             with open(pkl_path, "rb") as f:
-                # Official recordings use Python 2 pickles; latin1 preserves their byte strings.
+                # Python 2 strings require latin1.
                 data = pickle.load(f, encoding="latin1")
         except Exception as e:
             self.logger.error(f"Failed to load {subject_id}: {e}")

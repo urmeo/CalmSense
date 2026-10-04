@@ -1,5 +1,3 @@
-"""Feature extractors produce correct values on known signals."""
-
 import pickle
 
 import numpy as np
@@ -63,7 +61,7 @@ def test_compute_failure_preserves_earlier_values_and_remaining_nans(monkeypatch
 
 
 def test_rmssd_constant_rr_is_zero():
-    rr = np.full(60, 800.0)  # constant heartbeat
+    rr = np.full(60, 800.0)
     features = HRVTimeDomainExtractor().extract_all(rr)
     assert features["RMSSD"] == 0.0
     assert abs(features["MeanNN"] - 800.0) < 1e-6
@@ -72,18 +70,18 @@ def test_rmssd_constant_rr_is_zero():
 def test_triangular_index_uses_fixed_rr_bins_and_handles_constant_intervals():
     extractor = HRVTimeDomainExtractor()
     assert extractor.compute_hrvti(np.full(60, 800.0)) == 1.0
-    # The values straddle fixed 7.8125 ms bins despite a total range below one bin width.
+    # Fixed RR bins: 7.8125 ms.
     assert extractor.compute_hrvti(np.tile([800.0, 807.0], 30)) == 2.0
 
 
 def test_frequency_features_nan_below_min_rr():
-    feats = HRVFrequencyDomainExtractor().extract_all(np.full(5, 800.0))  # < 30 required
+    feats = HRVFrequencyDomainExtractor().extract_all(np.full(5, 800.0))
     assert all(np.isnan(v) for v in feats.values())
 
 
 def test_nonlinear_features_finite_with_enough_rr():
     rng = np.random.RandomState(0)
-    rr = 800 + 30 * rng.randn(120)  # > 50 required, physiological variation
+    rr = 800 + 30 * rng.randn(120)
     feats = HRVNonlinearExtractor().extract_all(rr)
     for key in ("SD1", "SD2", "SampEn"):
         assert np.isfinite(feats[key]), f"{key} should be finite on a well-formed RR series"
@@ -101,15 +99,14 @@ def test_poincare_geometry_and_cvi_use_the_paired_ellipse_axes():
 
 
 def test_hrv_matches_known_sequence():
-    rr = np.tile([800.0, 820.0], 30)  # alternating RR, 60 beats
+    rr = np.tile([800.0, 820.0], 30)
     f = HRVTimeDomainExtractor().extract_all(rr)
     assert abs(f["MeanNN"] - 810.0) < 1e-6
-    assert abs(f["RMSSD"] - 20.0) < 1e-6  # every successive diff is 20 ms
+    assert abs(f["RMSSD"] - 20.0) < 1e-6
     assert abs(f["SDNN"] - np.std(rr, ddof=1)) < 1e-6
 
 
 def test_too_few_rr_returns_nan():
-    # below the minimum RR count HRV is undefined
     features = HRVTimeDomainExtractor().extract_all(np.array([800.0, 810.0]))
     assert np.isnan(features["SDNN"])
 
@@ -117,7 +114,6 @@ def test_too_few_rr_returns_nan():
 def test_rpeaks_recover_known_rate():
     fs = 700
     t = np.arange(0, 30, 1 / fs)
-    # 1 Hz synthetic beats -> ~60 BPM
     ecg = np.sin(2 * np.pi * 1.0 * t) ** 21
     peaks = ECGProcessor(sampling_rate=fs).detect_r_peaks(ecg)
     rate = len(peaks) / 30
@@ -170,7 +166,6 @@ def test_sample_entropy_is_zero_when_every_matching_pattern_extends(rr):
 
 
 def test_sample_entropy_reports_zero_continuation_probability():
-    # [800, 800] appears twice, followed by different nonmatching next intervals.
     rr = np.array([800, 800, 900, 800, 800, 1000])
     assert np.isinf(HRVNonlinearExtractor().compute_sample_entropy(rr, m=2, r=0.01))
 
@@ -178,7 +173,7 @@ def test_sample_entropy_reports_zero_continuation_probability():
 def test_recurrence_determinism_uses_the_requested_embedding():
     extractor = HRVNonlinearExtractor()
     rr = np.tile([800.0, 820.0], 3)
-    # Five two-sample vectors: eight recurrent off-diagonal points, six in lines >=2.
+    # Recurrence: six line points among eight matches.
     assert extractor.compute_rqa_determinism(rr, embedding_dim=2) == pytest.approx(6 / 8)
     assert extractor.compute_rqa_determinism(rr, embedding_dim=2, time_delay=2) == pytest.approx(
         1.0

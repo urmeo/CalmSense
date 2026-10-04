@@ -1,5 +1,3 @@
-"""Assemble experiment results into the TypeScript module the dashboard reads."""
-
 import json
 import sys
 from pathlib import Path
@@ -14,7 +12,6 @@ from src.utils import atomic_write_text, sha256_file
 
 DASHBOARD_RESULTS = OUTPUT_DIR / "dashboard" / "results.ts"
 
-# Keys the dashboard consumes per task (per-subject lists stay out of the bundle)
 TASK_KEYS = [
     "n_windows",
     "n_features",
@@ -43,7 +40,6 @@ def _load_csv(name):
 
 
 def _validate_tasks(out):
-    """Reject partial benchmarks before replacing a usable dashboard snapshot."""
     for task in ("binary", "multiclass"):
         data = out.get(task)
         if (
@@ -103,7 +99,7 @@ def _unit_metric(value, name):
 
 
 def _unverified_sections(metrics, out):
-    """A primary protocol version cannot certify separately generated analyses."""
+    """Protocol versions apply only to the recorded analysis."""
     sections = set(out) - {"binary", "multiclass", "benchmark_protocol_version"}
     artifacts = metrics.get("artifacts", {})
     if not isinstance(artifacts, dict):
@@ -133,7 +129,7 @@ def run():
         raise ValueError("Benchmark results must be an object")
 
     out = {}
-    # Copy run metadata; exporting historical results does not constitute a new benchmark.
+    # Export preserves source metadata; it does not certify a new benchmark.
     if "benchmark_protocol_version" in metrics:
         if (
             type(metrics["benchmark_protocol_version"]) is not int

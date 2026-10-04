@@ -7,12 +7,10 @@ from scipy.interpolate import interp1d
 from ..preprocessing.filters import _positive_integer, _positive_number
 from .hrv_base import BaseHRVExtractor
 
-# numpy>=2 renamed trapz to trapezoid
 _trapz = getattr(np, "trapezoid", None) or getattr(np, "trapz")
 
 
 class HRVFrequencyDomainExtractor(BaseHRVExtractor):
-    # Task Force 1996 bands
     VLF_BAND = (0.0033, 0.04)
     LF_BAND = (0.04, 0.15)
     HF_BAND = (0.15, 0.40)
@@ -45,7 +43,6 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
         if duration * self.interpolation_rate < 10:
             return None, None
 
-        # Welch's declared sampling rate must match the actual interpolation step.
         t_uniform = np.arange(t_rr[0], t_rr[-1], 1.0 / self.interpolation_rate)
 
         try:
@@ -116,8 +113,7 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
             area = float(_trapz(psd, freqs))
             if not np.isfinite(area) or area <= 0:
                 return np.array([]), np.array([])
-            # Match RR variance over this returned frequency grid; this bounded
-            # normalization is a convention rather than Welch's full density.
+            # Lomb PSD integrates to variance over this grid.
             psd *= variance / area
         except Exception as e:
             self.logger.warning(f"Lomb-Scargle failed: {e}")
@@ -136,7 +132,7 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
             return 0.0
         inside = freqs[(freqs > lo) & (freqs < hi)]
         band_freqs = np.r_[lo, inside, hi]
-        # Include interpolated endpoints so narrow bands do not collapse to zero bins.
+        # Include narrow-band endpoints.
         return float(_trapz(np.interp(band_freqs, freqs, psd), band_freqs))
 
     def compute_vlf_power(self, freqs: np.ndarray, psd: np.ndarray) -> float:

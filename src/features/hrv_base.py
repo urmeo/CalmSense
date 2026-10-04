@@ -1,19 +1,15 @@
-"""Shared RR count, finite-value, and physiological-range checks for HRV."""
-
 from typing import Optional
 
 import numpy as np
 
 from ..logging_config import LoggerMixin
 
-# Plausible human RR-interval range in ms (~24-300 bpm); values outside are artifacts.
+# RR units: milliseconds.
 RR_MIN_MS = 200.0
 RR_MAX_MS = 2500.0
 
 
 class BaseHRVExtractor(LoggerMixin):
-    """Common RR-interval validation. Subclasses set ``self.min_rr_count``."""
-
     min_rr_count: int = 10
 
     def _validate_input(self, rr_intervals: np.ndarray) -> Optional[np.ndarray]:

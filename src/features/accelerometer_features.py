@@ -65,7 +65,6 @@ class AccelerometerFeatureExtractor(LoggerMixin):
             features["ACC_energy"] = float(np.sum(magnitude**2) / len(magnitude))
 
             if len(magnitude) >= 64 and np.isfinite(original).all() and np.std(magnitude) > 1e-10:
-                # Fine resolution so the 0.1-10 Hz movement band has frequency bins
                 nperseg = int(min(len(magnitude), max(256, self.sampling_rate * 4)))
                 freqs, psd = scipy_signal.welch(
                     mag_centered,

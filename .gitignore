@@ -1,4 +1,3 @@
-# Python and tool caches
 __pycache__/
 *.py[cod]
 *.so
@@ -21,7 +20,6 @@ coverage.xml
 htmlcov/
 .ipynb_checkpoints/
 
-# Local data, model fits and generated outputs
 data/raw/*
 data/external/*
 data/processed/
@@ -44,13 +42,11 @@ temp/
 *.tmp
 *.temp
 
-# Generated frontend tool files and dependencies
 frontend/package.json
 frontend/package-lock.json
 frontend/tsconfig.json
 frontend/node_modules/
 
-# Secrets and local settings
 .env
 .env.*
 secrets.yaml
@@ -60,7 +56,6 @@ credentials.json
 configs/local/
 *.local.yaml
 
-# Editor and operating-system files
 .vscode/
 .idea/
 *.swp

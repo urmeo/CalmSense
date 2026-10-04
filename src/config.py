@@ -1,5 +1,3 @@
-"""Project configuration: paths, sampling rates, filter and feature parameters, seed, and log settings."""
-
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List
@@ -38,10 +36,8 @@ LABEL_NAMES: Dict[int, str] = {
 
 @dataclass(frozen=True)
 class SamplingRates:
-    # Chest (RespiBAN), all channels at 700 Hz
     CHEST: float = 700.0
 
-    # Wrist (Empatica E4)
     WRIST_ACC: float = 32.0
     WRIST_BVP: float = 64.0
     WRIST_EDA: float = 4.0

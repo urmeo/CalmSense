@@ -5,7 +5,6 @@ import realSignals from '../../../outputs/dashboard/signals';
 import { zoomRange, relayoutRange } from '../lib/viewport';
 import { readSignalRecording, recordingDuration, conditionSegments, type SignalRecording } from '../lib/signals';
 
-// Real WESAD chest signals (baseline -> stress -> amusement), downsampled for display
 const recordings = Object.fromEntries(Object.entries(realSignals).map(([subject, recording]) => [subject, readSignalRecording(recording)]));
 const subjects = Object.keys(recordings);
 
@@ -87,7 +86,7 @@ const SignalPlots: React.FC<{ signalData: SignalRecording; subject: string }> = 
     })),
   };
 
-  // One stacked y-axis per visible signal, evenly split with a small gap
+  // Stack visible axes.
   const n = visiblePanels.length || 1;
   const slice = 1 / n;
   const gap = n > 1 ? 0.06 : 0;

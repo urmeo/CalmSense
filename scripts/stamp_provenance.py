@@ -1,8 +1,4 @@
-"""Record the current environment and result hashes beside experiment outputs.
-
-This snapshot does not prove which code or environment produced existing results.
-Run immediately after experiments to record the environment used for that run.
-"""
+"""Records the current environment, not how existing results were generated; run immediately after experiments."""
 
 import hashlib
 import json
@@ -16,7 +12,6 @@ from scripts.download_data import WESAD_SHA256
 from src.config import RESULTS_DIR, SEED
 from src.utils import provenance, sha256_file, write_json
 
-# Versions that move the numbers if they change; the model pickle is coupled to scikit-learn.
 KEY_PACKAGES = [
     "numpy",
     "scipy",
@@ -41,11 +36,7 @@ def _package_versions() -> dict:
 
 
 def _dataset_fingerprint() -> dict:
-    """Fingerprint the full reference manifest, independently of the benchmark cohort.
-
-    Hashes the checksum manifest (not the raw data), so it is reproducible without the
-    ~2 GB download present.
-    """
+    """Fingerprints the reference checksum manifest, not downloaded raw data."""
     manifest = json.dumps(WESAD_SHA256, sort_keys=True).encode()
     return {
         "dataset": "WESAD",

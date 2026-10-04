@@ -1,9 +1,4 @@
-"""Compute binary AUROC, AUPRC, and a descriptive Random Forest operating point.
-
-Use cached features and pooled LOSO probabilities. The Youden-J threshold is
-selected and scored on the same pooled labels, so its rates are exploratory.
-Failed model runs are recorded as unavailable.
-"""
+"""Youden-J selection and scoring share labels; rates are exploratory."""
 
 import sys
 from pathlib import Path
@@ -21,11 +16,10 @@ from src.config import RESULTS_DIR
 from src.utils import provenance, write_json
 
 FEATURE_MODELS = ["lr", "rf", "xgb", "lgbm"]
-POINT_MODEL = "rf"  # the shipped model
+POINT_MODEL = "rf"
 
 
 def loso_pos_proba(key, X, y, groups):
-    """Pooled out-of-fold P(class == 1), aligned with pooled true labels."""
     true, proba, _ = _pooled_proba(
         lambda: build_pipeline(key), X, y, groups, LeaveOneGroupOut().split(X, y, groups)
     )
@@ -33,14 +27,12 @@ def loso_pos_proba(key, X, y, groups):
 
 
 def operating_point(y_true, p1):
-    """Select Youden-J and describe its rates on the same supplied predictions."""
     y_true = np.asarray(y_true)
     p1 = np.asarray(p1, dtype=float)
     brier_score(y_true, p1)
     if len(np.unique(y_true)) != 2:
         raise ValueError("An ROC operating point requires both baseline and stress labels")
     fpr, tpr, thr = roc_curve(y_true, p1)
-    # ROC begins with an infinity sentinel. Select an attainable probability threshold.
     candidates = np.flatnonzero(np.isfinite(thr))
     j = int(candidates[np.argmax((tpr - fpr)[candidates])])
     t = float(thr[j])
@@ -65,7 +57,7 @@ def run():
     if cached is None:
         raise SystemExit("No cached features. Run scripts/run_experiment.py first.")
     features_df, x_raw = cached
-    X, y, groups, _, _ = prepare_task(features_df, x_raw, [1, 2])  # binary: baseline vs stress
+    X, y, groups, _, _ = prepare_task(features_df, x_raw, [1, 2])
 
     out = {"task": "binary", "n_windows": int(len(y)), "models": []}
     for key in FEATURE_MODELS:
@@ -85,7 +77,7 @@ def run():
                 raise ValueError("AUROC and AUPRC require finite scores and both binary classes")
             if key == POINT_MODEL:
                 row["operating_point"] = operating_point(y_true, p1)
-        except Exception as e:  # missing OpenMP for xgb/lgbm, etc.
+        except Exception as e:
             out["models"].append({"model": name, "available": False, "reason": str(e)[:80]})
             print(f"  {name:20s} skipped ({str(e)[:40]})")
             continue
