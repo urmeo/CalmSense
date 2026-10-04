@@ -7,34 +7,19 @@ env/
 *.egg-info/
 build/
 dist/
-/lib/
-/lib64/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.tox/
-.nox/
-.hypothesis/
+.*_cache/
 .coverage*
 coverage.xml
 htmlcov/
 .ipynb_checkpoints/
 
-data/raw/*
-data/external/*
-data/processed/
-data/interim/*
+/data/
 /outputs/generated/
 outputs/models/*
 !outputs/models/stress_classifier.joblib
 !outputs/models/stress_classifier.joblib.sha256
 *.pkl
 *.pickle
-*.h5
-*.hdf5
-*.pt
-*.pth
-*.ckpt
 /logs/
 *.log
 tmp/
@@ -42,13 +27,10 @@ temp/
 *.tmp
 *.temp
 
-frontend/package.json
-frontend/package-lock.json
-frontend/tsconfig.json
-frontend/node_modules/
+/frontend/*.json
+node_modules/
 
-.env
-.env.*
+.env*
 secrets.yaml
 credentials.json
 *.pem
@@ -58,13 +40,9 @@ configs/local/
 
 .vscode/
 .idea/
-*.swp
-*.swo
+*.sw[op]
 *~
 .DS_Store
 ._*
 Thumbs.db
 Desktop.ini
-*.prof
-*.lprof
-*.docx
