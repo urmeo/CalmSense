@@ -1,0 +1,7 @@
+line-length = 100
+target-version = "py311"
+extend-exclude = ["data", "outputs", ".venv"]
+
+[lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]

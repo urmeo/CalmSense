@@ -168,7 +168,7 @@ Python **3.11/3.12**; repository root:
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-python -m pip install -e ".[dev]"
+python -m pip install -r requirements.txt
 python scripts/calibration.py --synthetic
 ```
 
