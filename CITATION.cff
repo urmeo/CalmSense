@@ -22,8 +22,8 @@ keywords:
   - wesad
 abstract: >-
   CalmSense evaluates wearable stress detection on WESAD using Leave-One-Subject-Out
-  testing. It includes signal processing, 60 registered features (58 in the saved
-  benchmark), classical classifiers, a 1D-CNN, SHAP, calibration, decision curves,
+  testing. It includes signal processing, 60 registered features,
+  classical classifiers, a 1D-CNN, SHAP, calibration, decision curves,
   personalization, and cross-dataset transfer.
 references:
   - type: conference-paper

@@ -32,6 +32,34 @@ def _read_module(path):
     return json.loads(text[len(prefix) : -len(suffix)])
 
 
+def _benchmark_fixture(protocol=1):
+    metrics = {"benchmark_protocol_version": protocol}
+    for task in ("binary", "multiclass"):
+        metrics[task] = {
+            "n_windows": 8,
+            "n_features": 2,
+            "n_subjects": 2,
+            "classes": ["baseline", "stress"]
+            + (["amusement"] if task == "multiclass" else []),
+            "models": [
+                {
+                    "model": "Random Forest",
+                    "accuracy_mean": 0.75,
+                    "accuracy_std": 0.1,
+                    "f1_macro_mean": 0.7,
+                    "balanced_accuracy": 0.72,
+                }
+            ],
+            "best_model": "Random Forest",
+            "loso_accuracy": 0.75,
+            "loso_pooled_accuracy": 0.75,
+            "loso_matched_accuracy": 0.625,
+            "within_subject_accuracy": 0.875,
+            "optimism_gap_pts": 25.0,
+        }
+    return metrics
+
+
 class DashboardDataTests(unittest.TestCase):
 
     def setUp(self):
@@ -41,16 +69,41 @@ class DashboardDataTests(unittest.TestCase):
 
     def test_export_preserves_matched_metrics_and_normalizes_historical_brier(self):
         tmp_path = self.tmp_path
-        result_files = list(RESULTS_DIR.glob("*.json"))
-        originals = {path: path.read_bytes() for path in result_files}
+        results_dir = tmp_path / "results"
+        results_dir.mkdir()
+        metrics = _benchmark_fixture()
+        calibration = {
+            name: {"ece": 0.1, "mce": 0.2, "brier": brier, "reliability": []}
+            for name, brier in {
+                "loso": 0.4,
+                "loso_matched": 0.3,
+                "within_subject": 0.1,
+                "recalibrated_isotonic": 0.2,
+                "recalibrated_sigmoid": 0.25,
+            }.items()
+        }
+        calibration["gap_significance"] = {
+            "mean_brier_gap": 0.2,
+            "ci95": [0.1, 0.3],
+            "per_subject": {"S2": {"loso": 0.3, "within": 0.1}},
+        }
+        fixtures = {
+            "metrics.json": metrics,
+            "calibration.json": calibration,
+            "personalization.json": {"uncalibrated": {"ece": 0.1, "brier": 0.2}},
+        }
+        for name, value in fixtures.items():
+            (results_dir / name).write_text(json.dumps(value))
+        originals = {path: path.read_bytes() for path in results_dir.glob("*.json")}
         output = tmp_path / "dashboard" / "results.ts"
+        self.stack.enter_context(
+            patch.object(build_dashboard_data, "RESULTS_DIR", results_dir)
+        )
         self.stack.enter_context(
             patch.object(build_dashboard_data, "DASHBOARD_RESULTS", output)
         )
         build_dashboard_data.run()
         exported = _read_module(output)
-        metrics = json.loads(originals[RESULTS_DIR / "metrics.json"])
-        calibration = json.loads(originals[RESULTS_DIR / "calibration.json"])
         for task in ("binary", "multiclass"):
             data = exported[task]
             self.assertEqual(
@@ -82,6 +135,14 @@ class DashboardDataTests(unittest.TestCase):
         )
         self.assertEqual(
             exported["personalization"]["brier_definition"], BINARY_BRIER_DEFINITION
+        )
+        self.assertEqual(
+            exported["calibration"]["gap_significance"],
+            {
+                "mean_brier_gap": 0.1,
+                "ci95": [0.05, 0.15],
+                "per_subject": {"S2": {"loso": 0.15, "within": 0.05}},
+            },
         )
         self.assertTrue(
             all((path.read_bytes() == before for path, before in originals.items()))
@@ -350,20 +411,31 @@ class DashboardDataTests(unittest.TestCase):
 
     def test_new_primary_protocol_does_not_certify_saved_ancillary_runs(self):
         tmp_path = self.tmp_path
-        loader = build_dashboard_data._load_json
-
-        def current_primary(name):
-            value = loader(name)
-            if name == "metrics.json":
-                value["benchmark_protocol_version"] = 2
-            return value
-
+        results_dir = tmp_path / "results"
+        results_dir.mkdir()
+        fixtures = {
+            "metrics.json": _benchmark_fixture(protocol=2),
+            "calibration.json": {"brier_definition": BINARY_BRIER_DEFINITION},
+            "personalization.json": {"brier_definition": BINARY_BRIER_DEFINITION},
+            **{
+                f"{name}.json": {}
+                for name in ("stats", "wrist", "cross_dataset", "tuning")
+            },
+        }
+        for name, value in fixtures.items():
+            (results_dir / name).write_text(json.dumps(value))
+        (results_dir / "shap_top_features.csv").write_text(
+            "feature,mean_abs_shap\nHRV_MeanNN,0.2\n"
+        )
+        (results_dir / "ablation.csv").write_text(
+            "subset,n_features,accuracy_mean\nAll features,2,0.75\n"
+        )
         output = tmp_path / "results.ts"
         self.stack.enter_context(
             patch.object(build_dashboard_data, "DASHBOARD_RESULTS", output)
         )
         self.stack.enter_context(
-            patch.object(build_dashboard_data, "_load_json", current_primary)
+            patch.object(build_dashboard_data, "RESULTS_DIR", results_dir)
         )
         build_dashboard_data.run()
         self.assertEqual(
@@ -375,6 +447,7 @@ class DashboardDataTests(unittest.TestCase):
                 "personalization",
                 "shap",
                 "stats",
+                "tuning",
                 "wrist",
             ],
         )

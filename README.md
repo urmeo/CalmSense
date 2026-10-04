@@ -46,22 +46,21 @@ flowchart TD
 
 ## Results
 
-**Historical snapshots.** Corrected code requires a fresh benchmark; see [provenance](#protocol--provenance).
 Binary: baseline/stress. Three-class adds amusement.
 
 | Model | Binary acc | Binary F1 | AUROC* | AUPRC* | 3-class acc | 3-class F1 |
 | :-- | --: | --: | --: | --: | --: | --: |
-| Random Forest | 0.913 | 0.898 | 0.973 | 0.960 | 0.637 | 0.535 |
-| XGBoost | 0.903 | 0.873 | 0.975 | 0.960 | 0.633 | 0.552 |
-| Logistic Regression | 0.902 | 0.883 | 0.959 | 0.947 | 0.670 | 0.613 |
-| LightGBM | 0.894 | 0.860 | 0.965 | 0.946 | 0.658 | 0.568 |
-| 1D-CNN | 0.718 | 0.648 | n/a | n/a | 0.626 | 0.543 |
+| Random Forest | 0.910 | 0.895 | 0.973 | 0.959 | 0.651 | 0.542 |
+| XGBoost | 0.908 | 0.881 | 0.973 | 0.957 | 0.642 | 0.562 |
+| Logistic Regression | 0.910 | 0.893 | 0.963 | 0.953 | 0.659 | 0.603 |
+| LightGBM | 0.889 | 0.855 | 0.964 | 0.944 | 0.672 | 0.590 |
+| 1D-CNN | 0.733 | 0.654 | n/a | n/a | 0.499 | 0.401 |
 
-Accuracy/macro-F1: subject means. RF pooled balanced accuracy: **0.903**.
-RF accuracy **95% CI [0.860, 0.960]**; four-model comparison **p = 0.806** (no significant difference).
-Plots/CSVs cover four feature models; [metrics](outputs/results/metrics.json) also include CNN.
+Accuracy/macro-F1: subject means. RF pooled balanced accuracy: **0.899**.
+RF accuracy **95% CI [0.858, 0.956]**; Friedman **p = 0.599** (four feature models).
+Model comparison plots, CSVs, and [metrics](outputs/results/metrics.json) cover all five models.
 
-Matched subject-mixed gaps: binary **+5.7 pp**; three-class **0.658 → 0.792 (+13.3 pp)**.
+Matched subject-mixed gaps: RF binary **+5.0 pp**; LightGBM three-class **0.672 → 0.940 (+26.8 pp)**.
 
 ## Graphs & charts
 
@@ -71,23 +70,23 @@ Matched subject-mixed gaps: binary **+5.7 pp**; three-class **0.658 → 0.792 (+
 <td align="center" width="50%"><strong>Three-class accuracy · LOSO</strong></td>
 </tr>
 <tr>
-<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/binary_model_comparison.png"><img src="outputs/figures/binary_model_comparison.png" width="390" alt="Feature-model binary LOSO accuracy with subject standard deviation error bars"></a></td>
-<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/multiclass_model_comparison.png"><img src="outputs/figures/multiclass_model_comparison.png" width="390" alt="Feature-model three-class LOSO accuracy with subject standard deviation error bars"></a></td>
+<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/binary_model_comparison.png"><img src="outputs/figures/binary_model_comparison.png" width="390" alt="Binary LOSO accuracy for five models with subject standard deviation error bars"></a></td>
+<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/multiclass_model_comparison.png"><img src="outputs/figures/multiclass_model_comparison.png" width="390" alt="Three-class LOSO accuracy for five models with subject standard deviation error bars"></a></td>
 </tr>
 <tr>
-<td align="center"><sub>RF <b>0.913</b> · four feature models</sub></td>
-<td align="center"><sub>LR <b>0.670</b> · four feature models</sub></td>
+<td align="center"><sub>RF <b>0.910</b> · five models</sub></td>
+<td align="center"><sub>LightGBM <b>0.672</b> · five models</sub></td>
 </tr>
 <tr>
 <td align="center" width="50%"><strong>Subject leakage</strong></td>
 <td align="center" width="50%"><strong>Across the 15 subjects</strong></td>
 </tr>
 <tr>
-<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/binary_optimism_gap.png"><img src="outputs/figures/binary_optimism_gap.png" width="390" alt="Binary accuracy on matched non-overlapping windows under LOSO and subject-mixed testing"></a></td>
+<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/binary_optimism_gap.png"><img src="outputs/figures/binary_optimism_gap.png" width="329" alt="Binary accuracy on matched non-overlapping windows under LOSO and subject-mixed testing"></a></td>
 <td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/binary_per_subject.png"><img src="outputs/figures/binary_per_subject.png" width="390" alt="Binary Random Forest LOSO accuracy for each held-out subject"></a></td>
 </tr>
 <tr>
-<td align="center"><sub><b>0.907 → 0.964</b> · +5.7 pp</sub></td>
+<td align="center"><sub><b>0.913 → 0.964</b> · +5.0 pp</sub></td>
 <td align="center"><sub><b>0.712 to 1.000</b> · RF accuracy</sub></td>
 </tr>
 <tr>
@@ -96,11 +95,11 @@ Matched subject-mixed gaps: binary **+5.7 pp**; three-class **0.658 → 0.792 (+
 </tr>
 <tr>
 <td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/ablation.png"><img src="outputs/figures/ablation.png" width="390" alt="Random Forest binary LOSO accuracy for feature subsets"></a></td>
-<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/chest_vs_wrist.png"><img src="outputs/figures/chest_vs_wrist.png" width="390" alt="Same-model Random Forest binary LOSO accuracy for chest and wrist"></a></td>
+<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/chest_vs_wrist.png"><img src="outputs/figures/chest_vs_wrist.png" width="329" alt="Same-model Random Forest binary LOSO accuracy for chest and wrist"></a></td>
 </tr>
 <tr>
-<td align="center"><sub>All <b>0.913</b> · no motion <b>0.901</b></sub></td>
-<td align="center"><sub>RF: <b>0.913 vs 0.893</b></sub></td>
+<td align="center"><sub>RF: all <b>0.910</b> · no motion <b>0.901</b></sub></td>
+<td align="center"><sub>RF: chest <b>0.910</b> · wrist <b>0.890</b></sub></td>
 </tr>
 <tr>
 <td align="center" width="50%"><strong>Cross-dataset transfer</strong></td>
@@ -108,11 +107,11 @@ Matched subject-mixed gaps: binary **+5.7 pp**; three-class **0.658 → 0.792 (+
 </tr>
 <tr>
 <td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/cross_dataset.png"><img src="outputs/figures/cross_dataset.png" width="390" alt="Within-dataset and cross-dataset balanced accuracy on 18 shared features"></a></td>
-<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/shap_beeswarm.png"><img src="outputs/figures/shap_beeswarm.png" width="390" alt="Global signed SHAP contributions and feature values for the full-data gradient-boosted model"></a></td>
+<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/shap_beeswarm.png"><img src="outputs/figures/shap_beeswarm.png" width="312" alt="Global signed SHAP contributions and feature values for the full-data binary XGBoost fit"></a></td>
 </tr>
 <tr>
-<td align="center"><sub>Balanced accuracy: <b>0.557 / 0.494</b></sub></td>
-<td align="center"><sub>Full-data fit: motion · heart rate · EDA · respiration</sub></td>
+<td align="center"><sub>Balanced accuracy: WESAD → Non-EEG <b>0.558</b> · reverse <b>0.497</b></sub></td>
+<td align="center"><sub>XGBoost full-data fit · motion, HRV, EDA</sub></td>
 </tr>
 <tr>
 <td align="center" width="50%"><strong>Probability calibration</strong></td>
@@ -123,20 +122,20 @@ Matched subject-mixed gaps: binary **+5.7 pp**; three-class **0.658 → 0.792 (+
 <td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/personalization.png"><img src="outputs/figures/personalization.png" width="390" alt="Mean per-subject calibration error against requested enrollment budget"></a></td>
 </tr>
 <tr>
-<td align="center"><sub>Full LOSO ECE: <b>0.070 → 0.025</b></sub></td>
-<td align="center"><sub>ECE: <b>0.146 → 0.069</b> · requested 20</sub></td>
+<td align="center"><sub>RF full LOSO ECE: <b>0.077 → 0.026</b></sub></td>
+<td align="center"><sub>RF ECE: <b>0.162 → 0.078</b> · requested 20</sub></td>
 </tr>
 <tr>
 <td align="center" width="50%"><strong>Binary confusion · RF</strong></td>
-<td align="center" width="50%"><strong>Three-class confusion · LR</strong></td>
+<td align="center" width="50%"><strong>Three-class confusion · LightGBM</strong></td>
 </tr>
 <tr>
-<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/binary_confusion.png"><img src="outputs/figures/binary_confusion.png" width="390" alt="Pooled row-normalized binary Random Forest confusion matrix at default classifier decisions"></a></td>
-<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/multiclass_confusion.png"><img src="outputs/figures/multiclass_confusion.png" width="390" alt="Pooled row-normalized three-class Logistic Regression confusion matrix"></a></td>
+<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/binary_confusion.png"><img src="outputs/figures/binary_confusion.png" width="366" alt="Pooled row-normalized binary Random Forest confusion matrix at default classifier decisions"></a></td>
+<td align="center" valign="middle" height="300" width="50%"><a href="outputs/figures/multiclass_confusion.png"><img src="outputs/figures/multiclass_confusion.png" width="366" alt="Pooled row-normalized three-class LightGBM confusion matrix at default classifier decisions"></a></td>
 </tr>
 <tr>
-<td align="center"><sub>Stress recall <b>≈0.87</b> · default decisions</sub></td>
-<td align="center"><sub>Baseline ↔ amusement confusion</sub></td>
+<td align="center"><sub>Pooled default decisions</sub></td>
+<td align="center"><sub>Pooled default decisions</sub></td>
 </tr>
 </table>
 
@@ -148,14 +147,14 @@ Matched subject-mixed gaps: binary **+5.7 pp**; three-class **0.658 → 0.792 (+
 <!-- AUTOGEN:calibration START -->
 | Evaluation | ECE | MCE | Brier |
 | --- | :-: | :-: | :-: |
-| Subject-mixed 5-fold, non-overlapping | 0.085 | 0.290 | 0.038 |
-| LOSO, matched non-overlapping | 0.090 | 0.256 | 0.072 |
-| LOSO, all windows | 0.070 | 0.160 | 0.068 |
-| LOSO, all windows + isotonic | 0.025 | 0.271 | 0.064 |
+| Subject-mixed 5-fold, non-overlapping | 0.087 | 0.252 | 0.038 |
+| LOSO, matched non-overlapping | 0.090 | 0.363 | 0.073 |
+| LOSO, all windows | 0.077 | 0.177 | 0.069 |
+| LOSO, all windows + isotonic | 0.026 | 0.350 | 0.064 |
 <!-- AUTOGEN:calibration END -->
 
 15 bins; pooled RF; training-subject OOF isotonic fit. Plot: all windows; matched rows: non-overlapping subset.
-Binary Brier: stress-probability MSE; historical two-class scores/gap/CI halved for display. Source artifacts unchanged.
+Brier: mean squared error of the stress probability.
 [Decision curve](outputs/figures/calibration_decision_curve.png).
 
 ### Personalization
@@ -163,11 +162,11 @@ Binary Brier: stress-probability MSE; historical two-class scores/gap/CI halved 
 <!-- AUTOGEN:personalization START -->
 | Recalibration / requested enrollment budget | ECE | Brier |
 | --- | :-: | :-: |
-| None (LOSO) | 0.146 | 0.073 |
-| Global (training subjects) | 0.108 | 0.074 |
-| Per-subject, budget 5 | 0.097 | 0.061 |
-| Per-subject, budget 10 | 0.071 | 0.059 |
-| Per-subject, budget 20 | 0.069 | 0.058 |
+| None (LOSO) | 0.162 | 0.073 |
+| Global (training subjects) | 0.099 | 0.071 |
+| Per-subject, budget 5 | 0.099 | 0.061 |
+| Per-subject, budget 10 | 0.083 | 0.061 |
+| Per-subject, budget 20 | 0.078 | 0.063 |
 <!-- AUTOGEN:personalization END -->
 
 Subject means; reserved-half evaluation; disjoint enrollment; no classifier retraining.
@@ -177,9 +176,9 @@ Budget 5 enrolls 4 balanced windows; class availability can reduce requests.
 
 ## Protocol & provenance
 
-1. **Evaluation:** 15-fold LOSO; train-only preprocessing/calibration; subject means. *AUROC/AUPRC: [pooled OOF](outputs/results/threshold_metrics.json), unweighted XGBoost; no CNN.
-2. **Model:** [Uncalibrated chest RF](outputs/models/stress_classifier.joblib); **869** training windows; scikit-learn **1.6.1**. Use the [verified loader](src/utils.py) from a trusted checkout.
-3. **Provenance:** [Historical results](outputs/results/provenance.json) predate extraction/benchmark **v2** and portable **v3**; rerun extraction and fitting. Transfer units differ; SHAP uses a full-data fit.
+1. **Evaluation:** 15-fold LOSO; train-only preprocessing/calibration; subject means. *AUROC/AUPRC: [pooled OOF](outputs/results/threshold_metrics.json) for four feature models; no CNN.
+2. **Model:** [Uncalibrated chest RF](outputs/models/stress_classifier.joblib); **58** features, **869** training windows; scikit-learn **1.6.1**. Use the [verified loader](src/utils.py) from a trusted checkout.
+3. **Provenance:** [Validated rerun](outputs/results/provenance.json), **2026-10-04**, source `4f5c02f`, seed **42**; extraction/benchmark **v2**, portable **v3**. Tuning uses nested subject folds; exported RF keeps defaults. SHAP: full-data XGBoost; transfer units differ.
 
 ## Architecture
 
@@ -219,7 +218,7 @@ Saved **58** exclude all-NaN `RESP_inhale_exhale_ratio` and `RESP_variability`.
 ## Limitations
 
 1. **Cohort:** 15 lab subjects; wide CIs; no clinical validation.
-2. **Analysis:** 60 s windows limit VLF and long-term DFA; weak CNN; exploratory tests lack multiplicity correction.
+2. **Analysis:** 60 s windows limit VLF and long-term DFA; exploratory ablation/calibration/personalization lack multiplicity correction. Pairwise model tests use Holm correction.
 3. **Transfer:** One dataset pair; units, devices, stressors, and labels differ.
 
 ## Future work
