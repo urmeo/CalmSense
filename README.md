@@ -16,6 +16,33 @@ The static dashboard displays committed results.
 | :--: | :--: | :--: | :--: |
 | WESAD subjects | Saved features | Binary windows | Three-class windows |
 
+### Data flow
+
+```mermaid
+flowchart TD
+    A["WESAD chest signals"] --> B["Preprocess: filters, R-peaks, EDA decomposition"]
+    B --> C["Windows: 60 s, 50% overlap, label purity ≥90%"]
+    C --> D["60 registered features: HRV, EDA, temperature, respiration, motion"]
+    C --> R["Signal tensors for 1D-CNN: 5 channels × 1,024 samples"]
+    D --> E["LOSO: LR, RF, XGBoost, LightGBM"]
+    R --> N["LOSO: 1D-CNN"]
+    E --> F["Benchmark metrics"]
+    N --> F
+    D --> G["Calibration and few-shot personalization"]
+    D --> H["SHAP (full-data fit), ablation, statistics, tuning"]
+    D --> I["Full-data RF refit and checksum"]
+    W["WESAD wrist signals"] --> V["Wrist-only LOSO and chest comparison"]
+    E --> V
+    W --> P["18 portable features: transfer analysis"]
+    O["Non-EEG records"] --> P
+    F --> J["Dashboard data export"]
+    G --> J
+    H --> J
+    V --> J
+    P --> J
+    J --> K["Static React dashboard; no backend"]
+```
+
 ## Results
 
 **Saved benchmark from the earlier pipeline.** Corrected code requires a fresh benchmark; see [provenance](#result-provenance).
@@ -304,33 +331,6 @@ Synthetic outputs stay in `generated/demo/{results,figures,models}/`; committed 
 Sampling rates, filters, feature settings, subjects, and **seed 42**: `src/config.py`.
 Structured logs: `src/logging_config.py`. Offline demo: `src/synthetic.py`.
 Portable schema v3 uses per-second slopes, timestamp-aligned HR samples, and versioned cache sidecars.
-
-### Data flow
-
-```mermaid
-flowchart TD
-    A["WESAD chest signals"] --> B["Preprocess: filters, R-peaks, EDA decomposition"]
-    B --> C["Windows: 60 s, 50% overlap, label purity ≥90%"]
-    C --> D["60 registered features: HRV, EDA, temperature, respiration, motion"]
-    C --> R["Signal tensors for 1D-CNN: 5 channels × 1,024 samples"]
-    D --> E["LOSO: LR, RF, XGBoost, LightGBM"]
-    R --> N["LOSO: 1D-CNN"]
-    E --> F["Benchmark metrics"]
-    N --> F
-    D --> G["Calibration and few-shot personalization"]
-    D --> H["SHAP (full-data fit), ablation, statistics, tuning"]
-    D --> I["Full-data RF refit and checksum"]
-    W["WESAD wrist signals"] --> V["Wrist-only LOSO and chest comparison"]
-    E --> V
-    W --> P["18 portable features: transfer analysis"]
-    O["Non-EEG records"] --> P
-    F --> J["Dashboard data export"]
-    G --> J
-    H --> J
-    V --> J
-    P --> J
-    J --> K["Static React dashboard; no backend"]
-```
 
 </details>
 
