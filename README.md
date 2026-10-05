@@ -46,21 +46,25 @@ flowchart TD
 
 ## Results
 
-Binary: baseline/stress. Three-class adds amusement.
+**Binary: 91.0% (Random Forest)** · **Three-class: 67.2% (LightGBM)**
+
+[4 October 2026 benchmark](outputs/results/provenance.json) · 15-fold LOSO.
+Binary: baseline/stress; three-class adds amusement.
 
 | Model | Binary acc | Binary F1 | AUROC* | AUPRC* | 3-class acc | 3-class F1 |
 | :-- | --: | --: | --: | --: | --: | --: |
-| Random Forest | 0.910 | 0.895 | 0.973 | 0.959 | 0.651 | 0.542 |
-| XGBoost | 0.908 | 0.881 | 0.973 | 0.957 | 0.642 | 0.562 |
-| Logistic Regression | 0.910 | 0.893 | 0.963 | 0.953 | 0.659 | 0.603 |
-| LightGBM | 0.889 | 0.855 | 0.964 | 0.944 | 0.672 | 0.590 |
-| 1D-CNN | 0.733 | 0.654 | n/a | n/a | 0.499 | 0.401 |
+| Random Forest | **91.0%** | 0.895 | 0.973 | 0.959 | 65.1% | 0.542 |
+| XGBoost | 90.8% | 0.881 | 0.973 | 0.957 | 64.2% | 0.562 |
+| Logistic Regression | 91.0% | 0.893 | 0.963 | 0.953 | 65.9% | 0.603 |
+| LightGBM | 88.9% | 0.855 | 0.964 | 0.944 | **67.2%** | 0.590 |
+| 1D-CNN | 73.3% | 0.654 | n/a | n/a | 49.9% | 0.401 |
 
-Accuracy/macro-F1: subject means. RF pooled balanced accuracy: **0.899**.
-RF accuracy **95% CI [0.858, 0.956]**; Friedman **p = 0.599** (four feature models).
-Model comparison plots, CSVs, and [metrics](outputs/results/metrics.json) cover all five models.
+Accuracy/macro-F1: subject means. *AUROC/AUPRC: pooled held-out binary predictions; not computed for CNN.
+RF pooled balanced accuracy: **89.9%**; accuracy **95% CI [85.8%, 95.6%]**.
+Friedman **p = 0.599** (four feature models); no significant Holm-adjusted pairwise differences.
 
-Matched subject-mixed gaps: RF binary **+5.0 pp**; LightGBM three-class **0.672 → 0.940 (+26.8 pp)**.
+Matched pooled accuracy, LOSO → subject-mixed: RF binary **91.3% → 96.4% (+5.0 pp)**; LightGBM three-class **67.2% → 94.0% (+26.8 pp)**.
+[Metrics](outputs/results/metrics.json) · [Statistics](outputs/results/stats.json)
 
 ## Graphs & charts
 
