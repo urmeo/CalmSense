@@ -64,8 +64,6 @@ th { font-weight: 600; }
 .border-t { border-top-width:1px; }
 .bottom-4 { bottom:1rem; }
 .cursor-pointer { cursor:pointer; }
-.duration-200 { transition-duration:200ms; }
-.duration-300 { transition-duration:300ms; }
 .ease-in-out { transition-timing-function:cubic-bezier(.4,0,.2,1); }
 .fixed { position:fixed; }
 .flex { display:flex; }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useSyncExternalStore, type CSSProperties } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { init, use, type ComposeOption, type EChartsType } from 'echarts/core';
 import { BarChart, LineChart, type BarSeriesOption, type LineSeriesOption } from 'echarts/charts';
 import {
@@ -23,12 +23,11 @@ const subscribeTheme = (notify: () => void) => {
   return () => observer.disconnect();
 };
 
-export default function Chart({ option, label, height = 300, onDataZoom, style }: {
+export default function Chart({ option, label, height = 300, onDataZoom }: {
   option: ChartOption;
   label: string;
   height?: number;
   onDataZoom?: (event: unknown) => void;
-  style?: CSSProperties;
 }) {
   const element = useRef<HTMLDivElement>(null);
   const chart = useRef<EChartsType | null>(null);
@@ -61,5 +60,5 @@ export default function Chart({ option, label, height = 300, onDataZoom, style }
     }, { replaceMerge: ['series', 'xAxis', 'yAxis', 'grid', 'dataZoom'] });
   }, [option, label, dark]);
 
-  return <div ref={element} role="img" aria-label={label} style={{ width: '100%', height, ...style }} />;
+  return <div ref={element} role="img" aria-label={label} style={{ width: '100%', height }} />;
 }
