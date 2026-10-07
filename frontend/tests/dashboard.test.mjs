@@ -67,6 +67,20 @@ test('primary protocol status does not certify unrelated ancillary snapshots', (
   assert.equal(benchmarkStatus({ benchmark_protocol_version: 2, calibration: {}, unverified_sections: [] }).ancillary, null);
 });
 
+test('saved run summaries use recorded dates without inventing missing metadata', () => {
+  const metadata = { benchmark_protocol_version: 2, binary: { n_subjects: 15 } };
+  assert.equal(benchmarkStatus(metadata, '2026-10-04T09:05:02.671772+00:00').primary,
+    'Saved results: 2026-10-04 · 15 subjects · LOSO.');
+  for (const date of [undefined, '', 'today', '2026-02-30T00:00:00Z', '2026-13-01T00:00:00Z']) {
+    assert.equal(benchmarkStatus(metadata, date).primary, 'Primary benchmark: protocol v2.');
+  }
+  assert.equal(benchmarkStatus({ benchmark_protocol_version: 2 }, '2026-10-04T00:00:00Z').primary,
+    'Saved results: 2026-10-04.');
+  const historical = benchmarkStatus({ ...metadata, benchmark_protocol_version: 1 }, '2026-10-04T00:00:00Z');
+  assert.equal(historical.historical, true);
+  assert.equal(historical.primary.includes('Saved results'), false);
+});
+
 test('missing or nonfinite comparison metrics remain unavailable rather than zero', () => {
   for (const value of [undefined, null, NaN, Infinity]) {
     assert.equal(formatPercent(value), 'Unavailable');

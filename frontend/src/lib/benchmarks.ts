@@ -7,6 +7,7 @@ const SECTION_LABELS = {
 export interface BenchmarkMetadata extends Partial<Record<keyof typeof SECTION_LABELS, unknown>> {
   benchmark_protocol_version?: number;
   unverified_sections?: string[];
+  binary?: { n_subjects?: number };
 }
 
 export function requiresFreshBenchmark(metadata: BenchmarkMetadata): boolean {
@@ -14,8 +15,14 @@ export function requiresFreshBenchmark(metadata: BenchmarkMetadata): boolean {
   return !Number.isInteger(version) || (version ?? 1) < 2;
 }
 
-export function benchmarkStatus(metadata: BenchmarkMetadata) {
+export function benchmarkStatus(metadata: BenchmarkMetadata, runDate?: string) {
   const historical = requiresFreshBenchmark(metadata);
+  const day = runDate?.match(/^(\d{4}-\d{2}-\d{2})T/)?.[1];
+  const recordedDay = day && Number.isFinite(Date.parse(runDate!))
+    && new Date(`${day}T00:00:00Z`).toISOString().startsWith(day) ? day : null;
+  const subjects = metadata.binary?.n_subjects;
+  const cohort = Number.isInteger(subjects) && (subjects ?? 0) >= 2
+    ? ` · ${subjects} subjects · LOSO` : '';
   const labels: Record<string, string> = SECTION_LABELS;
   const present = Object.entries(SECTION_LABELS)
     .filter(([name]) => metadata[name as keyof typeof SECTION_LABELS] != null)
@@ -26,6 +33,7 @@ export function benchmarkStatus(metadata: BenchmarkMetadata) {
     historical,
     primary: historical
       ? 'Primary benchmark snapshots use the earlier pipeline. The corrected code requires a fresh benchmark.'
+      : recordedDay ? `Saved results: ${recordedDay}${cohort}.`
       : `Primary benchmark: protocol v${metadata.benchmark_protocol_version}.`,
     ancillary: sections.length > 0
       ? `Additional snapshots lack verified linkage to this benchmark: ${sections.map((name) => labels[name] ?? name).join(', ')}.`

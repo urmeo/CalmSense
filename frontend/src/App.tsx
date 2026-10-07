@@ -10,13 +10,15 @@ import Header from './components/layout/Header';
 import results from './data';
 import { readDarkMode, saveDarkMode } from './lib/preferences';
 import { benchmarkStatus } from './lib/benchmarks';
+import { generated_at, provenance_kind } from '../../outputs/results/provenance.json';
 
 const SignalExplorer = lazy(() => import('./pages/SignalExplorer'));
 const ExplainabilityDashboard = lazy(() => import('./pages/ExplainabilityDashboard'));
 const CalibrationPanel = lazy(() => import('./pages/CalibrationPanel'));
 
 const hasCalibration = Boolean(results.calibration);
-const status = benchmarkStatus(results);
+const status = benchmarkStatus(results,
+  provenance_kind === 'validated_reproduction' ? generated_at : undefined);
 
 const App: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
