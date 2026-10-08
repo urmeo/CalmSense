@@ -120,7 +120,6 @@ class CNN1DClassifier(LoggerMixin):
     def _validation_split(self, y: np.ndarray, groups=None):
         indices = np.arange(len(y))
         if groups is None:
-            # Ungrouped callers use sample holdouts.
             return train_test_split(
                 indices,
                 test_size=self.val_fraction,
@@ -206,7 +205,6 @@ class CNN1DClassifier(LoggerMixin):
             raise ValueError(
                 "CNN fitting requires at least two windows after validation splitting"
             )
-        # Training windows set normalization and weights.
         self._mean = X[train].mean(axis=(0, 2), keepdims=True)
         self._std = X[train].std(axis=(0, 2), keepdims=True) + 1e-8
         x_tr, x_val = self._standardize(X[train]), self._standardize(X[validation])
@@ -260,7 +258,6 @@ class CNN1DClassifier(LoggerMixin):
                 raise ValueError("CNN validation produced a nonfinite loss")
             if val_loss < best_loss - 1e-4:
                 best_loss = val_loss
-                # Clone checkpoint tensors before updates.
                 best_state = {
                     k: v.cpu().clone() for k, v in self.model.state_dict().items()
                 }

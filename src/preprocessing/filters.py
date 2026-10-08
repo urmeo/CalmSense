@@ -88,7 +88,6 @@ class SignalProcessor(LoggerMixin):
         if not np.isfinite(data).all():
             raise ValueError("Filter input must contain only finite samples")
 
-        # Low cutoffs reduce order to two.
         low_norm = (
             min(normalized_cutoff)
             if isinstance(normalized_cutoff, tuple)

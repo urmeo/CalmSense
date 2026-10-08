@@ -90,7 +90,6 @@ def tune_model(key, X, y, groups, inner_splits=3):
         )
         chosen.append(tuple(sorted(search.best_params_.items())))
     df = pd.DataFrame(rows)
-    # Modal outer-fold choice; no additional full-data search.
     mode_params = dict(Counter(chosen).most_common(1)[0][0])
     return df, mode_params
 

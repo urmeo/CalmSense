@@ -93,7 +93,6 @@ def _loso_result(y, groups, folds):
         }
         for test_idx, pred in folds
     )
-    # Subject means weight people; pooled metrics weight windows.
     return {
         "accuracy_mean": float(subj_df["accuracy"].mean()),
         "accuracy_std": float(subj_df["accuracy"].std()),
@@ -468,7 +467,6 @@ def run():
             "per_subject": best[1]["per_subject"].to_dict("records"),
         }
 
-        # Full-data inference refit supplies no LOSO scores.
         if task == "binary":
             top_clf = max(
                 [(k, results[k]) for k in CLASSIFIERS],

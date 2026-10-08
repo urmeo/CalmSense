@@ -32,7 +32,6 @@ def _confidence_correct(y: Array, proba: Array):
     y, proba = _validated_predictions(y, proba)
     if proba.ndim == 1:
         conf = np.maximum(proba, 1.0 - proba)
-        # Ties select class zero.
         pred = (proba > 0.5).astype(int)
     else:
         conf = proba.max(axis=1)
@@ -155,7 +154,7 @@ def net_benefit(y: Array, p_pos: Array, thresholds: np.ndarray) -> np.ndarray:
     out = []
     for pt in thresholds:
         if pt >= 1.0:
-            out.append(0.0)  # Threshold one uses zero net benefit.
+            out.append(0.0)
             continue
         flagged = p_pos >= pt
         tp = np.sum(flagged & (y == 1))

@@ -40,7 +40,6 @@ function validateLock(manifest, lock) {
 
 function prepare(validate = true) {
   if (validate) validateLock(packageConfig, packageLock);
-  // Required tool JSON.
   for (const [name, value] of [
     ['package.json', packageConfig],
     ['package-lock.json', packageLock],

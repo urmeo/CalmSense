@@ -25,7 +25,6 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
 
         r_val = r * np.std(rr)
 
-        # Equal template starts; exclude self-matches.
         patterns = np.lib.stride_tricks.sliding_window_view(rr, m + 1)
         b = np.count_nonzero(
             np.triu(cdist(patterns[:, :m], patterns[:, :m], "chebyshev") <= r_val, 1)
@@ -56,7 +55,6 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
             patterns = np.lib.stride_tricks.sliding_window_view(rr, template_len)
             n_patterns = len(patterns)
 
-            # ApEn includes self-matches.
             counts = np.count_nonzero(
                 cdist(patterns, patterns, "chebyshev") <= r_val, axis=1
             )
@@ -139,7 +137,6 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
         diff = rr_n1 - rr_n
 
         sd1 = float(np.std(diff, ddof=1) / np.sqrt(2))
-        # Paired-point covariance matters in finite series.
         sd2 = float(np.std((rr_n + rr_n1) / np.sqrt(2), ddof=1))
 
         if sd2 > FEATURE_PARAMS.EPSILON:
@@ -152,7 +149,6 @@ class HRVNonlinearExtractor(BaseHRVExtractor):
         else:
             csi = np.nan
 
-        # Ellipse axes are four standard deviations.
         if sd1 > 0 and sd2 > 0:
             cvi = float(np.log10(16 * sd1 * sd2))
         else:

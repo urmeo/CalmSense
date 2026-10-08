@@ -39,7 +39,6 @@ class ECGProcessor(LoggerMixin):
                 f"ECG cutoffs must satisfy 0 < low < high < Nyquist ({nyq} Hz)"
             )
 
-        # SOS avoids low-cutoff instability.
         sos = signal.butter(order, [low_norm, high_norm], btype="band", output="sos")
         return signal.sosfiltfilt(sos, ecg)
 
@@ -216,7 +215,6 @@ class ECGProcessor(LoggerMixin):
         if len(x_valid) == 1:
             return np.full_like(rr, float(rr[valid_mask][0]))
 
-        # Cubic needs four valid points.
         if method == "cubic" and len(x_valid) < 4:
             method = "quadratic" if len(x_valid) >= 3 else "linear"
 

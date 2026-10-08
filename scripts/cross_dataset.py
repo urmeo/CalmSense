@@ -138,7 +138,6 @@ def _load_or_build_cache(dataset, builder, source_provenance=None, *, rebuild=Fa
             raise ValueError(
                 f"Portable cache schema mismatch: {cache}; rebuild from raw data"
             )
-        # Schema checks definitions; checksums check bytes.
         if metadata.get("cache_sha256") != sha256_file(cache):
             raise ValueError(f"Portable cache checksum mismatch: {cache}")
         frame = pd.read_parquet(cache)

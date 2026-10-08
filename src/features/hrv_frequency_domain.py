@@ -124,7 +124,6 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
             area = float(_trapz(psd, freqs))
             if not np.isfinite(area) or area <= 0:
                 return np.array([]), np.array([])
-            # Lomb PSD integrates to variance over this grid.
             psd *= variance / area
         except Exception as e:
             self.logger.warning(f"Lomb-Scargle failed: {e}")
@@ -143,7 +142,6 @@ class HRVFrequencyDomainExtractor(BaseHRVExtractor):
             return 0.0
         inside = freqs[(freqs > lo) & (freqs < hi)]
         band_freqs = np.r_[lo, inside, hi]
-        # Include narrow-band endpoints.
         return float(_trapz(np.interp(band_freqs, freqs, psd), band_freqs))
 
     def compute_vlf_power(self, freqs: np.ndarray, psd: np.ndarray) -> float:

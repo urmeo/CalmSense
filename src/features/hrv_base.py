@@ -4,7 +4,6 @@ import numpy as np
 
 from ..logging_config import LoggerMixin
 
-# RR units: milliseconds.
 RR_MIN_MS = 200.0
 RR_MAX_MS = 2500.0
 

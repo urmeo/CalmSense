@@ -53,7 +53,6 @@ def setup_logging(
             handler.close()
         raise
 
-    # Prepare handlers before replacing them.
     project_logger = logging.getLogger("calmsense")
     for existing in project_logger.handlers[:]:
         project_logger.removeHandler(existing)

@@ -69,8 +69,8 @@ def build(subjects: Optional[list] = None) -> pd.DataFrame:
             or hr_record.p_signal.shape[1] < 2
         ):
             raise ValueError(f"Unexpected Non-EEG channel shapes for {sid}")
-        sig = sensor_record.p_signal  # ax, ay, az, temp, EDA
-        hr = hr_record.p_signal[:, 1]  # SpO2, HR
+        sig = sensor_record.p_signal
+        hr = hr_record.p_signal[:, 1]
         acc_mag = np.sqrt(np.sum(sig[:, 0:3] ** 2, axis=1))
         temp, eda = sig[:, 3], sig[:, 4]
 
@@ -88,7 +88,6 @@ def build(subjects: Optional[list] = None) -> pd.DataFrame:
                 continue
             for w0 in range(s0, s1 - win + 1, step):
                 w1 = w0 + win
-                # HR timestamps stay inside [start, end).
                 h0 = (w0 * HR_FS + ACC_FS - 1) // ACC_FS
                 h1 = (w1 * HR_FS + ACC_FS - 1) // ACC_FS
                 hr_win = hr[h0:h1]

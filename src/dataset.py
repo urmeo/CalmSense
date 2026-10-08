@@ -97,7 +97,6 @@ class WindowedDataset(LoggerMixin):
                 continue
 
             mask = (r_peaks >= start) & (r_peaks < end)
-            # Both RR peaks must lie inside the window.
             rr = self.ecg.extract_rr_intervals(r_peaks[mask], unit="ms")
             _, valid = self.ecg.remove_ectopic_beats(rr)
             rr_clean = self.ecg.interpolate_artifacts(rr, valid)
@@ -155,7 +154,6 @@ class WindowedDataset(LoggerMixin):
                 )
             all_raw.extend(raws)
             all_y.extend(ys)
-            # Release full-recording slice references.
             del windows
 
         features_df = (

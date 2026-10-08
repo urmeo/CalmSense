@@ -10,6 +10,5 @@ export function saveDarkMode(darkMode: boolean): void {
   try {
     window.localStorage.setItem('darkMode', String(darkMode));
   } catch {
-    // Storage is optional.
   }
 }

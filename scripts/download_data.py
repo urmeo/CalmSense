@@ -31,7 +31,6 @@ NONEEG_FILES = tuple(
     for extension in extensions
 )
 
-# Repository reference hashes; not publisher-issued.
 WESAD_SHA256 = {
     "S2": "36ef5e8afc0f91998eefba7c12fc9fa97b7b07198cbec0126917d7abb436ca23",
     "S3": "5c8bd4a82af029c082e610bca28a011fca2ae3b23e14a18458ebb5990be4015e",

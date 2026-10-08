@@ -1,4 +1,3 @@
-// Mobile modal only.
 export function containNavigationFocus(sidebar: HTMLElement, background: HTMLElement, onClose: () => void) {
   const document = sidebar.ownerDocument;
   const previousFocus = document.activeElement;

@@ -182,7 +182,6 @@ def run():
         raise ValueError("Benchmark artifact metadata must be an object")
 
     out = {}
-    # Export preserves source metadata; it does not certify a new benchmark.
     if "benchmark_protocol_version" in metrics:
         if (
             type(metrics["benchmark_protocol_version"]) is not int

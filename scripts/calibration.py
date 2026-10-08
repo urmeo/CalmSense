@@ -182,7 +182,6 @@ def compute(X, y, groups, model="rf", n_bins=N_BINS):
     y_iso, p_iso = loso_recalibrated_proba(factory, X, y, groups, "isotonic")
     y_sig, p_sig = loso_recalibrated_proba(factory, X, y, groups, "sigmoid")
 
-    # Match non-overlapping windows across CV schemes.
     m = nonoverlap_mask(groups)
     y_within, p_within, g_within = within_subject_proba(factory, X, y, groups)
     y_lm, p_lm, g_lm = loso_proba(factory, X[m], y[m], groups[m])

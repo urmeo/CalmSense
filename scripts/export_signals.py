@@ -24,7 +24,6 @@ def _slice(signal, labels, label, want):
     idx = np.flatnonzero(labels == label)
     if len(idx) == 0:
         return None
-    # Never bridge separate condition blocks.
     runs = np.split(idx, np.flatnonzero(np.diff(idx) > 1) + 1)
     run = max(runs, key=len)
     if len(run) < want:

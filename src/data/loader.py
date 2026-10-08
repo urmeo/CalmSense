@@ -63,7 +63,6 @@ class WESADLoader(LoggerMixin):
 
         try:
             with open(pkl_path, "rb") as f:
-                # Python 2 strings require latin1.
                 data = pickle.load(f, encoding="latin1")
         except Exception as e:
             self.logger.error(f"Failed to load {subject_id}: {e}")

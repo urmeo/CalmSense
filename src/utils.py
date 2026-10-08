@@ -273,7 +273,6 @@ def load_verified_joblib(path: Union[str, Path]):
         raise ValueError(
             f"SHA-256 mismatch for {path.name}: refusing to load an unverified pickle."
         )
-    # Deserialize the verified snapshot.
     return joblib.load(io.BytesIO(payload))
 
 
@@ -296,7 +295,6 @@ def paired_effect_size(a, b) -> dict:
     magnitude = float(np.abs(diff).max())
     if magnitude == 0:
         return {"cohens_d": 0.0, "hedges_g": 0.0, "n": int(n)}
-    # Scaling prevents underflow and overflow.
     scaled = diff / magnitude
     sd = scaled.std(ddof=1)
     if sd <= np.finfo(float).eps:

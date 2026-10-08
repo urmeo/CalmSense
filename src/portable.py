@@ -34,7 +34,6 @@ def _stats(
 ) -> Dict[str, float]:
     sampling_rate = _positive_number(sampling_rate, "sampling_rate")
     x = np.asarray(x, dtype=float).ravel()
-    # Preserve missing-sample timestamps.
     t = np.arange(len(x), dtype=float) / sampling_rate
     finite = np.isfinite(x)
     x, t = x[finite], t[finite]
@@ -106,7 +105,6 @@ def wesad_portable(
             )["PPG_Peaks"]
         )
         beat_hr = 60.0 / (np.diff(peaks) / FS.WRIST_BVP)
-        # Assign HR to the later peak.
         beat_t = peaks[1:] / FS.WRIST_BVP
 
         duration = len(labels) / FS.CHEST

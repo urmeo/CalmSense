@@ -7,7 +7,6 @@ import Panel from '../components/Panel';
 
 const prettify = (f: string) => f.replace(/_/g, ' ');
 
-// Descriptive full-data SHAP.
 const shap = results.shap ?? [];
 const importance = shap
   .slice()
