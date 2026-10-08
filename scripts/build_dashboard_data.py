@@ -8,7 +8,12 @@ import pandas as pd
 
 from src.calibration import BINARY_BRIER_DEFINITION, normalize_binary_calibration
 from src.config import OUTPUT_DIR, RESULTS_DIR
-from src.utils import atomic_write_text, benchmark_reference, sha256_file
+from src.utils import (
+    atomic_write_text,
+    benchmark_reference,
+    pipeline_source_sha256,
+    sha256_file,
+)
 
 DASHBOARD_RESULTS = OUTPUT_DIR / "dashboard" / "results.ts"
 
@@ -162,7 +167,7 @@ def _unverified_sections(metrics, out):
                 raise ValueError(
                     f"{section} snapshot source does not match the primary benchmark"
                 )
-        expected = benchmark_reference(RESULTS_DIR, shared_cache=False)
+        expected = benchmark_reference(RESULTS_DIR, shared_cache=False, recorded=True)
         if expected is None or any(reference != expected for reference in references):
             raise ValueError(f"{section} snapshot does not match the primary benchmark")
         sections.remove(section)
@@ -232,6 +237,11 @@ def run():
 
     if out.get("benchmark_protocol_version", 1) >= 2:
         out["unverified_sections"] = _unverified_sections(metrics, out)
+        if benchmark_reference(RESULTS_DIR, shared_cache=False, recorded=True):
+            out["benchmark_provenance"] = metrics["provenance"]
+            out["benchmark_source_matches_current"] = (
+                metrics["provenance"]["source_file_sha256"] == pipeline_source_sha256()
+            )
     if "ablation" in out:
         out["ablation"] = [
             {key: value for key, value in row.items() if key != "benchmark_sha256"}

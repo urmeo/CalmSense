@@ -24,7 +24,7 @@ const details = [
 
 const links = [
   ['Repository', 'https://github.com/urmeo/CalmSense'],
-  ['Architecture', 'https://github.com/urmeo/CalmSense#architecture'],
+  ['Data flow', 'https://github.com/urmeo/CalmSense#data-flow'],
   ['References', 'https://github.com/urmeo/CalmSense#references'],
   ['License', 'https://github.com/urmeo/CalmSense/blob/main/LICENSE'],
 ];

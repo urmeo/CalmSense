@@ -54,6 +54,7 @@ export interface TaskResult {
 
 export interface BenchmarkResults {
   benchmark_protocol_version?: number;
+  benchmark_source_matches_current?: boolean;
   unverified_sections?: string[];
   binary: TaskResult;
   multiclass: TaskResult;

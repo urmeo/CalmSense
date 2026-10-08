@@ -6,6 +6,7 @@ const SECTION_LABELS = {
 
 export interface BenchmarkMetadata extends Partial<Record<keyof typeof SECTION_LABELS, unknown>> {
   benchmark_protocol_version?: number;
+  benchmark_source_matches_current?: boolean;
   unverified_sections?: string[];
   binary?: { n_subjects?: number };
 }
@@ -28,12 +29,14 @@ export function benchmarkStatus(metadata: BenchmarkMetadata, runDate?: string) {
     .filter(([name]) => metadata[name as keyof typeof SECTION_LABELS] != null)
     .map(([name]) => name);
   const sections = [...new Set(metadata.unverified_sections ?? (historical ? [] : present))];
+  const sourceNotice = !historical && metadata.benchmark_source_matches_current === false
+    ? ' Recorded source differs from current code.' : '';
   return {
     historical,
     primary: historical
       ? 'Primary benchmark snapshots use the earlier pipeline. The corrected code requires a fresh benchmark.'
-      : recordedDay ? `Saved results: ${recordedDay}${cohort}.`
-      : `Primary benchmark: protocol v${metadata.benchmark_protocol_version}.`,
+      : recordedDay ? `Saved results: ${recordedDay}${cohort}.${sourceNotice}`
+      : `Primary benchmark: protocol v${metadata.benchmark_protocol_version}.${sourceNotice}`,
     ancillary: sections.length > 0
       ? `Additional snapshots lack verified linkage to this benchmark: ${sections.map((name) => labels[name] ?? name).join(', ')}.`
       : null,

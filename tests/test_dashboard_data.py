@@ -613,6 +613,52 @@ class BenchmarkLinkageTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "source differs"):
             benchmark_reference(self.root, self.frame)
 
+    def test_export_preserves_recorded_source_while_new_analysis_rejects_it(self):
+        context = self._bind()
+        (self.root / "stats.json").write_text(json.dumps({"provenance": context}))
+        original = (self.root / "metrics.json").read_bytes()
+        changed = {**pipeline_source_sha256(), "src/utils.py": "0" * 64}
+        with patch(
+            "src.utils.pipeline_source_sha256", return_value=changed
+        ), patch.object(
+            build_dashboard_data, "pipeline_source_sha256", return_value=changed
+        ):
+            data = self._export()
+            self.assertEqual(data["unverified_sections"], [])
+            self.assertEqual(data["benchmark_provenance"], self.metrics["provenance"])
+            self.assertIs(data["benchmark_source_matches_current"], False)
+            with self.assertRaisesRegex(ValueError, "source differs"):
+                benchmark_reference(self.root, self.frame)
+            with self.assertRaisesRegex(ValueError, "source differs"):
+                analysis_provenance(self.root, context["primary_benchmark_sha256"])
+        self.assertEqual((self.root / "metrics.json").read_bytes(), original)
+
+    def test_recorded_reference_rejects_current_inputs_and_malformed_source_hashes(
+        self,
+    ):
+        for kwargs in ({}, {"shared_cache": False, "frame": self.frame}):
+            with self.subTest(kwargs=kwargs), self.assertRaisesRegex(
+                ValueError, "cannot validate current inputs"
+            ):
+                benchmark_reference(self.root, recorded=True, **kwargs)
+        context = self._bind()
+        output = self.root / "results.ts"
+        for sources in ({}, {"src/utils.py": "not a hash"}, {"../utils.py": "a" * 64}):
+            with self.subTest(sources=sources):
+                self.metrics["provenance"]["source_file_sha256"] = sources
+                self._write_metrics()
+                saved_context = {**context, "source_file_sha256": sources}
+                saved_context["primary_benchmark_sha256"] = sha256_file(
+                    self.root / "metrics.json"
+                )
+                (self.root / "stats.json").write_text(
+                    json.dumps({"provenance": saved_context})
+                )
+                output.write_text("previous snapshot")
+                with self.assertRaisesRegex(ValueError, "does not match"):
+                    self._export()
+                self.assertEqual(output.read_text(), "previous snapshot")
+
     def test_primary_changes_during_analysis_are_rejected(self):
         reference = benchmark_reference(self.root, self.frame)
         self.metrics["binary"]["n_windows"] = 4
@@ -656,6 +702,7 @@ class BenchmarkLinkageTests(unittest.TestCase):
         self.assertEqual(data["shap_model"], "XGBoost")
         self.assertEqual(data["shap_scope"], "full_data_binary_fit")
         self.assertEqual(data["binary"]["inference_model"], "Logistic Regression")
+        self.assertIs(data["benchmark_source_matches_current"], True)
         self.assertNotIn("benchmark_sha256", data["ablation"][0])
 
     def test_stale_and_mixed_links_preserve_the_existing_dashboard(self):

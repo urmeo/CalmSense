@@ -30,9 +30,8 @@ class WESADLoader(LoggerMixin):
             self.logger.error(f"WESAD data path not found: {self.data_path}")
             raise FileNotFoundError(
                 f"WESAD data path not found: {self.data_path}\n"
-                "Please download the dataset from: "
-                "https://archive.ics.uci.edu/ml/datasets/WESAD\n"
-                "See README.md (Dataset download and integrity) for instructions."
+                "Download with: python scripts/download_data.py --wesad\n"
+                "Use the official source under its research agreement."
             )
 
     def _discover_subjects(self) -> List[str]:

@@ -135,7 +135,7 @@ def pipeline_source_sha256() -> dict:
 
 
 def benchmark_reference(
-    results_dir: Union[str, Path], frame=None, *, shared_cache=True
+    results_dir: Union[str, Path], frame=None, *, shared_cache=True, recorded=False
 ):
     import hashlib
     import json
@@ -165,9 +165,24 @@ def benchmark_reference(
         )
     ):
         return None
-    if not isinstance(context.get("source_file_sha256"), dict):
+    sources = context.get("source_file_sha256")
+    if (
+        not isinstance(sources, dict)
+        or not sources
+        or any(
+            not isinstance(name, str)
+            or not re.fullmatch(r"(?:src|scripts)/(?:[\w]+/)*[\w]+\.py", name)
+            or not isinstance(digest, str)
+            or not re.fullmatch(r"[0-9a-f]{64}", digest)
+            for name, digest in sources.items()
+        )
+    ):
         return None
-    if context.get("source_file_sha256") != pipeline_source_sha256():
+    if recorded and (shared_cache or frame is not None):
+        raise ValueError(
+            "Recorded snapshot verification cannot validate current inputs"
+        )
+    if not recorded and sources != pipeline_source_sha256():
         raise ValueError(
             "Primary benchmark source differs from the current pipeline; rerun it"
         )

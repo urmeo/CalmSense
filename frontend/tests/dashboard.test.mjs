@@ -81,6 +81,18 @@ test('saved run summaries use recorded dates without inventing missing metadata'
   assert.equal(historical.primary.includes('Saved results'), false);
 });
 
+test('recorded source mismatches remain visible without invalidating saved protocol results', () => {
+  const metadata = { benchmark_protocol_version: 2, benchmark_source_matches_current: false };
+  const status = benchmarkStatus(metadata, '2026-10-04T00:00:00Z');
+  assert.equal(status.historical, false);
+  assert.equal(status.primary,
+    'Saved results: 2026-10-04. Recorded source differs from current code.');
+  assert.equal(benchmarkStatus(metadata).primary,
+    'Primary benchmark: protocol v2. Recorded source differs from current code.');
+  assert.equal(benchmarkStatus({ ...metadata, benchmark_source_matches_current: true }).primary,
+    'Primary benchmark: protocol v2.');
+});
+
 test('missing or nonfinite comparison metrics remain unavailable rather than zero', () => {
   for (const value of [undefined, null, NaN, Infinity]) {
     assert.equal(formatPercent(value), 'Unavailable');
