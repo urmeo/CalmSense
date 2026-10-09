@@ -8,8 +8,7 @@ url: "https://github.com/urmeo/CalmSense"
 repository-code: "https://github.com/urmeo/CalmSense"
 license: MIT
 authors:
-  - family-names: "Bose"
-    given-names: "Urme"
+  - given-names: "Urme"
 keywords:
   - stress-detection
   - wearables

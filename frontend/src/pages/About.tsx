@@ -69,7 +69,7 @@ export default function About() {
           </a>
         ))}
       </nav>
-      <p className="text-center text-gray-500 dark:text-gray-400 text-sm">© 2025 Urme Bose · MIT License</p>
+      <p className="text-center text-gray-500 dark:text-gray-400 text-sm">© 2025 Urme · MIT License</p>
     </div>
   );
 }
